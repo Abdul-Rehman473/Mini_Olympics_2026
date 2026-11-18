@@ -30,9 +30,12 @@ export default function Footer() {
     return null;
   }
 
+  const isStandaloneDirectory = pathname?.startsWith('/games');
+
   return (
     <footer className="relative w-full bg-[#0A0B0E] border-t border-white/[0.08] overflow-hidden mt-auto">
-      {/* 1. Dramatic Finale Section: READY TO MAKE HISTORY? */}
+      {/* 1. Dramatic Finale Section (omitted on standalone /games directory) */}
+      {!isStandaloneDirectory && (
       <div className="relative py-24 sm:py-32 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] overflow-hidden">
         {/* Stadium Floodlight Glows */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-r from-[#F15A29]/15 via-[#D5F05B]/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
@@ -72,6 +75,7 @@ export default function Footer() {
           </div>
         </div>
       </div>
+      )}
 
       {/* 2. Structured Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -143,9 +147,9 @@ export default function Footer() {
             </span>
             <ul className="space-y-2.5 text-[#A4A5AA]">
               <li>
-                <a href="/#games" className="hover:text-[#F4F1EA] transition-colors">
-                  All 50+ Disciplines
-                </a>
+                <Link href="/games" className="hover:text-[#F4F1EA] transition-colors">
+                  All 49 Disciplines
+                </Link>
               </li>
               <li>
                 <a href="/#stats" className="hover:text-[#F4F1EA] transition-colors">

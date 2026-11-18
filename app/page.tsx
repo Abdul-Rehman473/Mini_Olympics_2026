@@ -3,7 +3,7 @@
 import React from 'react';
 import Navbar from '@/components/navbar';
 import HeroSection from '@/components/hero-section';
-import GamesCatalog from '@/components/games-catalog';
+import GamesCarousel from '@/components/games-carousel';
 import ChampionshipStats from '@/components/championship-stats';
 import WhyCompete from '@/components/why-compete';
 
@@ -16,8 +16,8 @@ export default function Home() {
       {/* Cinematic 3D Hero Section */}
       <HeroSection />
 
-      {/* Complete 50+ Disciplines Catalog Experience */}
-      <GamesCatalog />
+      {/* Auto-Scrolling Disciplines Carousel + View All */}
+      <GamesCarousel />
 
       {/* Championship Statistics Section */}
       <ChampionshipStats />

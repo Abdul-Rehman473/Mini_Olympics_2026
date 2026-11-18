@@ -1,6 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Footer from "@/components/footer";
+
+export const viewport: Viewport = {
+  colorScheme: "dark",
+  themeColor: "#101114",
+};
 
 export const metadata: Metadata = {
   title: {

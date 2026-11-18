@@ -27,17 +27,13 @@ export default function HeroSection() {
         </div>
 
         {/* Massive Editorial Headline */}
-        <div className="flex flex-col space-y-1 sm:space-y-2">
-          <h1 className="text-5xl sm:text-7xl lg:text-8xl xl:text-9xl font-black tracking-tight text-[#F4F1EA] uppercase font-['Space_Grotesk'] leading-[0.92]">
-            THE CAMPUS.
-          </h1>
-          <h1 className="text-5xl sm:text-7xl lg:text-8xl xl:text-9xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#F15A29] via-[#ff8a50] to-[#D5F05B] uppercase font-['Space_Grotesk'] leading-[0.92]">
+        <h1 className="flex flex-col space-y-1 sm:space-y-2 text-5xl sm:text-7xl lg:text-8xl xl:text-9xl font-black tracking-tight text-[#F4F1EA] uppercase font-['Space_Grotesk'] leading-[0.92]">
+          <span>THE CAMPUS.</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F15A29] via-[#ff8a50] to-[#D5F05B]">
             THE COMPETITION.
-          </h1>
-          <h1 className="text-5xl sm:text-7xl lg:text-8xl xl:text-9xl font-black tracking-tight text-[#F4F1EA] uppercase font-['Space_Grotesk'] leading-[0.92]">
-            THE CHAMPIONS.
-          </h1>
-        </div>
+          </span>
+          <span>THE CHAMPIONS.</span>
+        </h1>
 
         {/* Supporting Editorial Paragraph */}
         <div className="mt-8 sm:mt-10 max-w-2xl">
@@ -63,13 +59,13 @@ export default function HeroSection() {
             <ArrowUpRight className="w-5 h-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
           </Link>
 
-          <a
-            href="#games"
+          <Link
+            href="/games"
             className="group inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-xl text-sm sm:text-base font-bold tracking-wider text-[#F4F1EA] bg-[#1B1D21]/80 hover:bg-[#24272D] border border-white/[0.1] hover:border-[#D5F05B]/40 transition-all duration-300 uppercase backdrop-blur-md font-mono"
           >
-            <span>EXPLORE 50+ EVENTS</span>
+            <span>VIEW ALL 49 EVENTS</span>
             <ArrowDown className="w-4 h-4 text-[#D5F05B] transition-transform group-hover:translate-y-1" />
-          </a>
+          </Link>
 
           <Link
             href="/verify-cash"

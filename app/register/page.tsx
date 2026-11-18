@@ -40,6 +40,7 @@ import {
   isTeamGame as defaultIsTeamGame,
   getRequiredPlayers as defaultGetRequiredPlayers,
 } from '@/lib/games-pricing';
+import { resolvePricingName } from '@/lib/games-data';
 
 type TeamMember = {
   name: string;
@@ -74,6 +75,7 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedGame = searchParams?.get('game') || '';
+  const preselectedGamesParam = searchParams?.get('games') || '';
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -143,18 +145,26 @@ function RegisterForm() {
     fetchGames();
   }, []);
 
-  // Pre-select game if passed in URL
+  // Pre-select game(s) if passed in URL (?game=... or ?games=a,b)
   useEffect(() => {
-    if (preselectedGame && availableGames.length > 0) {
-      const match = availableGames.find((g) => g.name.toLowerCase() === preselectedGame.toLowerCase());
-      if (match && !formData.selectedGames.includes(match.name)) {
-        setFormData((prev) => ({
-          ...prev,
-          selectedGames: [...prev.selectedGames, match.name],
-        }));
-      }
+    const rawInputs = [
+      ...(preselectedGame ? [preselectedGame] : []),
+      ...(preselectedGamesParam ? preselectedGamesParam.split(',') : []),
+    ];
+    if (rawInputs.length === 0 || allGames.length === 0) return;
+
+    const availableNames = allGames.map((g) => g.name);
+    const resolved = rawInputs
+      .map((item) => resolvePricingName(item, availableNames))
+      .filter((name): name is string => Boolean(name));
+
+    if (resolved.length > 0) {
+      setFormData((prev) => {
+        const merged = Array.from(new Set([...prev.selectedGames, ...resolved]));
+        return merged.length === prev.selectedGames.length ? prev : { ...prev, selectedGames: merged };
+      });
     }
-  }, [preselectedGame, availableGames]);
+  }, [preselectedGame, preselectedGamesParam, allGames]);
 
   // Helper functions
   const getAvailableGamesForGender = (gender: 'boys' | 'girls'): GamePrice[] => {
@@ -193,8 +203,14 @@ function RegisterForm() {
 
   useEffect(() => {
     if (formData.gender) {
-      setAvailableGames(getAvailableGamesForGender(formData.gender));
-      setFormData((prev) => ({ ...prev, selectedGames: [], teamMembers: {} }));
+      const genderGames = getAvailableGamesForGender(formData.gender);
+      const validNames = new Set(genderGames.map((g) => g.name));
+      setAvailableGames(genderGames);
+      setFormData((prev) => ({
+        ...prev,
+        selectedGames: prev.selectedGames.filter((name) => validNames.has(name)),
+        teamMembers: {},
+      }));
       setSportGroups([]);
     }
   }, [formData.gender, allGames]);
