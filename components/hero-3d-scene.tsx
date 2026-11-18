@@ -2,73 +2,73 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 export default function Hero3DScene() {
   const mountRef = useRef<HTMLDivElement>(null);
   const [webGLSupported, setWebGLSupported] = useState(true);
 
   useEffect(() => {
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) {
-      setWebGLSupported(false);
-      return;
-    }
-
     const container = mountRef.current;
     if (!container) return;
 
-    // Check WebGL availability
+    // Verify WebGL availability without hiding the trophy on reduced-motion systems
+    let renderer: THREE.WebGLRenderer;
     try {
-      const testCanvas = document.createElement('canvas');
-      const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
-      if (!gl) {
-        setWebGLSupported(false);
-        return;
-      }
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+      });
     } catch {
       setWebGLSupported(false);
       return;
     }
 
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
 
-    // 1. Scene & Camera Setup
+    // 1. Scene, Studio EnvMap & Camera Setup (centered 507823b composition)
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x101114, 0.045);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const envTarget = pmremGenerator.fromScene(new RoomEnvironment(), 0.04);
+    scene.environment = envTarget.texture;
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
     camera.position.set(0, 1.8, 7.5);
 
     // 2. Renderer
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
-    });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.25;
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
     // 3. Lighting
-    // Ambient fill
-    const ambientLight = new THREE.AmbientLight(0x202430, 2.5);
+    const ambientLight = new THREE.AmbientLight(0x2c303d, 2.2);
     scene.add(ambientLight);
 
-    // Main stadium floodlight (key light)
-    const keyLight = new THREE.DirectionalLight(0xfff5e6, 3.5);
+    const keyLight = new THREE.DirectionalLight(0xfff5e6, 3.8);
     keyLight.position.set(5, 8, 4);
     scene.add(keyLight);
 
-    // Cyan/Lime stadium rim light
-    const rimLight = new THREE.DirectionalLight(0xd5f05b, 2.0);
+    const frontFillLight = new THREE.DirectionalLight(0xffdca8, 1.8);
+    frontFillLight.position.set(0, 2.5, 6);
+    scene.add(frontFillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xd5f05b, 2.2);
     rimLight.position.set(-5, 4, -4);
     scene.add(rimLight);
 
-    // Warm competition orange accent
     const orangeLight = new THREE.PointLight(0xf15a29, 3.0, 15);
     orangeLight.position.set(0, -1, 2);
     scene.add(orangeLight);
@@ -76,20 +76,18 @@ export default function Hero3DScene() {
     // 4. Stadium Arena Floor / Track Lines
     const arenaGroup = new THREE.Group();
 
-    // Concentric running tracks
+    const floorGeo = new THREE.RingGeometry(1.8, 6.5, 64);
     const trackMaterial = new THREE.MeshBasicMaterial({
       color: 0x1f232b,
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.6,
     });
-    const floorGeo = new THREE.RingGeometry(1.8, 6.5, 64);
     const floorMesh = new THREE.Mesh(floorGeo, trackMaterial);
     floorMesh.rotation.x = -Math.PI / 2;
     floorMesh.position.y = -1.5;
     arenaGroup.add(floorMesh);
 
-    // Glowing track line 1 (Electric lime)
     const lineGeo1 = new THREE.RingGeometry(2.8, 2.84, 64);
     const lineMat1 = new THREE.MeshBasicMaterial({
       color: 0xd5f05b,
@@ -102,7 +100,6 @@ export default function Hero3DScene() {
     lineMesh1.position.y = -1.49;
     arenaGroup.add(lineMesh1);
 
-    // Glowing track line 2 (Competition orange)
     const lineGeo2 = new THREE.RingGeometry(4.2, 4.24, 64);
     const lineMat2 = new THREE.MeshBasicMaterial({
       color: 0xf15a29,
@@ -115,7 +112,6 @@ export default function Hero3DScene() {
     lineMesh2.position.y = -1.49;
     arenaGroup.add(lineMesh2);
 
-    // Outer grid lattice
     const gridHelper = new THREE.GridHelper(14, 28, 0xd5f05b, 0x1d212a);
     gridHelper.position.y = -1.51;
     (gridHelper.material as THREE.Material).transparent = true;
@@ -124,86 +120,93 @@ export default function Hero3DScene() {
 
     scene.add(arenaGroup);
 
-    // 5. Championship Metallic Trophy Group
+    // 5. Centered Championship Metallic Trophy Group
     const trophyGroup = new THREE.Group();
 
-    // Gold metallic PBR material
     const goldMaterial = new THREE.MeshStandardMaterial({
-      color: 0xdeb852,
-      metalness: 0.94,
-      roughness: 0.22,
+      color: 0xf2c14e,
+      metalness: 0.85,
+      roughness: 0.2,
+      emissive: 0x332004,
+      emissiveIntensity: 0.22,
       envMapIntensity: 1.5,
     });
 
     const obsidianMaterial = new THREE.MeshStandardMaterial({
-      color: 0x121418,
+      color: 0x161922,
       metalness: 0.6,
       roughness: 0.35,
+      envMapIntensity: 1.0,
     });
 
     const limeAccentMaterial = new THREE.MeshStandardMaterial({
       color: 0xd5f05b,
       emissive: 0xd5f05b,
-      emissiveIntensity: 0.3,
+      emissiveIntensity: 0.45,
       metalness: 0.8,
       roughness: 0.2,
     });
 
-    // Trophy Base (Plinth)
-    const baseGeo = new THREE.CylinderGeometry(0.55, 0.68, 0.35, 32);
-    const baseMesh = new THREE.Mesh(baseGeo, obsidianMaterial);
+    const baseMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55, 0.68, 0.35, 32),
+      obsidianMaterial
+    );
     baseMesh.position.y = -0.9;
     trophyGroup.add(baseMesh);
 
-    // Plinth Ring Accent
-    const plinthRingGeo = new THREE.TorusGeometry(0.6, 0.03, 16, 48);
-    const plinthRingMesh = new THREE.Mesh(plinthRingGeo, limeAccentMaterial);
+    const plinthRingMesh = new THREE.Mesh(
+      new THREE.TorusGeometry(0.6, 0.03, 16, 48),
+      limeAccentMaterial
+    );
     plinthRingMesh.rotation.x = Math.PI / 2;
     plinthRingMesh.position.y = -0.75;
     trophyGroup.add(plinthRingMesh);
 
-    // Stem
-    const stemGeo = new THREE.CylinderGeometry(0.18, 0.25, 0.6, 24);
-    const stemMesh = new THREE.Mesh(stemGeo, goldMaterial);
+    const stemMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.25, 0.6, 24),
+      goldMaterial
+    );
     stemMesh.position.y = -0.45;
     trophyGroup.add(stemMesh);
 
-    // Central Chalice Cup
-    const cupOuterGeo = new THREE.CylinderGeometry(0.75, 0.25, 0.95, 32, 1, false);
-    const cupMesh = new THREE.Mesh(cupOuterGeo, goldMaterial);
+    const cupMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.75, 0.25, 0.95, 32, 1, false),
+      goldMaterial
+    );
     cupMesh.position.y = 0.25;
     trophyGroup.add(cupMesh);
 
-    // Cup rim ring
-    const rimGeo = new THREE.TorusGeometry(0.75, 0.045, 16, 48);
-    const rimMesh = new THREE.Mesh(rimGeo, goldMaterial);
+    const rimMesh = new THREE.Mesh(
+      new THREE.TorusGeometry(0.75, 0.045, 16, 48),
+      goldMaterial
+    );
     rimMesh.rotation.x = Math.PI / 2;
     rimMesh.position.y = 0.725;
     trophyGroup.add(rimMesh);
 
-    // Left Handle (Torus segment)
     const handleGeo = new THREE.TorusGeometry(0.42, 0.05, 16, 32, Math.PI * 1.15);
     const handleLeft = new THREE.Mesh(handleGeo, goldMaterial);
     handleLeft.position.set(-0.78, 0.28, 0);
     handleLeft.rotation.z = Math.PI * 0.45;
     trophyGroup.add(handleLeft);
 
-    // Right Handle (Torus segment)
     const handleRight = new THREE.Mesh(handleGeo, goldMaterial);
     handleRight.position.set(0.78, 0.28, 0);
     handleRight.rotation.z = -Math.PI * 0.45;
     handleRight.rotation.y = Math.PI;
     trophyGroup.add(handleRight);
 
-    // Crown / Olympic Flame Finial at top
-    const crownGeo = new THREE.OctahedronGeometry(0.24, 0);
-    const crownMesh = new THREE.Mesh(crownGeo, limeAccentMaterial);
+    const crownMesh = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.24, 0),
+      limeAccentMaterial
+    );
     crownMesh.position.y = 0.98;
     trophyGroup.add(crownMesh);
 
-    // Internal Olympic Emblem Emblem Disc
-    const emblemGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.04, 32);
-    const emblemMesh = new THREE.Mesh(emblemGeo, obsidianMaterial);
+    const emblemMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22, 0.22, 0.04, 32),
+      obsidianMaterial
+    );
     emblemMesh.rotation.x = Math.PI / 2;
     emblemMesh.position.set(0, 0.25, 0.52);
     trophyGroup.add(emblemMesh);
@@ -255,7 +258,9 @@ export default function Hero3DScene() {
     let targetY = 0;
 
     const handleMouseMove = (e: MouseEvent) => {
+      if (prefersReducedMotion) return;
       const rect = container.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
       const x = (e.clientX - rect.left) / rect.width - 0.5;
       const y = (e.clientY - rect.top) / rect.height - 0.5;
       targetX = x * 1.8;
@@ -264,67 +269,87 @@ export default function Hero3DScene() {
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
 
-    // Handle Resize
+    const renderStaticFrame = () => {
+      camera.lookAt(0, 0.4, 0);
+      trophyGroup.rotation.y = -0.3;
+      renderer.render(scene, camera);
+    };
+
     const handleResize = () => {
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (!w || !h) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      if (prefersReducedMotion) {
+        renderStaticFrame();
+      }
     };
 
     window.addEventListener('resize', handleResize);
 
     // 8. Animation Render Loop
-    let animationFrameId: number;
+    let animationFrameId = 0;
     const clock = new THREE.Clock();
 
-    const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
-      const elapsedTime = clock.getElapsedTime();
+    if (prefersReducedMotion) {
+      renderStaticFrame();
+    } else {
+      const animate = () => {
+        animationFrameId = requestAnimationFrame(animate);
+        const elapsedTime = clock.getElapsedTime();
 
-      // Smooth camera lerping with inertia
-      mouseX += (targetX - mouseX) * 0.05;
-      mouseY += (targetY - mouseY) * 0.05;
+        mouseX += (targetX - mouseX) * 0.05;
+        mouseY += (targetY - mouseY) * 0.05;
 
-      camera.position.x = mouseX * 2.2;
-      camera.position.y = 1.8 + mouseY * 1.2;
-      camera.lookAt(0, 0.4, 0);
+        camera.position.x = mouseX * 2.2;
+        camera.position.y = 1.8 + mouseY * 1.2;
+        camera.lookAt(0, 0.4, 0);
 
-      // Trophy subtle hover & slow rotation
-      trophyGroup.rotation.y = elapsedTime * 0.35 + mouseX * 0.5;
-      trophyGroup.position.y = Math.sin(elapsedTime * 1.2) * 0.08;
-      crownMesh.rotation.y = elapsedTime * 1.5;
+        trophyGroup.rotation.y = elapsedTime * 0.35 + mouseX * 0.5;
+        trophyGroup.position.y = Math.sin(elapsedTime * 1.2) * 0.08;
+        crownMesh.rotation.y = elapsedTime * 1.5;
 
-      // Arena floor subtle reactive tilt
-      arenaGroup.rotation.y = -elapsedTime * 0.05;
+        arenaGroup.rotation.y = -elapsedTime * 0.05;
 
-      // Particle floating drift
-      const posAttr = particleGeo.attributes.position as THREE.BufferAttribute;
-      const array = posAttr.array as Float32Array;
-      for (let i = 0; i < particleCount; i++) {
-        array[i * 3 + 1] += 0.005; // slowly rise
-        if (array[i * 3 + 1] > 3.0) {
-          array[i * 3 + 1] = -1.2;
+        const posAttr = particleGeo.attributes.position as THREE.BufferAttribute;
+        const array = posAttr.array as Float32Array;
+        for (let i = 0; i < particleCount; i++) {
+          array[i * 3 + 1] += 0.005;
+          if (array[i * 3 + 1] > 3.0) {
+            array[i * 3 + 1] = -1.2;
+          }
         }
-      }
-      posAttr.needsUpdate = true;
-      particles.rotation.y = elapsedTime * 0.08;
+        posAttr.needsUpdate = true;
+        particles.rotation.y = elapsedTime * 0.08;
 
-      renderer.render(scene, camera);
-    };
+        renderer.render(scene, camera);
+      };
 
-    animate();
+      animate();
+    }
 
-    // Cleanup
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
 
-      // Dispose Three objects
+      scene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh || obj instanceof THREE.Points) {
+          obj.geometry?.dispose();
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach((m) => m.dispose());
+          } else {
+            obj.material?.dispose();
+          }
+        }
+      });
+
       scene.clear();
+      envTarget.dispose();
+      pmremGenerator.dispose();
       renderer.dispose();
       if (renderer.domElement && renderer.domElement.parentNode) {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
@@ -333,24 +358,49 @@ export default function Hero3DScene() {
   }, []);
 
   return (
-    <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden select-none">
-      {/* Three.js Canvas Container — full opacity for the 3D scene to be visible */}
+    <div className="absolute inset-0 z-[1] w-full h-full pointer-events-none overflow-hidden select-none">
+      {/* Three.js Canvas Container */}
       <div ref={mountRef} className="w-full h-full opacity-100 transition-opacity duration-1000" />
 
-      {/* Fallback Atmospheric Ring when WebGL not available */}
+      {/* Centered Atmospheric Ring + Trophy Fallback when WebGL unavailable */}
       {!webGLSupported && (
         <div className="absolute inset-0 flex items-center justify-center bg-radial from-[#1B1D21]/80 via-[#101114] to-[#0A0B0E]">
           <div className="relative w-80 h-80 rounded-full border border-[#D5F05B]/20 animate-pulse flex items-center justify-center">
             <div className="w-56 h-56 rounded-full border border-[#F15A29]/25 flex items-center justify-center">
-              <div className="w-36 h-36 rounded-full bg-gradient-to-tr from-[#F15A29]/20 to-[#D5F05B]/20 blur-xl" />
+              <svg
+                viewBox="0 0 120 120"
+                className="w-36 h-36 opacity-80 drop-shadow-[0_0_24px_rgba(243,198,79,0.3)]"
+                fill="none"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient id="heroTrophyGoldFallback" x1="20" y1="18" x2="96" y2="102" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#FCE38A" />
+                    <stop offset="50%" stopColor="#F3C64F" />
+                    <stop offset="100%" stopColor="#C48F21" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M35 28H85V48C85 63.5 73.8 76 60 76C46.2 76 35 63.5 35 48V28Z"
+                  fill="url(#heroTrophyGoldFallback)"
+                />
+                <path
+                  d="M35 34H22C22 50 28 58 37 60M85 34H98C98 50 92 58 83 60"
+                  stroke="#F3C64F"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                />
+                <rect x="54" y="75" width="12" height="16" rx="2" fill="url(#heroTrophyGoldFallback)" />
+                <rect x="40" y="91" width="40" height="11" rx="3" fill="#1B1E28" stroke="#D5F05B" strokeWidth="2" />
+                <polygon points="60,10 66,18 60,26 54,18" fill="#D5F05B" />
+              </svg>
             </div>
           </div>
         </div>
       )}
 
-      {/* Light bottom vignette to blend 3D scene into page — reduced to keep scene visible */}
+      {/* Light bottom vignette to blend 3D scene into page */}
       <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#101114] via-[#101114]/50 to-transparent pointer-events-none" />
-      {/* Soft radial edge darkening */}
       <div className="absolute inset-0 bg-radial from-transparent via-transparent to-[#101114]/70 pointer-events-none" />
     </div>
   );

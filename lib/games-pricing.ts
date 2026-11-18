@@ -30,6 +30,7 @@ export const gamesPricing: GamePrice[] = [
   { name: 'Uno', boys: 100, girls: null },
   { name: 'Tekken', boys: 300, girls: 300 },
   { name: 'Fifa', boys: 300, girls: 300 },
+  { name: 'PUBG Mobile', boys: 300, girls: null },
 ];
 
 export function getGamePrice(gameName: string, gender: 'boys' | 'girls'): number | null {

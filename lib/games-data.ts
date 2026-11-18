@@ -32,11 +32,11 @@ export interface GameInfo {
 
 export const CATEGORIES: { id: SportCategory; label: string; count: number; description: string }[] = [
   { id: 'team', label: 'Team Sports', count: 12, description: 'High-stakes squad athletic championships across the main campus arenas.' },
-  { id: 'racket', label: 'Racket Sports', count: 4, description: 'Speed, reflex, and precision tournaments in singles and doubles format.' },
-  { id: 'board', label: 'Board & Card', count: 8, description: 'Strategic intellectual clashes, traditional tabletop matches, and tactical games.' },
   { id: 'race', label: 'Races & Relays', count: 4, description: 'Pure campus sprint velocity, endurance tests, and synchronized relays.' },
-  { id: 'skill', label: 'Fun & Skill', count: 17, description: 'Target shooting, power tests, precision darts, and high-energy campus challenges.' },
+  { id: 'racket', label: 'Racket Sports', count: 4, description: 'Speed, reflex, and precision tournaments in singles and doubles format.' },
   { id: 'esports', label: 'Esports Arena', count: 4, description: 'Competitive digital battles in FIFA, Tekken, and mobile battle royale.' },
+  { id: 'board', label: 'Board & Card', count: 8, description: 'Strategic intellectual clashes, traditional tabletop matches, and tactical games.' },
+  { id: 'skill', label: 'Fun & Skill', count: 17, description: 'Target shooting, power tests, precision darts, and high-energy campus challenges.' },
 ];
 
 export const GAMES_DATA: GameInfo[] = [
@@ -85,7 +85,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'FCIT Sports Complex Field',
     accentColor: '#D5F05B',
     iconKey: 'football',
-    image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80',
+    image: '/images/games/football.avif',
   },
   {
     id: 'hockey',
@@ -104,7 +104,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Outdoor Synthetic Turf',
     accentColor: '#00E5FF',
     iconKey: 'hockey',
-    image: 'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1734158776592-4bf027643b2b?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'kabaddi',
@@ -125,7 +125,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Central Clay Court Arena',
     accentColor: '#FF6B00',
     iconKey: 'kabaddi',
-    image: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=1000&q=80',
+    image: '/images/games/kabaddi.avif',
   },
   {
     id: 'handball',
@@ -144,7 +144,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Outdoor Multi-Purpose Court',
     accentColor: '#00F0FF',
     iconKey: 'handball',
-    image: 'https://images.unsplash.com/photo-1526676037777-05a232554f7b?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1553627220-92f0446b6a5f?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'volleyball',
@@ -182,7 +182,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'North Lawn Arena',
     accentColor: '#38EF7D',
     iconKey: 'frisbee',
-    image: 'https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1686605972972-d7b17f7ebc7a?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'pitho-gol-garam',
@@ -201,7 +201,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Courtyard Zone B',
     accentColor: '#FF2A6D',
     iconKey: 'target',
-    image: 'https://images.unsplash.com/photo-1569534403786-9e3a2dd8571a?auto=format&fit=crop&w=800&q=80',
+    image: '/images/games/pitho-gol-garam.avif',
   },
   {
     id: 'tug-of-war',
@@ -224,7 +224,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Central Arena Turf',
     accentColor: '#F15A29',
     iconKey: 'tug-of-war',
-    image: 'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=1000&q=80',
+    image: '/images/games/tug-of-war.avif',
   },
   {
     id: 'double-wicket',
@@ -243,7 +243,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Center Pitch Cage',
     accentColor: '#05FFA1',
     iconKey: 'cricket',
-    image: 'https://images.unsplash.com/photo-1531415074868-036b10554f60?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1674986778924-7a33c1531443?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'basketball-1v1',
@@ -329,7 +329,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Indoor Gymnasium Hall 2',
     accentColor: '#B026FF',
     iconKey: 'shuttlecock',
-    image: 'https://images.unsplash.com/photo-1613918108466-292b78a8ef95?auto=format&fit=crop&w=1200&q=80',
+    image: 'https://images.unsplash.com/photo-1626721105368-a69248e93b32?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'table-tennis-singles',
@@ -415,7 +415,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Club Room 1',
     accentColor: '#00C9FF',
     iconKey: 'dice',
-    image: 'https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1606167668584-78701c57f13d?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'ludo-doubles',
@@ -436,7 +436,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Club Room 1',
     accentColor: '#92FE9D',
     iconKey: 'dice',
-    image: 'https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1642056448416-b7dd0ed968cc?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'carrom-singles',
@@ -457,7 +457,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Recreation Hall B',
     accentColor: '#F39C12',
     iconKey: 'disc',
-    image: 'https://images.unsplash.com/photo-1612822747230-de8d05ef91e4?auto=format&fit=crop&w=800&q=80',
+    image: '/images/games/carrom-singles.avif',
   },
   {
     id: 'carrom-doubles',
@@ -478,7 +478,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Recreation Hall B',
     accentColor: '#E67E22',
     iconKey: 'disc',
-    image: 'https://images.unsplash.com/photo-1612822747230-de8d05ef91e4?auto=format&fit=crop&w=800&q=80',
+    image: '/images/games/carrom-doubles.avif',
   },
   {
     id: 'jenga',
@@ -499,7 +499,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Activity Lounge',
     accentColor: '#E74C3C',
     iconKey: 'layers',
-    image: 'https://images.unsplash.com/photo-1606167668584-78701c57f13d?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1619261529873-3c4cc299d23d?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'uno',
@@ -518,7 +518,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Activity Lounge',
     accentColor: '#FF0055',
     iconKey: 'cards',
-    image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+    image: '/images/games/uno.avif',
   },
   {
     id: 'pucket',
@@ -537,7 +537,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Activity Lounge',
     accentColor: '#00F5D4',
     iconKey: 'disc',
-    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
+    image: '/images/games/pucket.avif',
   },
 
   // --- RACES & RELAY (4) ---
@@ -579,7 +579,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Main Grass Oval',
     accentColor: '#FFB800',
     iconKey: 'running',
-    image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1758586326118-01c566d308ca?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'relay-race',
@@ -598,7 +598,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Olympic 400m Track',
     accentColor: '#FF3366',
     iconKey: 'running',
-    image: 'https://images.unsplash.com/photo-1521396333185-f4f293f0de6e?auto=format&fit=crop&w=800&q=80',
+    image: '/images/games/relay-race.avif',
   },
   {
     id: 'egg-relay-race',
@@ -617,7 +617,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Central Walkway',
     accentColor: '#F7B731',
     iconKey: 'egg',
-    image: 'https://images.unsplash.com/photo-1516726817505-f5ed825624d8?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1529570634977-ec042420117b?auto=format&fit=crop&w=800&q=80',
   },
 
   // --- FUN & SKILL GAMES (17) ---
@@ -638,7 +638,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Central Stage Arena',
     accentColor: '#FF5722',
     iconKey: 'bicep',
-    image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1780295788839-cf987c493b4b?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'foosball-singles',
@@ -657,7 +657,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Game Room 2',
     accentColor: '#26C6DA',
     iconKey: 'football',
-    image: 'https://images.unsplash.com/photo-1529874777078-a7c6f8d4ebdf?auto=format&fit=crop&w=800&q=80',
+    image: '/images/games/foosball-singles.avif',
   },
   {
     id: 'foosball-doubles',
@@ -678,7 +678,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Game Room 2',
     accentColor: '#00ACC1',
     iconKey: 'football',
-    image: 'https://images.unsplash.com/photo-1529874777078-a7c6f8d4ebdf?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1786025054505-abee8b30bb51?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'darts-singles',
@@ -699,7 +699,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Indoor Lounge Zone C',
     accentColor: '#E91E63',
     iconKey: 'target',
-    image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1517127766989-c19048cd61e1?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'darts-doubles',
@@ -718,7 +718,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Indoor Lounge Zone C',
     accentColor: '#D81B60',
     iconKey: 'target',
-    image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800&q=80',
+    image: '/images/games/darts-doubles.avif',
   },
   {
     id: '1v1-penalty',
@@ -756,7 +756,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Archery Range South',
     accentColor: '#795548',
     iconKey: 'bow',
-    image: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1741790053537-c34a2e90ed40?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'rifle-shooting',
@@ -775,7 +775,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Firing Range Zone',
     accentColor: '#607D8B',
     iconKey: 'crosshair',
-    image: 'https://images.unsplash.com/photo-1595590424283-b8f17842773f?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1700774607140-37bd97c94d80?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'gol-gappay-eating',
@@ -796,7 +796,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Student Cafeteria Stage',
     accentColor: '#FF6F00',
     iconKey: 'flame',
-    image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1653850280260-aa3b9e00b230?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'plank',
@@ -815,7 +815,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Fitness Center Mat',
     accentColor: '#8D6E63',
     iconKey: 'stopwatch',
-    image: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1765302741884-e846c7a178df?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'rope-jump',
@@ -834,7 +834,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Fitness Center Mat',
     accentColor: '#CDDC39',
     iconKey: 'activity',
-    image: 'https://images.unsplash.com/photo-1598986646512-9330bcc4c0dc?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1758875568447-aa45a5d3b351?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'rubiks-cube',
@@ -872,7 +872,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Courtyard Zone A',
     accentColor: '#9E9E9E',
     iconKey: 'shield',
-    image: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1543956228-f38027e0c61f?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'squid-game',
@@ -891,7 +891,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Indoor Sports Arena',
     accentColor: '#E91E63',
     iconKey: 'target',
-    image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1607468103349-00fafe69117c?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'subway-surfers',
@@ -910,7 +910,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Gaming Zone Desk',
     accentColor: '#00BCD4',
     iconKey: 'gamepad',
-    image: 'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?auto=format&fit=crop&w=800&q=80',
+    image: '/images/games/subway-surfers.avif',
   },
   {
     id: 'blur-racing',
@@ -948,7 +948,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Gaming Zone Desk',
     accentColor: '#212121',
     iconKey: 'music',
-    image: 'https://images.unsplash.com/photo-1520523839898-50712825e3a7?auto=format&fit=crop&w=800&q=80',
+    image: '/images/games/piano-tiles.avif',
   },
 
   // --- ESPORTS (4) ---
@@ -996,7 +996,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Esports Center Stage (PS5 Lounge)',
     accentColor: '#EF4444',
     iconKey: 'combat',
-    image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1000&q=80',
+    image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1000&q=80',
   },
   {
     id: 'cod-mobile',
@@ -1015,7 +1015,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Esports Mobile Stage',
     accentColor: '#F59E0B',
     iconKey: 'crosshair',
-    image: 'https://images.unsplash.com/photo-1542751110-97427bbecf20?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1564049489314-60d154ff107d?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'pubg-mobile',
@@ -1036,7 +1036,7 @@ export const GAMES_DATA: GameInfo[] = [
     venueNote: 'Esports Mobile Stage',
     accentColor: '#EAB308',
     iconKey: 'crosshair',
-    image: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=1000&q=80',
+    image: 'https://images.unsplash.com/photo-1685578437686-a3240b85aaee?auto=format&fit=crop&w=1000&q=80',
   },
 ];
 
@@ -1051,3 +1051,101 @@ export function getGamesByCategory(category: SportCategory): GameInfo[] {
 export function getFeaturedGames(): GameInfo[] {
   return GAMES_DATA.filter((g) => g.featured);
 }
+
+export type DivisionFilter =
+  | 'all'
+  | 'boys_and_girls'
+  | 'boys_only'
+  | 'girls_only';
+
+export type TeamSizeFilter = 'all' | 'solo' | 'duo' | 'squad';
+
+export type SortOption = 'default' | 'name_asc' | 'fee_asc' | 'fee_desc' | 'players_desc';
+
+const CATEGORY_ORDER_INDEX = new Map(CATEGORIES.map((c, idx) => [c.id, idx]));
+
+/** Sort games according to the curated CATEGORIES order, preserving relative order inside each category. */
+export function sortByCategoryOrder(games: GameInfo[]): GameInfo[] {
+  return [...games].sort(
+    (a, b) =>
+      (CATEGORY_ORDER_INDEX.get(a.category) ?? 99) -
+      (CATEGORY_ORDER_INDEX.get(b.category) ?? 99)
+  );
+}
+
+/** Check whether a game matches the selected division filter. */
+export function matchesDivisionFilter(game: GameInfo, division: DivisionFilter): boolean {
+  if (division === 'all') return true;
+  return game.division === division;
+}
+
+/** Return the maximum player count per side for a game. */
+export function getMaxPlayers(game: GameInfo): number {
+  return Math.max(game.boysPlayers ?? 1, game.girlsPlayers ?? 1);
+}
+
+/** Check whether a game matches the selected team size filter. */
+export function matchesTeamSizeFilter(game: GameInfo, size: TeamSizeFilter): boolean {
+  if (size === 'all') return true;
+  const maxPlayers = getMaxPlayers(game);
+  if (size === 'solo') return maxPlayers <= 1;
+  if (size === 'duo') return maxPlayers === 2;
+  return maxPlayers >= 3;
+}
+
+/** Return the minimum non-null entry fee for sorting/display. */
+export function getLowestFee(game: GameInfo): number {
+  const fees = [game.boysFee, game.girlsFee].filter((f): f is number => typeof f === 'number');
+  return fees.length > 0 ? Math.min(...fees) : 0;
+}
+
+/** Compact division badge label for cards and modals. */
+export function getDivisionLabel(division: GameInfo['division']): string {
+  if (division === 'boys_and_girls') return 'Boys & Girls';
+  if (division === 'boys_only') return 'Boys Only';
+  return 'Girls Only';
+}
+
+/** Compact player-count summary string (e.g. "♂ 11p · ♀ 5p" or "1p"). */
+export function getCompactPlayerLabel(game: GameInfo): string {
+  const b = game.boysPlayers;
+  const g = game.girlsPlayers;
+  if (b && g && b !== g) return `♂ ${b}p · ♀ ${g}p`;
+  const count = b ?? g ?? 1;
+  return `${count}p`;
+}
+
+const PRICING_ALIASES: Record<string, string> = {
+  'tape ball cricket': 'Cricket',
+  'football championship': 'Football',
+  'double wicket cricket': 'Double Wicket',
+  'championship chess': 'Chess',
+  'jenga tower challenge': 'Jenga',
+  'uno championship': 'Uno',
+  'darts singles (501)': 'Darts Singles',
+  'ea sports fc / fifa 24': 'Fifa',
+  'tekken 8 tournament': 'Tekken',
+  'pubg mobile championship': 'PUBG Mobile',
+};
+
+/** Resolve a catalog game name or id to a matching pricing entry name. */
+export function resolvePricingName(input: string, availableNames: string[]): string | null {
+  const normalized = input.trim().toLowerCase();
+  if (!normalized) return null;
+
+  const exact = availableNames.find((n) => n.toLowerCase() === normalized);
+  if (exact) return exact;
+
+  const aliasTarget = PRICING_ALIASES[normalized];
+  if (aliasTarget) {
+    const aliased = availableNames.find((n) => n.toLowerCase() === aliasTarget.toLowerCase());
+    if (aliased) return aliased;
+  }
+
+  // Fallback substring match for catalog display names (e.g. "Fifa" in "EA Sports FC / FIFA 24")
+  const contains = availableNames.find(
+    (n) => normalized.includes(n.toLowerCase()) || n.toLowerCase().includes(normalized)
+  );
+  return contains ?? null;
+}
+

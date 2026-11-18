@@ -24,7 +24,7 @@ export default function Navbar() {
   }, [pathname]);
 
   const navLinks = [
-    { label: 'DISCIPLINES', href: '/#games', number: '01' },
+    { label: 'ALL GAMES', href: '/games', number: '01' },
     { label: 'CHAMPIONSHIP STATS', href: '/#stats', number: '02' },
     { label: 'WHY COMPETE', href: '/#why', number: '03' },
     { label: 'VERIFY PASS', href: '/verify-cash', number: '04' },
