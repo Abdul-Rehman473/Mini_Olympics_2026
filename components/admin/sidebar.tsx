@@ -36,83 +36,37 @@ type AdminSidebarProps = {
   onLogout: () => void;
 };
 
-export default function AdminSidebar({ userRole, username, onLogout }: AdminSidebarProps) {
-  const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Close mobile menu on route change
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
-
-  const navItems: NavItem[] = [
-    {
-      label: 'Dashboard',
-      href: '/admin/dashboard',
-      icon: <LayoutDashboard className="h-4 w-4" />,
-      roles: ['super_admin'],
-    },
-    {
-      label: 'Registrations',
-      href: '/admin/registrations',
-      icon: <Users className="h-4 w-4" />,
-      roles: ['super_admin', 'registration_admin'],
-    },
-    {
-      label: 'Inventory',
-      href: '/admin/inventory',
-      icon: <Package className="h-4 w-4" />,
-      roles: ['super_admin', 'inventory_admin'],
-    },
-    {
-      label: 'Finance',
-      href: '/admin/finance',
-      icon: <Wallet className="h-4 w-4" />,
-      roles: ['super_admin', 'finance_admin'],
-    },
-    {
-      label: 'Sport Groups',
-      href: '/admin/super',
-      icon: <Shield className="h-4 w-4" />,
-      roles: ['super_admin', 'hoc_admin'],
-    },
-    {
-      label: 'HOC Scheduling',
-      href: '/admin/hoc',
-      icon: <Trophy className="h-4 w-4" />,
-      roles: ['super_admin', 'hoc_admin'],
-    },
-    {
-      label: 'Email Composer',
-      href: '/admin/email',
-      icon: <Mail className="h-4 w-4" />,
-      roles: ['super_admin'],
-    },
-    {
-      label: 'Settings',
-      href: '/admin/settings',
-      icon: <Settings className="h-4 w-4" />,
-      roles: ['super_admin'],
-    },
-  ];
-
-  const filteredNavItems = navItems.filter((item) => item.roles.includes(userRole));
-
-  const getRoleBadge = (role: string) => {
-    const badges: Record<string, { label: string; color: string }> = {
-      super_admin: { label: 'SUPER ADMIN', color: 'bg-[#F15A29]/15 text-[#F15A29] border border-[#F15A29]/30' },
-      registration_admin: { label: 'REGISTRATION', color: 'bg-blue-500/15 text-blue-400 border border-blue-500/30' },
-      inventory_admin: { label: 'INVENTORY', color: 'bg-amber-500/15 text-amber-400 border border-amber-500/30' },
-      hoc_admin: { label: 'HOC OFFICER', color: 'bg-[#D5F05B]/15 text-[#D5F05B] border border-[#D5F05B]/30' },
-      finance_admin: { label: 'FINANCE', color: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' },
-    };
-    return badges[role] || { label: 'ORGANIZER', color: 'bg-white/10 text-white' };
+function getRoleBadge(role: string) {
+  const badges: Record<string, { label: string; color: string }> = {
+    super_admin: { label: 'SUPER ADMIN', color: 'bg-[#F15A29]/15 text-[#F15A29] border border-[#F15A29]/30' },
+    registration_admin: { label: 'REGISTRATION', color: 'bg-blue-500/15 text-blue-400 border border-blue-500/30' },
+    inventory_admin: { label: 'INVENTORY', color: 'bg-amber-500/15 text-amber-400 border border-amber-500/30' },
+    hoc_admin: { label: 'HOC OFFICER', color: 'bg-[#D5F05B]/15 text-[#D5F05B] border border-[#D5F05B]/30' },
+    finance_admin: { label: 'FINANCE', color: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' },
   };
+  return badges[role] || { label: 'ORGANIZER', color: 'bg-white/10 text-white' };
+}
 
-  const roleBadge = getRoleBadge(userRole);
+type AdminSidebarContentProps = {
+  pathname: string;
+  collapsed: boolean;
+  username: string;
+  roleBadge: { label: string; color: string };
+  filteredNavItems: NavItem[];
+  onToggleCollapse: () => void;
+  onLogout: () => void;
+};
 
-  const SidebarContent = () => (
+function AdminSidebarContent({
+  pathname,
+  collapsed,
+  username,
+  roleBadge,
+  filteredNavItems,
+  onToggleCollapse,
+  onLogout,
+}: AdminSidebarContentProps) {
+  return (
     <div className="flex flex-col h-full bg-[#0F1116] border-r border-white/[0.08] text-[#F4F1EA]">
       {/* Brand Header */}
       <div className={`p-4 border-b border-white/[0.08] ${collapsed ? 'px-2' : ''}`}>
@@ -205,7 +159,7 @@ export default function AdminSidebar({ userRole, username, onLogout }: AdminSide
       {/* Desktop Collapse Toggle */}
       <div className="hidden lg:block p-2 border-t border-white/[0.06]">
         <Button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={onToggleCollapse}
           variant="ghost"
           className="w-full text-[#A4A5AA] hover:text-white hover:bg-white/[0.04] justify-center rounded-lg"
           size="sm"
@@ -215,6 +169,71 @@ export default function AdminSidebar({ userRole, username, onLogout }: AdminSide
       </div>
     </div>
   );
+}
+
+export default function AdminSidebar({ userRole, username, onLogout }: AdminSidebarProps) {
+  const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  const navItems: NavItem[] = [
+    {
+      label: 'Dashboard',
+      href: '/admin/dashboard',
+      icon: <LayoutDashboard className="h-4 w-4" />,
+      roles: ['super_admin'],
+    },
+    {
+      label: 'Registrations',
+      href: '/admin/registrations',
+      icon: <Users className="h-4 w-4" />,
+      roles: ['super_admin', 'registration_admin'],
+    },
+    {
+      label: 'Inventory',
+      href: '/admin/inventory',
+      icon: <Package className="h-4 w-4" />,
+      roles: ['super_admin', 'inventory_admin'],
+    },
+    {
+      label: 'Finance',
+      href: '/admin/finance',
+      icon: <Wallet className="h-4 w-4" />,
+      roles: ['super_admin', 'finance_admin'],
+    },
+    {
+      label: 'Sport Groups',
+      href: '/admin/super',
+      icon: <Shield className="h-4 w-4" />,
+      roles: ['super_admin', 'hoc_admin'],
+    },
+    {
+      label: 'HOC Scheduling',
+      href: '/admin/hoc',
+      icon: <Trophy className="h-4 w-4" />,
+      roles: ['super_admin', 'hoc_admin'],
+    },
+    {
+      label: 'Email Composer',
+      href: '/admin/email',
+      icon: <Mail className="h-4 w-4" />,
+      roles: ['super_admin'],
+    },
+    {
+      label: 'Settings',
+      href: '/admin/settings',
+      icon: <Settings className="h-4 w-4" />,
+      roles: ['super_admin'],
+    },
+  ];
+
+  const filteredNavItems = navItems.filter((item) => item.roles.includes(userRole));
+  const roleBadge = getRoleBadge(userRole);
 
   return (
     <>
@@ -241,7 +260,15 @@ export default function AdminSidebar({ userRole, username, onLogout }: AdminSide
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } ${collapsed ? 'w-20' : 'w-64'}`}
       >
-        <SidebarContent />
+        <AdminSidebarContent
+          pathname={pathname}
+          collapsed={collapsed}
+          username={username}
+          roleBadge={roleBadge}
+          filteredNavItems={filteredNavItems}
+          onToggleCollapse={() => setCollapsed((c) => !c)}
+          onLogout={onLogout}
+        />
       </aside>
     </>
   );

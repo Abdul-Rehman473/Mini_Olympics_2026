@@ -2,8 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Hero3DScene from './hero-3d-scene';
-import { ArrowDown, ArrowUpRight, Flame, Sparkles, Trophy, Users, Shield } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { ArrowDown, ArrowUpRight, Shield } from 'lucide-react';
+
+const Hero3DScene = dynamic(() => import('./hero-3d-scene'), {
+  ssr: false,
+  loading: () => (
+    <div className="absolute inset-0 z-[1] pointer-events-none" aria-hidden="true" />
+  ),
+});
 
 export default function HeroSection() {
   return (
@@ -28,15 +35,15 @@ export default function HeroSection() {
 
         {/* Massive Editorial Headline */}
         <h1 className="flex flex-col space-y-1 sm:space-y-2 text-5xl sm:text-7xl lg:text-8xl xl:text-9xl font-black tracking-tight text-[#F4F1EA] uppercase font-['Space_Grotesk'] leading-[0.92]">
-          <span>THE CAMPUS.</span>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F15A29] via-[#ff8a50] to-[#D5F05B]">
+          <span className="hero-stagger hero-stagger-1">THE CAMPUS.</span>
+          <span className="hero-stagger hero-stagger-2 text-transparent bg-clip-text bg-gradient-to-r from-[#F15A29] via-[#ff8a50] to-[#D5F05B]">
             THE COMPETITION.
           </span>
-          <span>THE CHAMPIONS.</span>
+          <span className="hero-stagger hero-stagger-3">THE CHAMPIONS.</span>
         </h1>
 
         {/* Supporting Editorial Paragraph */}
-        <div className="mt-8 sm:mt-10 max-w-2xl">
+        <div className="hero-stagger hero-stagger-sub mt-8 sm:mt-10 max-w-2xl">
           <div className="flex items-center gap-2 text-sm sm:text-base font-bold tracking-widest text-[#D5F05B] uppercase font-mono mb-2">
             <span>50+ GAMES</span>
             <span>•</span>
