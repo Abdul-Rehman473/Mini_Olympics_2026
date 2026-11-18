@@ -358,7 +358,7 @@ export default function Hero3DScene() {
   }, []);
 
   return (
-    <div className="absolute inset-0 z-[1] w-full h-full pointer-events-none overflow-hidden select-none">
+    <div className="hero-scene-reveal absolute inset-0 z-[1] w-full h-full pointer-events-none overflow-hidden select-none">
       {/* Three.js Canvas Container */}
       <div ref={mountRef} className="w-full h-full opacity-100 transition-opacity duration-1000" />
 

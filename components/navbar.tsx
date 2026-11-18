@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ArrowUpRight, ShieldCheck, Trophy, Sparkles } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ShieldCheck, Trophy } from 'lucide-react';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -22,6 +23,27 @@ export default function Navbar() {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  // Handle Escape key and body scroll lock for mobile drawer
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
 
   const navLinks = [
     { label: 'ALL GAMES', href: '/games', number: '01' },
@@ -109,10 +131,13 @@ export default function Navbar() {
                 REGISTER
               </Link>
               <button
+                ref={menuButtonRef}
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-[#F4F1EA] hover:text-[#D5F05B] focus:outline-none"
+                className="p-2 text-[#F4F1EA] hover:text-[#D5F05B] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D5F05B] rounded-lg"
                 aria-label="Toggle Navigation"
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-nav-drawer"
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -122,8 +147,15 @@ export default function Navbar() {
       </header>
 
       {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden bg-[#101114]/95 backdrop-blur-2xl pt-24 px-6 flex flex-col justify-between pb-8 animate-in fade-in duration-200">
+      <div
+        id="mobile-nav-drawer"
+        aria-hidden={!mobileMenuOpen}
+        className={`fixed inset-0 z-40 lg:hidden bg-[#101114]/95 backdrop-blur-2xl pt-24 px-6 flex flex-col justify-between pb-8 transition-all duration-200 ease-out motion-reduce:transition-none ${
+          mobileMenuOpen
+            ? 'opacity-100 translate-y-0 visible pointer-events-auto'
+            : 'opacity-0 -translate-y-2 invisible pointer-events-none'
+        }`}
+      >
           <div className="flex flex-col space-y-6">
             <span className="text-xs font-mono tracking-widest text-[#D5F05B] uppercase">
               // CHAMPIONSHIP NAVIGATION
@@ -133,6 +165,8 @@ export default function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  tabIndex={mobileMenuOpen ? undefined : -1}
+                  onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center justify-between py-2 text-xl font-bold tracking-wider text-[#F4F1EA] hover:text-[#D5F05B] border-b border-white/[0.06] font-['Space_Grotesk']"
                 >
                   <span>{item.label}</span>
@@ -144,6 +178,8 @@ export default function Navbar() {
             <div className="pt-4 flex flex-col gap-3">
               <Link
                 href="/register"
+                tabIndex={mobileMenuOpen ? undefined : -1}
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black tracking-wider text-[#101114] bg-[#D5F05B] uppercase font-['Space_Grotesk']"
               >
                 <span>ENTER CHAMPIONSHIP (REGISTER)</span>
@@ -152,6 +188,8 @@ export default function Navbar() {
 
               <Link
                 href="/verify-cash"
+                tabIndex={mobileMenuOpen ? undefined : -1}
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold tracking-wider text-[#F4F1EA] bg-[#1B1D21] border border-white/[0.08] uppercase font-mono"
               >
                 <span>VERIFY REGISTRATION SLIP</span>
@@ -159,6 +197,8 @@ export default function Navbar() {
 
               <Link
                 href="/admin/login"
+                tabIndex={mobileMenuOpen ? undefined : -1}
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-semibold tracking-wider text-[#A4A5AA] hover:text-white uppercase font-mono"
               >
                 <ShieldCheck className="w-4 h-4 text-[#F15A29]" />
@@ -171,7 +211,6 @@ export default function Navbar() {
             MINI OLYMPICS 2026 • FCIT SPORTS SOCIETY
           </div>
         </div>
-      )}
     </>
   );
 }

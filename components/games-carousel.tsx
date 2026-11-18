@@ -31,8 +31,20 @@ export default function GamesCarousel() {
   const [activeModalGame, setActiveModalGame] = useState<GameInfo | null>(null);
   const [userPaused, setUserPaused] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+
+    const onChange = (event: MediaQueryListEvent) => {
+      setPrefersReducedMotion(event.matches);
+    };
+    mediaQuery.addEventListener('change', onChange);
+    return () => mediaQuery.removeEventListener('change', onChange);
+  }, []);
 
   const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -131,8 +143,8 @@ export default function GamesCarousel() {
     };
   }, [displayedGames.length]);
 
-  // One-by-one auto-scroll timer: pauses only when hovered, manually paused, or modal open
-  const shouldAutoPlay = !userPaused && !isHovered && !activeModalGame;
+  // One-by-one auto-scroll timer: pauses when hovered, manually paused, modal open, or reduced motion is preferred
+  const shouldAutoPlay = !userPaused && !isHovered && !activeModalGame && !prefersReducedMotion;
 
   useEffect(() => {
     if (!shouldAutoPlay || displayedGames.length <= 1) return;
@@ -243,7 +255,6 @@ export default function GamesCarousel() {
               type="button"
               onClick={() => setUserPaused((p) => !p)}
               aria-label={userPaused ? 'Resume auto-scroll' : 'Pause auto-scroll'}
-              aria-pressed={userPaused}
               className="min-w-[36px] min-h-[36px] p-2 rounded-xl bg-[#16181F] hover:bg-[#20232D] border border-white/[0.1] text-[#A4A5AA] hover:text-[#F4F1EA] transition-colors flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D5F05B]"
             >
               {userPaused ? (

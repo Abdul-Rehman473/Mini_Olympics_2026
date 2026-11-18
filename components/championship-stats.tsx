@@ -15,6 +15,12 @@ interface StatItem {
 
 export default function ChampionshipStats() {
   const [inView, setInView] = useState(false);
+  const [counts, setCounts] = useState<Record<string, number>>({
+    games: 0,
+    athletes: 0,
+    teams: 0,
+    status: 0,
+  });
   const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,6 +39,45 @@ export default function ChampionshipStats() {
 
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!inView) return;
+
+    const targets: Record<string, number> = {
+      games: 50,
+      athletes: 500,
+      teams: 100,
+      status: 24,
+    };
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setCounts(targets);
+      return;
+    }
+
+    const durationMs = 900;
+    const startTime = performance.now();
+    let rafId = 0;
+
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startTime) / durationMs);
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      setCounts({
+        games: Math.round(targets.games * eased),
+        athletes: Math.round(targets.athletes * eased),
+        teams: Math.round(targets.teams * eased),
+        status: Math.round(targets.status * eased),
+      });
+
+      if (progress < 1) {
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [inView]);
 
   const stats: StatItem[] = [
     {
@@ -128,8 +173,8 @@ export default function ChampionshipStats() {
 
                 {/* Massive Kinetic Typography */}
                 <div className="flex items-baseline font-black tracking-tighter text-[#F4F1EA] font-['Space_Grotesk'] leading-none mb-3">
-                  <span className="text-6xl sm:text-7xl font-extrabold group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#F4F1EA] group-hover:to-[#D5F05B] transition-all">
-                    {inView ? item.value : 0}
+                  <span className="text-6xl sm:text-7xl font-extrabold tabular-nums group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#F4F1EA] group-hover:to-[#D5F05B] transition-all">
+                    {counts[item.id] ?? 0}
                   </span>
                   <span className="text-4xl sm:text-5xl font-black text-[#D5F05B] ml-1">
                     {item.suffix}

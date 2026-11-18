@@ -106,6 +106,9 @@ function RegisterForm() {
   const [couponError, setCouponError] = useState('');
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null);
+  const [screenshotError, setScreenshotError] = useState('');
+  const [screenshotInfo, setScreenshotInfo] = useState('');
+  const [compressingScreenshot, setCompressingScreenshot] = useState(false);
 
   const cashPaymentEnabled = process.env.NEXT_PUBLIC_CASH_PAYMENT_ENABLED === 'true';
 
@@ -352,18 +355,102 @@ function RegisterForm() {
     });
   };
 
+  const compressScreenshotToDataUrl = async (file: File): Promise<{ dataUrl: string; sizeKB: number }> => {
+    const MAX_DIM = 1200;
+    const MAX_BYTES = 400 * 1024;
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(image);
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Could not read image file'));
+      };
+      image.src = objectUrl;
+    });
+
+    const scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+    const width = Math.max(1, Math.round((img.naturalWidth || 1) * scale));
+    const height = Math.max(1, Math.round((img.naturalHeight || 1) * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Canvas 2D context unavailable');
+    }
+    ctx.drawImage(img, 0, 0, width, height);
+
+    const encodeWithMime = async (mime: string, quality: number): Promise<Blob | null> =>
+      new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), mime, quality));
+
+    const blobToDataUrl = (blob: Blob): Promise<string> =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to encode compressed image'));
+        reader.readAsDataURL(blob);
+      });
+
+    // Prefer WebP when supported, falling back to JPEG
+    let mime = 'image/webp';
+    let bestBlob = await encodeWithMime(mime, 0.82);
+    if (!bestBlob || bestBlob.type !== 'image/webp') {
+      mime = 'image/jpeg';
+      bestBlob = await encodeWithMime(mime, 0.82);
+    }
+
+    for (const quality of [0.7, 0.56, 0.42]) {
+      if (!bestBlob || bestBlob.size <= MAX_BYTES) break;
+      const nextBlob = await encodeWithMime(mime, quality);
+      if (nextBlob) bestBlob = nextBlob;
+    }
+
+    if (!bestBlob || bestBlob.size > MAX_BYTES) {
+      throw new Error('Compressed screenshot is still over 400 KB. Please crop or choose a smaller image.');
+    }
+
+    const dataUrl = await blobToDataUrl(bestBlob);
+    return { dataUrl, sizeKB: Math.max(1, Math.round(bestBlob.size / 1024)) };
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    setScreenshotError('');
+    setScreenshotInfo('');
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
+    if (!file) {
+      setFormData((prev) => ({ ...prev, screenshotUrl: '' }));
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      e.target.value = '';
+      setFormData((prev) => ({ ...prev, screenshotUrl: '' }));
+      setScreenshotError('Please select a valid image file (PNG, JPG, or WebP).');
+      return;
+    }
+
+    setCompressingScreenshot(true);
+    try {
+      const { dataUrl, sizeKB } = await compressScreenshotToDataUrl(file);
       setFormData((prev) => ({
         ...prev,
-        screenshotUrl: reader.result as string,
+        screenshotUrl: dataUrl,
       }));
-    };
-    reader.readAsDataURL(file);
+      setScreenshotInfo(`Compressed to ${sizeKB} KB`);
+    } catch (err: any) {
+      e.target.value = '';
+      setFormData((prev) => ({ ...prev, screenshotUrl: '' }));
+      setScreenshotError(err?.message || 'Failed to process screenshot image.');
+    } finally {
+      setCompressingScreenshot(false);
+    }
   };
 
   const totalAmount =
@@ -521,6 +608,7 @@ function RegisterForm() {
       return formData.selectedGames.length > 0;
     }
     if (step === 3) {
+      if (compressingScreenshot) return false;
       if (!cashPaymentEnabled) {
         return formData.paymentMethod === 'online' && !!(formData.transactionId && formData.screenshotUrl);
       }
@@ -647,6 +735,7 @@ function RegisterForm() {
 
         {/* Main Content Box */}
         <div className="p-6 sm:p-10 rounded-3xl bg-[#161820] border border-white/[0.08] shadow-2xl relative">
+          <div key={step} className="register-step-enter">
           {/* STEP 1: Personal Information */}
           {step === 1 && (
             <div className="space-y-6">
@@ -1033,13 +1122,25 @@ function RegisterForm() {
                           id="proof"
                           type="file"
                           accept="image/*"
+                          disabled={compressingScreenshot}
                           onChange={handleFileUpload}
                           className="mt-1 bg-[#101114] border-white/[0.1] text-xs text-[#F4F1EA] rounded-xl file:bg-[#181B22] file:text-white file:border-0 file:rounded-lg file:mr-3"
                         />
-                        {formData.screenshotUrl && (
+                        {compressingScreenshot && (
+                          <p className="text-xs text-[#A4A5AA] font-mono mt-1.5">
+                            Optimizing screenshot for upload...
+                          </p>
+                        )}
+                        {screenshotError && (
+                          <p className="text-xs text-red-400 font-mono mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{screenshotError}</span>
+                          </p>
+                        )}
+                        {formData.screenshotUrl && !compressingScreenshot && (
                           <p className="text-xs text-[#D5F05B] font-mono mt-1.5 flex items-center gap-1">
                             <Check className="w-3.5 h-3.5" />
-                            Receipt proof attached successfully.
+                            Receipt proof attached successfully{screenshotInfo ? ` (${screenshotInfo})` : ''}.
                           </p>
                         )}
                       </div>
@@ -1140,6 +1241,7 @@ function RegisterForm() {
               </div>
             </div>
           )}
+          </div>
 
           {/* Step Actions */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-white/[0.08]">
