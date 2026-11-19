@@ -1,6 +1,6 @@
-// Games pricing for Mini Olympics 2026 (Synced with Official 5-Page Games Prices PDF)
+// Games pricing for Mini Olympics 2026 (Previous 49 games with official PDF prices)
 
-export type GameCategorySlug = 'team' | 'indoor' | 'track' | 'fun' | 'esports';
+export type GameCategorySlug = 'team' | 'race' | 'racket' | 'esports' | 'board' | 'skill';
 
 export interface GamePrice {
   name: string;
@@ -12,60 +12,55 @@ export interface GamePrice {
 }
 
 export const gamesPricing: GamePrice[] = [
-  // Page 1: TEAM SPORTS (8)
-  { name: 'Cricket', boys: 1600, girls: 1200, boysPlayers: 8, girlsPlayers: 5, category: 'team' },
-  { name: 'Football', boys: 2200, girls: 1200, boysPlayers: 11, girlsPlayers: 6, category: 'team' },
-  { name: 'Basketball Team', boys: 2200, girls: 2200, boysPlayers: 7, girlsPlayers: 7, category: 'team' },
-  { name: 'Handball', boys: 1200, girls: 1200, boysPlayers: 6, girlsPlayers: 6, category: 'team' },
-  { name: 'Volley Ball', boys: 1200, girls: 1200, boysPlayers: 6, girlsPlayers: 6, category: 'team' },
-  { name: 'Kabbadi', boys: 500, girls: 500, boysPlayers: 7, girlsPlayers: 7, category: 'team' },
+  { name: 'Tape Ball Cricket', boys: 1600, girls: 1200, boysPlayers: 8, girlsPlayers: 5, category: 'team' },
+  { name: 'Football Championship', boys: 2200, girls: 1200, boysPlayers: 11, girlsPlayers: 6, category: 'team' },
+  { name: 'Field Hockey', boys: 1500, girls: null, boysPlayers: 10, category: 'team' },
+  { name: 'Kabaddi Championship', boys: 500, girls: 500, boysPlayers: 7, girlsPlayers: 7, category: 'team' },
+  { name: 'Handball Clash', boys: 1200, girls: 1200, boysPlayers: 6, girlsPlayers: 6, category: 'team' },
+  { name: 'Volleyball Spike', boys: 1200, girls: 1200, boysPlayers: 6, girlsPlayers: 6, category: 'team' },
+  { name: 'Ultimate Frisbee', boys: 250, girls: 250, boysPlayers: 1, girlsPlayers: 1, category: 'team' },
+  { name: 'Pitho Gol Garam', boys: 1000, girls: null, boysPlayers: 6, category: 'team' },
   { name: 'Tug of War', boys: 600, girls: 600, boysPlayers: 8, girlsPlayers: 8, category: 'team' },
-  { name: 'Frisbee', boys: 250, girls: 250, boysPlayers: 1, girlsPlayers: 1, category: 'team' },
-
-  // Page 2: INDOOR & TABLE GAMES (12)
-  { name: 'Badminton Singles', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'indoor' },
-  { name: 'Badminton Doubles', boys: 400, girls: 400, boysPlayers: 2, girlsPlayers: 2, category: 'indoor' },
-  { name: 'Table Tennis Singles', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'indoor' },
-  { name: 'Table Tennis Doubles', boys: 400, girls: 400, boysPlayers: 2, girlsPlayers: 2, category: 'indoor' },
-  { name: 'Carrom Singles', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'indoor' },
-  { name: 'Carrom Doubles', boys: 250, girls: 250, boysPlayers: 2, girlsPlayers: 2, category: 'indoor' },
-  { name: 'Ludo Singles', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'indoor' },
-  { name: 'Ludo Doubles', boys: 300, girls: 300, boysPlayers: 2, girlsPlayers: 2, category: 'indoor' },
-  { name: 'Foosball Singles', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'indoor' },
-  { name: 'Foosball Doubles', boys: 300, girls: 300, boysPlayers: 2, girlsPlayers: 2, category: 'indoor' },
-  { name: 'Dart Singles', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'indoor' },
-  { name: 'Dart Doubles', boys: 300, girls: 300, boysPlayers: 2, girlsPlayers: 2, category: 'indoor' },
-
-  // Page 3: TRACK & FIELD (9)
-  { name: '100m Race', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'track' },
-  { name: 'Relay Race', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'track' },
-  { name: '3 Leg Race', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'track' },
-  { name: 'Egg Relay Race', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'track' },
-  { name: 'Rope Jump', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'track' },
-  { name: 'Plank', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'track' },
-  { name: 'Laser Run', boys: 300, girls: 300, boysPlayers: 1, girlsPlayers: 1, category: 'track' },
-  { name: 'Scavenger Hunt', boys: 400, girls: 400, boysPlayers: 1, girlsPlayers: 1, category: 'track' },
-  { name: '1 vs 1 Penalty', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'track' },
-
-  // Page 4: FUN GAMES (9)
-  { name: 'Rifle Shooting', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'fun' },
-  { name: 'Arm Wrestling', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'fun' },
-  { name: 'Squid Game', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'fun' },
-  { name: 'Pucket', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'fun' },
-  { name: 'Gol Gappay Eating Challenge', boys: 300, girls: 300, boysPlayers: 1, girlsPlayers: 1, category: 'fun' },
-  { name: 'UNO', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'fun' },
-  { name: 'Jenga', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'fun' },
-  { name: 'Chess', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'fun' },
-  { name: "Rubik's Cube", boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'fun' },
-
-  // Page 5: E-SPORTS ARENA (7)
-  { name: 'Pubg', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
-  { name: 'Call of Duty Mobile', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
-  { name: 'Blur (Racing)', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
-  { name: 'Subway Surfer', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
-  { name: 'Piano Tiles', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
-  { name: 'Tekken', boys: 300, girls: 300, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
-  { name: 'Fifa', boys: 300, girls: 300, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
+  { name: 'Double Wicket Cricket', boys: 500, girls: null, boysPlayers: 2, category: 'team' },
+  { name: 'Basketball (1 vs 1)', boys: 200, girls: null, boysPlayers: 1, category: 'team' },
+  { name: 'Swimming Sprint', boys: 300, girls: null, boysPlayers: 1, category: 'team' },
+  { name: 'Badminton Singles', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'racket' },
+  { name: 'Badminton Doubles', boys: 400, girls: 400, boysPlayers: 2, girlsPlayers: 2, category: 'racket' },
+  { name: 'Table Tennis Singles', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'racket' },
+  { name: 'Table Tennis Doubles', boys: 400, girls: 400, boysPlayers: 2, girlsPlayers: 2, category: 'racket' },
+  { name: 'Championship Chess', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'board' },
+  { name: 'Ludo Singles', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'board' },
+  { name: 'Ludo Doubles', boys: 300, girls: 300, boysPlayers: 2, girlsPlayers: 2, category: 'board' },
+  { name: 'Carrom Singles', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'board' },
+  { name: 'Carrom Doubles', boys: 250, girls: 250, boysPlayers: 2, girlsPlayers: 2, category: 'board' },
+  { name: 'Jenga Tower Challenge', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'board' },
+  { name: 'Uno Championship', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'board' },
+  { name: 'Pucket Fast-Track', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'board' },
+  { name: '100m Sprint Dash', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'race' },
+  { name: '3 Legged Race', boys: 200, girls: 200, boysPlayers: 2, girlsPlayers: 2, category: 'race' },
+  { name: '4x100m Baton Relay', boys: 200, girls: 200, boysPlayers: 4, girlsPlayers: 4, category: 'race' },
+  { name: 'Egg & Spoon Relay', boys: 150, girls: 150, boysPlayers: 2, girlsPlayers: 2, category: 'race' },
+  { name: 'Arm Wrestling', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Foosball Singles', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Foosball Doubles', boys: 300, girls: 300, boysPlayers: 2, girlsPlayers: 2, category: 'skill' },
+  { name: 'Darts Singles (501)', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Darts Doubles', boys: 300, girls: 300, boysPlayers: 2, girlsPlayers: 2, category: 'skill' },
+  { name: '1v1 Penalty Shootout', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Archery Target Shoot', boys: 200, girls: null, boysPlayers: 1, category: 'skill' },
+  { name: 'Air Rifle Target Shooting', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Gol Gappay Challenge', boys: 300, girls: 300, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Plank Endurance Test', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Rope Jump Sprint', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Rubik\'s Speedcubing', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Thula Traditional', boys: 150, girls: null, boysPlayers: 1, category: 'skill' },
+  { name: 'Red Light Green Light', boys: 200, girls: 200, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Subway Surfers High Score', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Blur PC Racing', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'Piano Tiles Reflex Test', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'skill' },
+  { name: 'EA Sports FC / FIFA 24', boys: 300, girls: 300, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
+  { name: 'Tekken 8 Tournament', boys: 300, girls: 300, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
+  { name: 'Call of Duty: Mobile', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
+  { name: 'PUBG Mobile Championship', boys: 150, girls: 150, boysPlayers: 1, girlsPlayers: 1, category: 'esports' },
 ];
 
 export function getGamePrice(gameName: string, gender: 'boys' | 'girls'): number | null {

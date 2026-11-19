@@ -468,7 +468,7 @@ export default function SettingsPage() {
   };
 
   const handleSyncPdfGames = async () => {
-    if (!confirm('Sync all 45 official Mini Olympics 2026 PDF games and prices? Existing prices matching those games will be updated to the PDF values, and non-PDF games will be removed.')) {
+    if (!confirm('Sync all 49 championship games with the official PDF prices? Existing matching games will update to the PDF prices.')) {
       return;
     }
     setSyncingPdfGames(true);
@@ -480,7 +480,7 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`Synced ${data.syncedCount} official PDF games & prices!`);
+        alert(`Synced ${data.syncedCount} championship games with PDF prices!`);
         loadGames();
       } else {
         alert(data.error || 'Failed to sync games');
@@ -1010,7 +1010,7 @@ export default function SettingsPage() {
                   className="bg-white/15 hover:bg-white/25 text-white"
                 >
                   {syncingPdfGames ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                  Sync PDF (45)
+                  Sync PDF (49)
                 </Button>
                 <Button
                   onClick={() => handleOpenGameDialog()}
@@ -1121,10 +1121,11 @@ export default function SettingsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="team">Team Sports</SelectItem>
-                    <SelectItem value="indoor">Indoor &amp; Table Games</SelectItem>
-                    <SelectItem value="track">Track &amp; Field</SelectItem>
-                    <SelectItem value="fun">Fun Games</SelectItem>
-                    <SelectItem value="esports">E-Sports Arena</SelectItem>
+                    <SelectItem value="race">Races &amp; Relays</SelectItem>
+                    <SelectItem value="racket">Racket Sports</SelectItem>
+                    <SelectItem value="esports">Esports Arena</SelectItem>
+                    <SelectItem value="board">Board &amp; Card</SelectItem>
+                    <SelectItem value="skill">Fun &amp; Skill</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

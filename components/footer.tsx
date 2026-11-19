@@ -148,7 +148,7 @@ export default function Footer() {
             <ul className="space-y-2.5 text-[#94A3B8]">
               <li>
                 <Link href="/games" className="hover:text-[#F8FAFC] transition-colors">
-                  All 45 Disciplines
+                  All 49 Disciplines
                 </Link>
               </li>
               <li>
