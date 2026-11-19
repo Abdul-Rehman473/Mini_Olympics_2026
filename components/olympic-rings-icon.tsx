@@ -5,7 +5,7 @@ interface OlympicRingsIconProps {
 }
 
 /** Five interlocking Olympic rings matching the Mini Olympics 2026 brand palette. */
-export default function OlympicRingsIcon({ className = 'w-8 h-4' }: OlympicRingsIconProps) {
+export function OlympicRingsIcon({ className = 'w-8 h-4' }: OlympicRingsIconProps) {
   return (
     <svg
       viewBox="0 0 116 58"
@@ -24,3 +24,5 @@ export default function OlympicRingsIcon({ className = 'w-8 h-4' }: OlympicRings
     </svg>
   );
 }
+
+export default OlympicRingsIcon;

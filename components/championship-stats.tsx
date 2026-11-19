@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Trophy, Users, Zap, ShieldCheck } from 'lucide-react';
+import { Users, Zap, ShieldCheck } from 'lucide-react';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 
 interface StatItem {
   id: string;
@@ -15,7 +16,7 @@ interface StatItem {
 
 export default function ChampionshipStats() {
   const [inView, setInView] = useState(false);
-  const [liveGameCount, setLiveGameCount] = useState(49);
+  const [liveGameCount, setLiveGameCount] = useState(50);
   const [counts, setCounts] = useState<Record<string, number>>({
     games: 0,
     athletes: 0,
@@ -29,7 +30,7 @@ export default function ChampionshipStats() {
       .then((res) => res.json())
       .then((data) => {
         if (data?.success && Array.isArray(data.data) && data.data.length > 0) {
-          setLiveGameCount(data.data.length);
+          setLiveGameCount(Math.max(50, data.data.length));
         }
       })
       .catch(() => {});
@@ -97,9 +98,9 @@ export default function ChampionshipStats() {
       value: liveGameCount,
       suffix: '+',
       label: 'OFFICIAL DISCIPLINES',
-      subtitle: 'Across team sports, racket, board, track sprint & esports divisions',
+      subtitle: 'Across team sports, indoor & table, track & field, fun games & esports divisions',
       accent: '#F59E0B',
-      icon: <Trophy className="w-5 h-5 text-[#F59E0B]" />,
+      icon: <OlympicRingsIcon className="w-6 h-3.5" />,
     },
     {
       id: 'athletes',

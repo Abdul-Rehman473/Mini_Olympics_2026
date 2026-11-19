@@ -5,7 +5,7 @@ import GamesDirectory from '@/components/games-directory';
 
 export const metadata: Metadata = {
   title: 'All Disciplines',
-  description: 'Browse and filter all 49 Mini Olympics 2026 sports, board games, races, and esports events.',
+  description: 'Browse and filter 50+ Mini Olympics 2026 team sports, indoor & table games, track & field, fun games, and esports events.',
 };
 
 export default function GamesPage() {

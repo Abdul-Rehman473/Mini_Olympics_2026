@@ -42,14 +42,12 @@ export type AdminPageMeta = {
 export const ADMIN_PAGES: AdminPageMeta[] = [
   { key: '/admin/dashboard', label: 'Dashboard', description: 'Operations KPIs & overview metrics' },
   { key: '/admin/registrations', label: 'Registrations', description: 'View, verify, approve & export registrations' },
-  { key: '/admin/inventory', label: 'Inventory', description: 'Equipment inventory & loan tracking' },
+  { key: '/admin/inventory', label: 'Inventory', description: 'Equipment inventory & stock tracking' },
   { key: '/admin/finance', label: 'Finance', description: 'Treasury income, expense & ledger sync' },
-  { key: '/admin/super', label: 'Sport Groups', description: 'WhatsApp groups & coordinator contact links' },
-  { key: '/admin/hoc', label: 'HOC & Match Records', description: 'Tournament brackets & all coordinator match records' },
+  { key: '/admin/hoc', label: 'HOC & Match Records', description: 'Tournament brackets, sport groups & all coordinator match records' },
   { key: '/admin/coordinator', label: 'Coordinator Portal', description: 'Assigned game players, match scheduling & results' },
-  { key: '/admin/email', label: 'Email Composer', description: 'Send bulk or individual emails to participants' },
   { key: '/admin/esports', label: 'Esports Controls', description: 'Esports registration toggle & announcements' },
-  { key: '/admin/settings', label: 'Settings & Games', description: 'Manage games, prices, coupons, SMTP & registration lock' },
+  { key: '/admin/settings', label: 'Settings & Games', description: 'Manage games, prices, coupons & registration lock' },
   { key: '/admin/permissions', label: 'Permissions & Users', description: 'Create sub-admins/coordinators, assign permissions & audit logs' },
 ];
 
@@ -62,7 +60,7 @@ export const rolePermissions: Record<AdminRole, string[]> = {
   coordinator: ['/admin/coordinator'],
   registration_admin: ['/admin/registrations'],
   inventory_admin: ['/admin/inventory'],
-  hoc_admin: ['/admin/super', '/admin/hoc', '/admin/coordinator'],
+  hoc_admin: ['/admin/hoc', '/admin/coordinator'],
   finance_admin: ['/admin/finance'],
 };
 
@@ -133,8 +131,8 @@ export async function ensureAuthAndPermissionsSchema(): Promise<void> {
       await sql`
         CREATE TABLE IF NOT EXISTS games (
           id TEXT PRIMARY KEY,
-          slug TEXT NOT NULL UNIQUE,
-          name VARCHAR(100) NOT NULL UNIQUE,
+          slug TEXT UNIQUE,
+          name VARCHAR(150) NOT NULL UNIQUE,
           category VARCHAR(50) NOT NULL DEFAULT 'skill',
           headline TEXT,
           tagline TEXT,
@@ -151,6 +149,10 @@ export async function ensureAuthAndPermissionsSchema(): Promise<void> {
           updated_at TIMESTAMP DEFAULT NOW() NOT NULL
         )
       `;
+      try {
+        await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS slug TEXT`;
+        await sql`ALTER TABLE games ALTER COLUMN slug DROP NOT NULL`;
+      } catch {}
 
       await sql`ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS category VARCHAR(50)`;
       await sql`ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS game_id TEXT`;
@@ -162,49 +164,67 @@ export async function ensureAuthAndPermissionsSchema(): Promise<void> {
           id TEXT PRIMARY KEY,
           registration_id TEXT NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
           game_id TEXT,
-          game_name_snapshot VARCHAR(100) NOT NULL,
-          unit_price_snapshot DECIMAL(10, 2) NOT NULL,
-          players_snapshot INTEGER DEFAULT 1,
-          coupon_eligible_snapshot BOOLEAN DEFAULT true NOT NULL,
+          game_name VARCHAR(150) NOT NULL,
+          gender VARCHAR(20),
+          unit_price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+          currency VARCHAR(10) DEFAULT 'PKR',
+          players_count INTEGER DEFAULT 1,
+          team_members_json JSONB,
           created_at TIMESTAMP DEFAULT NOW() NOT NULL
         )
       `;
+      try {
+        await sql`ALTER TABLE registration_items ADD COLUMN IF NOT EXISTS game_name VARCHAR(150)`;
+        await sql`ALTER TABLE registration_items ADD COLUMN IF NOT EXISTS gender VARCHAR(20)`;
+        await sql`ALTER TABLE registration_items ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10, 2) DEFAULT 0`;
+        await sql`ALTER TABLE registration_items ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'PKR'`;
+        await sql`ALTER TABLE registration_items ADD COLUMN IF NOT EXISTS players_count INTEGER DEFAULT 1`;
+        await sql`ALTER TABLE registration_items ADD COLUMN IF NOT EXISTS team_members_json JSONB`;
+      } catch {}
       await sql`CREATE INDEX IF NOT EXISTS idx_reg_items_reg_id ON registration_items(registration_id)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_reg_items_game_id ON registration_items(game_id)`;
 
       await sql`
         CREATE TABLE IF NOT EXISTS coordinator_game_assignments (
           id TEXT PRIMARY KEY,
-          coordinator_id TEXT NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
           game_id TEXT,
-          game_name VARCHAR(100) NOT NULL,
+          game_name VARCHAR(150) NOT NULL,
           gender VARCHAR(10) NOT NULL DEFAULT 'both' CHECK (gender IN ('boys', 'girls', 'both')),
           assigned_by TEXT,
           created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-          UNIQUE(coordinator_id, game_name, gender)
+          UNIQUE(user_id, game_name)
         )
       `;
-      await sql`CREATE INDEX IF NOT EXISTS idx_coord_game_assign_coord ON coordinator_game_assignments(coordinator_id)`;
+      try {
+        await sql`ALTER TABLE coordinator_game_assignments ADD COLUMN IF NOT EXISTS user_id TEXT`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_coord_game_assign_user ON coordinator_game_assignments(user_id)`;
+      } catch {}
 
       await sql`
         CREATE TABLE IF NOT EXISTS coordinator_player_assignments (
           id TEXT PRIMARY KEY,
-          coordinator_id TEXT NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+          coordinator_user_id TEXT NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
           registration_id TEXT NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
           game_id TEXT,
-          game_name VARCHAR(100) NOT NULL,
+          game_name VARCHAR(150),
+          notes TEXT,
           assigned_by TEXT,
           created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-          UNIQUE(coordinator_id, registration_id, game_name)
+          UNIQUE(coordinator_user_id, registration_id)
         )
       `;
-      await sql`CREATE INDEX IF NOT EXISTS idx_coord_player_assign_coord ON coordinator_player_assignments(coordinator_id)`;
+      try {
+        await sql`ALTER TABLE coordinator_player_assignments ADD COLUMN IF NOT EXISTS coordinator_user_id TEXT`;
+        await sql`ALTER TABLE coordinator_player_assignments ADD COLUMN IF NOT EXISTS notes TEXT`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_coord_player_assign_user ON coordinator_player_assignments(coordinator_user_id)`;
+      } catch {}
       await sql`CREATE INDEX IF NOT EXISTS idx_coord_player_assign_reg ON coordinator_player_assignments(registration_id)`;
 
       await sql`
         CREATE TABLE IF NOT EXISTS coordinator_matches (
           id TEXT PRIMARY KEY,
-          game_name VARCHAR(100) NOT NULL,
+          game_name VARCHAR(150) NOT NULL,
           gender VARCHAR(10) NOT NULL CHECK (gender IN ('boys', 'girls')),
           round_name VARCHAR(100) NOT NULL DEFAULT 'Round 1',
           match_number INTEGER NOT NULL DEFAULT 1,
@@ -225,6 +245,7 @@ export async function ensureAuthAndPermissionsSchema(): Promise<void> {
           notes TEXT,
           coordinator_id TEXT,
           coordinator_username TEXT,
+          assignment_scope TEXT DEFAULT 'game',
           created_at TIMESTAMP DEFAULT NOW() NOT NULL,
           updated_at TIMESTAMP DEFAULT NOW() NOT NULL
         )
@@ -235,6 +256,7 @@ export async function ensureAuthAndPermissionsSchema(): Promise<void> {
       await sql`ALTER TABLE coordinator_matches ADD COLUMN IF NOT EXISTS pair_reason TEXT`;
       await sql`ALTER TABLE coordinator_matches ADD COLUMN IF NOT EXISTS override_by TEXT`;
       await sql`ALTER TABLE coordinator_matches ADD COLUMN IF NOT EXISTS override_reason TEXT`;
+      await sql`ALTER TABLE coordinator_matches ADD COLUMN IF NOT EXISTS assignment_scope TEXT DEFAULT 'game'`;
 
       await sql`CREATE INDEX IF NOT EXISTS idx_coord_matches_game_gender ON coordinator_matches(game_name, gender)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_coord_matches_coord_id ON coordinator_matches(coordinator_id)`;
@@ -443,7 +465,7 @@ export async function getAdminSession(sessionToken: string | undefined): Promise
           cga.gender
         FROM coordinator_game_assignments cga
         LEFT JOIN games g ON g.id = cga.game_id
-        WHERE cga.coordinator_id = ${adminUserId}
+        WHERE cga.user_id = ${adminUserId}
       `) as any[];
       if (assignRows.length > 0) {
         const mergedNames = new Set(assignedGames);

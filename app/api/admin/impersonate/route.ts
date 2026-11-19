@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { cookies } from 'next/headers';
-import { ensureAuthAndPermissionsSchema, getAdminSession, normalizeRole } from '@/lib/auth';
+import { ensureAuthAndPermissionsSchema, getAdminSession, normalizeRole, resolveUserPermissions } from '@/lib/auth';
 import { logAudit, getClientIp } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
@@ -37,11 +37,10 @@ export async function POST(request: NextRequest) {
 
       await sql`
         UPDATE admin_sessions
-        SET username = ${session.impersonatedBy},
-            admin_user_id = ${origUserId},
+        SET admin_user_id = ${origUserId},
             role = ${origRole},
             impersonated_by = NULL
-        WHERE id = ${sessionId}
+        WHERE session_token = ${sessionId}
       `;
 
       await logAudit({
@@ -54,7 +53,13 @@ export async function POST(request: NextRequest) {
         ip: getClientIp(request),
       });
 
-      return NextResponse.json({ success: true, username: session.impersonatedBy, role: origRole });
+      const resolvedOrig = await resolveUserPermissions(origUserId, origRole);
+      return NextResponse.json({
+        success: true,
+        username: session.impersonatedBy,
+        role: origRole,
+        defaultPage: resolvedOrig.defaultPage,
+      });
     }
 
     // Only non-impersonated super_admin may start impersonation
@@ -90,10 +95,9 @@ export async function POST(request: NextRequest) {
     await sql`
       UPDATE admin_sessions
       SET admin_user_id = ${target.id},
-          username = ${target.username},
           role = ${targetRole},
           impersonated_by = ${session.username}
-      WHERE id = ${sessionId}
+      WHERE session_token = ${sessionId}
     `;
 
     await logAudit({
@@ -106,11 +110,13 @@ export async function POST(request: NextRequest) {
       ip: getClientIp(request),
     });
 
+    const resolvedTarget = await resolveUserPermissions(String(target.id), targetRole);
     return NextResponse.json({
       success: true,
       username: target.username,
       role: targetRole,
       impersonatedBy: session.username,
+      defaultPage: resolvedTarget.defaultPage,
     });
   } catch (error: any) {
     console.error('Impersonation error:', error);

@@ -7,15 +7,12 @@ import {
   Package,
   Wallet,
   Users,
-  Shield,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Menu,
   X,
-  Trophy,
   Settings,
-  Mail,
   Home,
   KeyRound,
   ClipboardList,
@@ -23,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 
 type NavItem = {
   label: string;
@@ -74,9 +72,9 @@ function AdminSidebarContent({
       {/* Brand Header */}
       <div className={`p-4 border-b border-white/[0.08] ${collapsed ? 'px-2' : ''}`}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F59E0B] via-[#12E2C4] to-[#0B1124] p-[1.5px] shrink-0">
-            <div className="w-full h-full bg-[#0B1124] rounded-[10px] flex items-center justify-center">
-              <Trophy className="h-4 w-4 text-[#12E2C4]" />
+          <div className="w-10 h-9 rounded-xl bg-gradient-to-br from-[#F59E0B] via-[#12E2C4] to-[#0B1124] p-[1.5px] shrink-0">
+            <div className="w-full h-full bg-[#0B1124] rounded-[10px] flex items-center justify-center px-1">
+              <OlympicRingsIcon className="w-7 h-4" />
             </div>
           </div>
           {!collapsed && (
@@ -202,12 +200,7 @@ export default function AdminSidebar({ userRole, username, permissions, onLogout
     {
       label: 'HOC Scheduling',
       href: '/admin/hoc',
-      icon: <Trophy className="h-4 w-4" />,
-    },
-    {
-      label: 'Sport Groups',
-      href: '/admin/super',
-      icon: <Shield className="h-4 w-4" />,
+      icon: <OlympicRingsIcon className="h-3.5 w-5" />,
     },
     {
       label: 'Inventory',
@@ -218,11 +211,6 @@ export default function AdminSidebar({ userRole, username, permissions, onLogout
       label: 'Finance',
       href: '/admin/finance',
       icon: <Wallet className="h-4 w-4" />,
-    },
-    {
-      label: 'Email Composer',
-      href: '/admin/email',
-      icon: <Mail className="h-4 w-4" />,
     },
     {
       label: 'Esports Arena',

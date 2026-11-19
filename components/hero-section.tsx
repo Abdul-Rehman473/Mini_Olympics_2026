@@ -72,7 +72,7 @@ export default function HeroSection() {
             href="/games"
             className="group inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-xl text-sm sm:text-base font-bold tracking-wider text-[#F8FAFC] bg-[#182244]/80 hover:bg-[#1E2A52] border border-white/[0.1] hover:border-[#12E2C4]/40 transition-all duration-300 uppercase backdrop-blur-md font-mono"
           >
-            <span>VIEW ALL {liveGames.length} EVENTS</span>
+            <span>VIEW ALL {liveGames.length >= 50 ? `${liveGames.length}+` : '50+'} EVENTS</span>
             <ArrowDown className="w-4 h-4 text-[#12E2C4] transition-transform group-hover:translate-y-1" />
           </Link>
 
@@ -92,7 +92,7 @@ export default function HeroSection() {
           <div className="flex flex-col space-y-0.5">
             <span className="text-[10px] font-mono tracking-widest text-[#F59E0B] uppercase">01 // DISCIPLINES</span>
             <span className="text-xl sm:text-2xl font-black text-[#F8FAFC] font-['Space_Grotesk']">50+ OFFICIAL SPORTS</span>
-            <span className="text-xs text-[#94A3B8]">Team, Racket, Board & Esports</span>
+            <span className="text-xs text-[#94A3B8]">Team, Indoor & Table, Track & Esports</span>
           </div>
 
           <div className="flex flex-col space-y-0.5">

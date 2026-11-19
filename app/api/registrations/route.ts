@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Enforce esports_settings window when any Esports game is selected
-    const hasEsports = resolvedItems.some((item) => item.category === 'Esports');
+    const hasEsports = resolvedItems.some((item) => String(item.category || '').toLowerCase() === 'esports');
     if (hasEsports) {
       const esRows = (await sql`SELECT * FROM esports_settings WHERE id = '1' LIMIT 1`) as any[];
       const es = esRows[0] || null;

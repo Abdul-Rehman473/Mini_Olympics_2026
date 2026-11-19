@@ -32,16 +32,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    // Parameterized query: IN clause for games to avoid driver array quirks
-    const gamePlaceholders = games.map((_, i) => `$${i + 1}`).join(', ');
-    const paramsWithGender = [...games, gender];
-    const genderParamIndex = games.length + 1;
+    // Parameterized query: case-insensitive IN clause for games
+    const lowerGames = games.map((g) => g.toLowerCase());
+    const gamePlaceholders = lowerGames.map((_, i) => `$${i + 1}`).join(', ');
+    const paramsWithGender = [...lowerGames, gender.toLowerCase()];
+    const genderParamIndex = lowerGames.length + 1;
     let queryText = `SELECT game_name, group_title, group_url, coordinator_name, coordinator_phone, message_template
       FROM sport_groups
-      WHERE is_active = true AND game_name IN (${gamePlaceholders})`;
+      WHERE is_active = true AND LOWER(game_name) IN (${gamePlaceholders})`;
     const selectWithGender = `SELECT game_name, gender, group_title, group_url, coordinator_name, coordinator_phone, message_template
       FROM sport_groups
-      WHERE is_active = true AND game_name IN (${gamePlaceholders}) AND gender = $${genderParamIndex}
+      WHERE is_active = true AND LOWER(game_name) IN (${gamePlaceholders}) AND LOWER(gender) = $${genderParamIndex}
       ORDER BY game_name`;
 
     let rows: any[];
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
       // 42703 = undefined_column (sport_groups may not have gender if created by older init)
       if (code === '42703') {
         queryText += ' ORDER BY game_name';
-        rows = await sql(queryText, games);
+        rows = await sql(queryText, lowerGames);
       } else {
         throw err;
       }

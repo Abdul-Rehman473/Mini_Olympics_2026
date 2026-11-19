@@ -199,7 +199,7 @@ export async function PUT(request: NextRequest) {
     await logAudit({
       actorUserId: session.adminUserId,
       actorUsername: session.username,
-      action: 'finance.delete',
+      action: 'finance.update',
       targetType: 'finance_record',
       targetId: id,
       ip: getClientIp(request),

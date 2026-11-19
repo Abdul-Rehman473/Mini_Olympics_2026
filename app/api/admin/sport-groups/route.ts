@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPagePermission(session, '/admin/super', 'view')) {
+    if (!hasPagePermission(session, '/admin/hoc', 'view') && !hasPagePermission(session, '/admin/super', 'view')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // super_admin and hoc_admin can create groups
-    if (!hasPagePermission(session, '/admin/super', 'edit')) {
+    if (!hasPagePermission(session, '/admin/hoc', 'edit') && !hasPagePermission(session, '/admin/super', 'edit')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -142,7 +142,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // super_admin and hoc_admin can update groups
-    if (!hasPagePermission(session, '/admin/super', 'edit')) {
+    if (!hasPagePermission(session, '/admin/hoc', 'edit') && !hasPagePermission(session, '/admin/super', 'edit')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -190,7 +190,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // super_admin and hoc_admin can delete groups
-    if (!hasPagePermission(session, '/admin/super', 'edit')) {
+    if (!hasPagePermission(session, '/admin/hoc', 'edit') && !hasPagePermission(session, '/admin/super', 'edit')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

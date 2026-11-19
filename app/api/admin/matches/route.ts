@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     let teamsQuery = `
       SELECT id, registration_number, team_name, name, roll_number, contact_number, email, gender, selected_games
       FROM registrations
-      WHERE status = 'paid' AND team_name IS NOT NULL AND team_name != ''
+      WHERE status = 'paid'
     `;
     const teamsParams: any[] = [];
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       teamsQuery += ` AND gender = $${teamsParams.length}`;
     }
 
-    teamsQuery += ' ORDER BY team_name ASC';
+    teamsQuery += ' ORDER BY COALESCE(NULLIF(team_name, \'\'), name) ASC';
     const rawTeams = (await sql(teamsQuery, teamsParams)) as any[];
 
     const teams = game
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
       if (game) {
         schedulesParams.push(game);
-        schedulesConditions.push(`game_name = $${schedulesParams.length}`);
+        schedulesConditions.push(`LOWER(game_name) = LOWER($${schedulesParams.length})`);
       }
       if (gender && gender !== 'all') {
         schedulesParams.push(gender);

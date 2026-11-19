@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
 async function renameGameEverywhere(oldName: string, newName: string, newSlug: string) {
   await runTransaction((txn) => [
-    txn`UPDATE games SET name = ${newName}, updated_at = NOW() WHERE name = ${oldName}`,
+    txn`UPDATE games SET name = ${newName}, slug = ${newSlug}, updated_at = NOW() WHERE name = ${oldName}`,
     txn`UPDATE games_pricing SET game_name = ${newName}, updated_at = NOW() WHERE game_name = ${oldName}`,
     txn`UPDATE sport_groups SET game_name = ${newName} WHERE game_name = ${oldName}`,
     txn`UPDATE coordinator_matches SET game_name = ${newName}, game_id = COALESCE(game_id, ${newSlug}) WHERE game_name = ${oldName}`,
@@ -46,6 +46,68 @@ async function renameGameEverywhere(oldName: string, newName: string, newSlug: s
     txn`UPDATE coordinator_game_assignments SET game_name = ${newName} WHERE game_name = ${oldName}`,
     txn`UPDATE registration_items SET game_name = ${newName} WHERE game_name = ${oldName}`,
   ]);
+
+  // Also update coordinator_player_assignments, admin_users.assigned_games, and registrations JSON
+  try {
+    await sql`UPDATE coordinator_player_assignments SET game_name = ${newName} WHERE game_name = ${oldName}`;
+  } catch {}
+
+  try {
+    const affectedUsers = (await sql`
+      SELECT id, assigned_games FROM admin_users
+      WHERE assigned_games IS NOT NULL AND assigned_games ILIKE ${'%' + oldName + '%'}
+    `) as any[];
+    for (const u of affectedUsers) {
+      let arr: string[] = [];
+      try {
+        const parsed = JSON.parse(String(u.assigned_games));
+        arr = Array.isArray(parsed) ? parsed.map(String) : String(u.assigned_games).split(',').map((s) => s.trim());
+      } catch {
+        arr = String(u.assigned_games).split(',').map((s) => s.trim());
+      }
+      const updated = arr.map((g) => (g.toLowerCase() === oldName.toLowerCase() ? newName : g));
+      await sql`UPDATE admin_users SET assigned_games = ${JSON.stringify(updated)} WHERE id = ${u.id}`;
+    }
+  } catch {}
+
+  try {
+    const affectedRegs = (await sql`
+      SELECT id, selected_games, team_members FROM registrations
+      WHERE selected_games::text ILIKE ${'%"' + oldName + '"%'}
+    `) as any[];
+    for (const r of affectedRegs) {
+      let gamesArr: string[] = [];
+      try {
+        gamesArr = Array.isArray(r.selected_games) ? r.selected_games : JSON.parse(String(r.selected_games || '[]'));
+      } catch {
+        gamesArr = [];
+      }
+      const nextGames = gamesArr.map((g) => (String(g).toLowerCase() === oldName.toLowerCase() ? newName : g));
+
+      let teamMembers = r.team_members;
+      if (teamMembers) {
+        try {
+          const obj = typeof teamMembers === 'string' ? JSON.parse(teamMembers) : { ...teamMembers };
+          if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+            for (const key of Object.keys(obj)) {
+              if (key.toLowerCase() === oldName.toLowerCase() && key !== newName) {
+                obj[newName] = obj[key];
+                delete obj[key];
+              }
+            }
+            teamMembers = JSON.stringify(obj);
+          }
+        } catch {}
+      }
+
+      await sql`
+        UPDATE registrations
+        SET selected_games = ${JSON.stringify(nextGames)},
+            team_members = ${teamMembers ? (typeof teamMembers === 'string' ? teamMembers : JSON.stringify(teamMembers)) : null}
+        WHERE id = ${r.id}
+      `;
+    }
+  } catch {}
 }
 
 async function isGameReferenced(gameName: string, gameId: string | null): Promise<boolean> {
@@ -107,9 +169,10 @@ export async function POST(request: NextRequest) {
         const slug = toGameSlug(item.name);
         const couponEligible = item.name.toLowerCase() !== 'swimming sprint';
         await sql`
-          INSERT INTO games (id, name, category, is_active, coupon_eligible, created_at, updated_at)
-          VALUES (${slug}, ${item.name}, ${item.category ?? null}, true, ${couponEligible}, NOW(), NOW())
+          INSERT INTO games (id, slug, name, category, is_active, coupon_eligible, created_at, updated_at)
+          VALUES (${slug}, ${slug}, ${item.name}, ${item.category ?? null}, true, ${couponEligible}, NOW(), NOW())
           ON CONFLICT (name) DO UPDATE SET
+            slug = COALESCE(games.slug, EXCLUDED.slug),
             category = COALESCE(EXCLUDED.category, games.category),
             is_active = true,
             updated_at = NOW()
@@ -214,9 +277,10 @@ export async function POST(request: NextRequest) {
 
     await runTransaction((txn) => [
       txn`
-        INSERT INTO games (id, name, category, is_active, coupon_eligible, created_at, updated_at)
-        VALUES (${slug}, ${trimmedName}, ${category || null}, ${nextActive}, ${couponEligible}, NOW(), NOW())
+        INSERT INTO games (id, slug, name, category, is_active, coupon_eligible, created_at, updated_at)
+        VALUES (${slug}, ${slug}, ${trimmedName}, ${category || null}, ${nextActive}, ${couponEligible}, NOW(), NOW())
         ON CONFLICT (name) DO UPDATE SET
+          slug = COALESCE(games.slug, EXCLUDED.slug),
           category = COALESCE(${category || null}, games.category),
           is_active = COALESCE(${typeof is_active === 'boolean' ? is_active : null}, games.is_active),
           coupon_eligible = ${couponEligible},
@@ -313,9 +377,10 @@ export async function PUT(request: NextRequest) {
 
     await runTransaction((txn) => [
       txn`
-        INSERT INTO games (id, name, category, is_active, coupon_eligible, created_at, updated_at)
-        VALUES (${slug}, ${gameName}, ${category}, ${isActive}, ${couponEligible}, NOW(), NOW())
+        INSERT INTO games (id, slug, name, category, is_active, coupon_eligible, created_at, updated_at)
+        VALUES (${slug}, ${slug}, ${gameName}, ${category}, ${isActive}, ${couponEligible}, NOW(), NOW())
         ON CONFLICT (name) DO UPDATE SET
+          slug = COALESCE(games.slug, EXCLUDED.slug),
           category = COALESCE(${category}, games.category),
           is_active = ${isActive},
           coupon_eligible = ${couponEligible},

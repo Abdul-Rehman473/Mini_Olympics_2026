@@ -213,7 +213,7 @@ export default function PermissionsPage() {
       sub_admin: ['/admin/dashboard', '/admin/registrations', '/admin/coordinator', '/admin/permissions'],
       registration_admin: ['/admin/registrations'],
       inventory_admin: ['/admin/inventory'],
-      hoc_admin: ['/admin/super', '/admin/hoc', '/admin/coordinator'],
+      hoc_admin: ['/admin/hoc', '/admin/coordinator'],
       finance_admin: ['/admin/finance'],
       super_admin: pages.map((p) => p.key),
     };
@@ -360,7 +360,7 @@ export default function PermissionsPage() {
         return;
       }
       toast.success(`Now viewing as ${data.username}`);
-      window.location.href = user.role === 'coordinator' ? '/admin/coordinator' : '/admin/dashboard';
+      window.location.href = data.defaultPage || (user.role === 'coordinator' ? '/admin/coordinator' : '/admin/dashboard');
     } catch {
       toast.error('Impersonation request failed');
     }

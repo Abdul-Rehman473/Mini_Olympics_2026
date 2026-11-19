@@ -303,29 +303,29 @@ export default function SuperAdminPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 pt-16 lg:pt-8">
+    <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-7xl mx-auto text-[#F8FAFC]">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl shadow-lg">
-            <Users className="h-6 w-6 text-white" />
+      <div className="mb-8 pb-6 border-b border-white/[0.08]">
+        <h1 className="text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight flex items-center gap-3">
+          <div className="p-2 bg-gradient-to-br from-[#12E2C4] to-[#3B82F6] rounded-xl shadow-lg">
+            <Users className="h-6 w-6 text-[#080D1C]" />
           </div>
           Sport Groups
         </h1>
-        <p className="text-slate-500 mt-1">Manage WhatsApp groups for Male and Female separately</p>
+        <p className="text-xs font-mono text-[#94A3B8] mt-1">Manage WhatsApp groups for Male and Female separately</p>
       </div>
 
       {/* Info Card */}
-      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+      <Card className="mb-6 border border-white/[0.08] shadow-lg bg-gradient-to-r from-[#131B38] to-[#182244] text-[#F8FAFC]">
         <CardContent className="p-5">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/20 rounded-xl">
+            <div className="p-3 bg-[#12E2C4]/15 rounded-xl text-[#12E2C4]">
               <Link2 className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="font-bold text-lg mb-1">Gender-Specific Groups</h3>
-              <p className="text-purple-100 text-sm">
-                Each game has <strong>separate groups</strong> for Male and Female. Configure WhatsApp links and coordinator contacts for each.
+              <h3 className="font-bold text-lg mb-1 text-[#F8FAFC]">Gender-Specific Groups</h3>
+              <p className="text-[#94A3B8] text-sm">
+                Each game has <strong className="text-[#F8FAFC]">separate groups</strong> for Male and Female. Configure WhatsApp links and coordinator contacts for each.
               </p>
             </div>
           </div>
@@ -337,7 +337,7 @@ export default function SuperAdminPage() {
         <Button
           onClick={() => setGenderTab('boys')}
           variant={genderTab === 'boys' ? 'default' : 'outline'}
-          className={genderTab === 'boys' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+          className={genderTab === 'boys' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-[#131B38] border-white/[0.1] text-[#94A3B8]'}
         >
           <User className="h-4 w-4 mr-2" />
           Male ({boysGroups.length})
@@ -345,7 +345,7 @@ export default function SuperAdminPage() {
         <Button
           onClick={() => setGenderTab('girls')}
           variant={genderTab === 'girls' ? 'default' : 'outline'}
-          className={genderTab === 'girls' ? 'bg-pink-500 hover:bg-pink-600' : ''}
+          className={genderTab === 'girls' ? 'bg-pink-500 hover:bg-pink-600 text-white' : 'bg-[#131B38] border-white/[0.1] text-[#94A3B8]'}
         >
           <UserCircle2 className="h-4 w-4 mr-2" />
           Female ({girlsGroups.length})
@@ -354,9 +354,9 @@ export default function SuperAdminPage() {
 
       {/* Actions */}
       <div className="flex justify-between items-center mb-6">
-        <p className="text-slate-600">{currentGroups.length} {genderTab} group(s) configured</p>
+        <p className="text-xs font-mono text-[#94A3B8]">{currentGroups.length} {genderTab} group(s) configured</p>
         {isSuperAdmin && (
-          <Button onClick={() => openCreateDialog(genderTab)} className={genderTab === 'boys' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-pink-500 hover:bg-pink-600'}>
+          <Button onClick={() => openCreateDialog(genderTab)} className={genderTab === 'boys' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-pink-500 hover:bg-pink-600 text-white'}>
             <Plus className="h-4 w-4 mr-2" />
             Add {genderTab === 'boys' ? 'Male' : 'Female'} Group
           </Button>
@@ -366,15 +366,15 @@ export default function SuperAdminPage() {
       {/* Groups Grid */}
       {groupsLoading ? (
         <div className="text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-500" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#12E2C4]" />
         </div>
       ) : currentGroups.length === 0 ? (
-        <Card className="border-0 shadow-lg">
+        <Card className="bg-[#131B38] border border-white/[0.08] shadow-lg">
           <CardContent className="py-16 text-center">
-            <Link2 className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-            <p className="text-slate-500 mb-4">No {genderTab} groups configured yet</p>
+            <Link2 className="h-12 w-12 mx-auto text-[#94A3B8]/50 mb-4" />
+            <p className="text-[#94A3B8] mb-4">No {genderTab} groups configured yet</p>
             {isSuperAdmin && (
-              <Button onClick={() => openCreateDialog(genderTab)} className={genderTab === 'boys' ? 'bg-blue-600' : 'bg-pink-500'}>
+              <Button onClick={() => openCreateDialog(genderTab)} className={genderTab === 'boys' ? 'bg-blue-600 text-white' : 'bg-pink-500 text-white'}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add First {genderTab === 'boys' ? 'Male' : 'Female'} Group
               </Button>
@@ -384,20 +384,20 @@ export default function SuperAdminPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentGroups.map((group) => (
-            <Card key={group.id} className={`border-0 shadow-lg overflow-hidden ${!group.is_active ? 'opacity-60' : ''}`}>
-              <div className={`h-1 ${group.is_active ? (group.gender === 'boys' ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : 'bg-gradient-to-r from-pink-500 to-rose-500') : 'bg-slate-300'}`}></div>
+            <Card key={group.id} className={`bg-[#131B38] border border-white/[0.08] text-[#F8FAFC] shadow-lg overflow-hidden ${!group.is_active ? 'opacity-60' : ''}`}>
+              <div className={`h-1 ${group.is_active ? (group.gender === 'boys' ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : 'bg-gradient-to-r from-pink-500 to-rose-500') : 'bg-slate-600'}`}></div>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${group.gender === 'boys' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${group.gender === 'boys' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-pink-500/20 text-pink-300 border border-pink-500/30'}`}>
                         {group.gender === 'boys' ? '♂ Male' : '♀ Female'}
                       </span>
                     </div>
-                    <CardTitle className="text-lg">{group.group_title || group.game_name}</CardTitle>
-                    <CardDescription>Game: {group.game_name}</CardDescription>
+                    <CardTitle className="text-lg text-[#F8FAFC]">{group.group_title || group.game_name}</CardTitle>
+                    <CardDescription className="text-[#94A3B8]">Game: {group.game_name}</CardDescription>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${group.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${group.is_active ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/10 text-[#94A3B8]'}`}>
                     {group.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </div>
@@ -405,8 +405,8 @@ export default function SuperAdminPage() {
               <CardContent className="space-y-3">
                 {group.group_url && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Link2 className="h-4 w-4 text-purple-500" />
-                    <a href={group.group_url} target="_blank" rel="noreferrer" className="text-purple-600 hover:underline truncate">
+                    <Link2 className="h-4 w-4 text-[#12E2C4]" />
+                    <a href={group.group_url} target="_blank" rel="noreferrer" className="text-[#12E2C4] hover:underline truncate">
                       {group.group_url}
                     </a>
                   </div>
@@ -522,7 +522,7 @@ export default function SuperAdminPage() {
               <div className="space-y-2">
                 <Label>Game Name *</Label>
                 {editingGroup ? (
-                  <Input value={formData.gameName} disabled className="bg-slate-50" />
+                  <Input value={formData.gameName} disabled className="bg-[#131B38] border-white/15 text-[#94A3B8]" />
                 ) : (
                   <Select value={formData.gameName} onValueChange={(v) => setFormData({ ...formData, gameName: v, groupTitle: formData.applyToBoth ? v : `${v} (${formData.gender === 'boys' ? 'Male' : 'Female'})` })}>
                     <SelectTrigger><SelectValue placeholder="Select a game" /></SelectTrigger>
@@ -553,7 +553,7 @@ export default function SuperAdminPage() {
                 <div className="space-y-2">
                   <Label>Gender</Label>
                   <Select value={formData.gender} onValueChange={(v) => setFormData({ ...formData, gender: v as 'boys' | 'girls', groupTitle: formData.gameName ? `${formData.gameName} (${v === 'boys' ? 'Male' : 'Female'})` : '' })} disabled={!!editingGroup}>
-                    <SelectTrigger className={editingGroup ? 'bg-slate-50' : ''}><SelectValue /></SelectTrigger>
+                    <SelectTrigger className={editingGroup ? 'bg-[#131B38] text-[#94A3B8]' : ''}><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="boys">Male</SelectItem>
                       <SelectItem value="girls">Female</SelectItem>
