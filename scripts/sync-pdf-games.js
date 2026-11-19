@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Sync database schema (permissions, coordinator_matches, admin_users columns)
- * and upsert all 45 official Mini Olympics 2026 PDF games & prices.
+ * and upsert all 49 championship games with official Mini Olympics 2026 PDF prices.
  *
  * Usage:
  *   node scripts/sync-pdf-games.js [--replace-all]

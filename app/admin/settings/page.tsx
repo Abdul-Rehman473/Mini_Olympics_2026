@@ -545,7 +545,7 @@ export default function SettingsPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Registrations open/closed */}
-        <Card className="border-0 shadow-lg lg:col-span-2">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg lg:col-span-2">
           <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               {settings.registrations_open ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
@@ -615,7 +615,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* SMTP Email Settings */}
-        <Card className="border-0 shadow-lg lg:col-span-2">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg lg:col-span-2">
           <CardHeader className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
@@ -752,7 +752,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Automated Email Templates — one at a time with dropdown */}
-        <Card className="border-0 shadow-lg flex flex-col min-h-[420px]">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg flex flex-col min-h-[420px]">
           <CardHeader className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
@@ -831,7 +831,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Coupons — same-size card with scrollable small coupon cards */}
-        <Card className="border-0 shadow-lg flex flex-col min-h-[420px]">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg flex flex-col min-h-[420px]">
           <CardHeader className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Tag className="h-5 w-5" />
@@ -908,7 +908,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* API Key Settings */}
-        <Card className="border-0 shadow-lg">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg">
           <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Key className="h-5 w-5" />
@@ -990,7 +990,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Games & Pricing Management */}
-        <Card className="border-0 shadow-lg lg:col-span-1">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg lg:col-span-1">
           <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
               <div>

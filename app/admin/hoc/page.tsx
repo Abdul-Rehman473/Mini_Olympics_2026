@@ -412,7 +412,7 @@ export default function HOCPage() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Generate Schedule */}
-        <Card className="border-0 shadow-lg">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg">
           <CardHeader className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5" />
@@ -525,7 +525,7 @@ export default function HOCPage() {
         </Card>
 
         {/* Generated Schedule Preview */}
-        <Card className="border-0 shadow-lg">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-indigo-500" />
@@ -646,7 +646,7 @@ export default function HOCPage() {
       </div>
 
       {/* Saved Schedules */}
-      <Card className="border-0 shadow-lg mt-6">
+      <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-purple-500" />
@@ -747,7 +747,7 @@ export default function HOCPage() {
       </Card>
 
       {/* Coordinator Match Records (Live Visibility for Admin / HOC) */}
-      <Card className="border-0 shadow-lg mt-6">
+      <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg mt-6">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -811,15 +811,15 @@ export default function HOCPage() {
 
             return (
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="w-full text-sm">
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Game & Round</TableHead>
-                      <TableHead>Division</TableHead>
-                      <TableHead>Matchup</TableHead>
-                      <TableHead>Time & Venue</TableHead>
-                      <TableHead>Status & Result</TableHead>
-                      <TableHead>Coordinator</TableHead>
+                    <TableRow className="bg-slate-50 border-b border-slate-200">
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Game & Round</TableHead>
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Division</TableHead>
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Matchup</TableHead>
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Time & Venue</TableHead>
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Status & Result</TableHead>
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Coordinator</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

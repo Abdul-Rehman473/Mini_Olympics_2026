@@ -17,7 +17,7 @@ import {
   GameInfo,
   getCompactPlayerLabel,
   getDivisionLabel,
-  getLowestFee,
+  getFeeSummary,
   sortByCategoryOrder,
 } from '@/lib/games-data';
 import { useLiveGames } from '@/lib/use-live-games';
@@ -306,7 +306,7 @@ export default function GamesCarousel() {
             className="relative games-carousel-track gap-4 sm:gap-5 pb-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#12E2C4] rounded-2xl"
           >
             {displayedGames.map((game, index) => {
-              const lowestFee = getLowestFee(game);
+              const feeSummary = getFeeSummary(game);
               return (
                 <article
                   key={game.id}
@@ -363,7 +363,7 @@ export default function GamesCarousel() {
                   {/* Card Footer */}
                   <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-2 border-t border-white/[0.06] flex items-center justify-between gap-2">
                     <span className="text-xs font-mono font-bold text-[#F8FAFC]">
-                      {lowestFee > 0 ? `Rs. ${lowestFee.toLocaleString()}` : 'Free'}
+                      {feeSummary}
                     </span>
 
                     <div className="flex items-center gap-1.5">

@@ -25,6 +25,7 @@ import {
   TeamSizeFilter,
   getCompactPlayerLabel,
   getDivisionLabel,
+  getFeeSummary,
   getLowestFee,
   getMaxPlayers,
   matchesDivisionFilter,
@@ -198,7 +199,7 @@ function GameDirectoryCard({
   onToggleSelect: (gameName: string) => void;
   onOpenInfo: (game: GameInfo) => void;
 }) {
-  const lowestFee = getLowestFee(game);
+  const feeSummary = getFeeSummary(game);
   const borderClass = isSelected
     ? 'border-[#12E2C4] shadow-lg shadow-[#12E2C4]/10'
     : 'border-white/[0.08] hover:border-white/[0.22]';
@@ -259,8 +260,8 @@ function GameDirectoryCard({
           <div className="pt-4 border-t border-white/[0.08] space-y-3">
             <div className="flex items-baseline justify-between">
               <span className="text-[11px] font-mono text-[#94A3B8] uppercase">Entry Fee</span>
-              <span className="text-xl font-black font-['Space_Grotesk'] text-[#12E2C4]">
-                {lowestFee > 0 ? `Rs. ${lowestFee.toLocaleString()}` : 'Free'}
+              <span className="text-lg sm:text-xl font-black font-['Space_Grotesk'] text-[#12E2C4]">
+                {feeSummary}
               </span>
             </div>
 
@@ -322,7 +323,7 @@ function GameDirectoryCard({
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="text-[#94A3B8]">Entry Fee</span>
               <span className="font-bold text-[#F8FAFC]">
-                {lowestFee > 0 ? `Rs. ${lowestFee.toLocaleString()}` : 'Free'}
+                {feeSummary}
               </span>
             </div>
 
@@ -384,8 +385,8 @@ function GameDirectoryCard({
           <div className="pt-3 border-t border-white/[0.06] space-y-2.5">
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="text-[#94A3B8] truncate max-w-[65%]">{game.matchFormat}</span>
-              <span className="font-bold text-[#F8FAFC]">
-                {lowestFee > 0 ? `Rs. ${lowestFee.toLocaleString()}` : 'Free'}
+              <span className="font-bold text-[#F8FAFC] whitespace-nowrap">
+                {feeSummary}
               </span>
             </div>
 
@@ -454,8 +455,8 @@ function GameDirectoryCard({
 
           <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
             <span className="text-[#94A3B8] truncate max-w-[60%]">{game.matchFormat}</span>
-            <span className="font-bold text-[#F8FAFC]">
-              {lowestFee > 0 ? `Rs. ${lowestFee.toLocaleString()}` : 'Free'}
+            <span className="font-bold text-[#F8FAFC] whitespace-nowrap">
+              {feeSummary}
             </span>
           </div>
         </div>
@@ -657,7 +658,7 @@ export default function GamesDirectory() {
             <div className="relative flex-1">
               <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
-                type="search"
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search games, formats, or venues (e.g. Cricket, PUBG, Chess)..."

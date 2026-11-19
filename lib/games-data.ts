@@ -1330,6 +1330,17 @@ export function getLowestFee(game: GameInfo): number {
   return fees.length > 0 ? Math.min(...fees) : 0;
 }
 
+/** Return formatted fee summary showing both divisions if their fees differ. */
+export function getFeeSummary(game: GameInfo): string {
+  const b = game.boysFee;
+  const g = game.girlsFee;
+  if (typeof b === 'number' && typeof g === 'number' && b !== g) {
+    return `♂ Rs. ${b.toLocaleString()} · ♀ Rs. ${g.toLocaleString()}`;
+  }
+  const fee = typeof b === 'number' ? b : typeof g === 'number' ? g : 0;
+  return fee > 0 ? `Rs. ${fee.toLocaleString()}` : 'Free';
+}
+
 /** Compact division badge label for cards and modals. */
 export function getDivisionLabel(division: GameInfo['division']): string {
   if (division === 'boys_and_girls') return 'Boys & Girls';
