@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { sendRegistrationSubmittedEmail } from '@/lib/email';
+import { getAdminSession, hasPagePermission } from '@/lib/auth';
+import { getGamePrice } from '@/lib/games-pricing';
+import { cookies } from 'next/headers';
 
 // Generate cash slip ID
 function generateSlipId(): string {
@@ -91,7 +94,37 @@ export async function POST(request: NextRequest) {
     // Prepare data
     const selectedGamesJson = JSON.stringify(selectedGames);
     const teamMembersJson = teamMembers ? JSON.stringify(teamMembers) : null;
-    const totalAmountNum = Number(totalAmount);
+
+    // Authoritative server-side price lookup from games_pricing (synced with Admin Settings)
+    let serverTotal = 0;
+    try {
+      const priceRows = (await sql`
+        SELECT game_name, price FROM games_pricing WHERE gender = ${gender}
+      `) as any[];
+      const priceMap = new Map(
+        priceRows.map((r) => [String(r.game_name).toLowerCase(), Number(r.price)])
+      );
+      let allResolved = true;
+      for (const g of selectedGames as string[]) {
+        const dbPrice = priceMap.get(String(g).trim().toLowerCase());
+        if (dbPrice !== undefined && !isNaN(dbPrice)) {
+          serverTotal += dbPrice;
+        } else {
+          const fallbackPrice = getGamePrice(String(g), gender);
+          if (fallbackPrice !== null) {
+            serverTotal += fallbackPrice;
+          } else {
+            allResolved = false;
+          }
+        }
+      }
+      if (!allResolved && serverTotal === 0) {
+        serverTotal = Number(totalAmount);
+      }
+    } catch {
+      serverTotal = Number(totalAmount);
+    }
+    const totalAmountNum = serverTotal > 0 ? serverTotal : Number(totalAmount);
 
     // Coupon: discount is ONLY ever set from server-side DB lookup. Coupon does not apply to "Swimming" — only to other games.
     const GAME_EXCLUDED_FROM_COUPON = 'Swimming';
@@ -214,7 +247,7 @@ export async function POST(request: NextRequest) {
       registrationNumber,
       slipId: slipId,
       status,
-      totalAmount: Number(totalAmount),
+      totalAmount: totalAmountNum,
     });
   } catch (error: any) {
     console.error('Registration error:', error);
@@ -238,6 +271,21 @@ export const revalidate = 0;
 // GET - Fetch all registrations (admin only)
 export async function GET(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get('admin_session')?.value;
+    const session = await getAdminSession(sessionId);
+
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (
+      !hasPagePermission(session, '/admin/registrations', 'view') &&
+      !hasPagePermission(session, '/admin/dashboard', 'view')
+    ) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
     const paymentMethod = searchParams.get('paymentMethod');

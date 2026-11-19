@@ -32,7 +32,7 @@ export default function Hero3DScene() {
 
     // 1. Scene, Studio EnvMap & Camera Setup (centered 507823b composition)
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x101114, 0.045);
+    scene.fog = new THREE.FogExp2(0x0b1124, 0.045);
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
@@ -65,11 +65,11 @@ export default function Hero3DScene() {
     frontFillLight.position.set(0, 2.5, 6);
     scene.add(frontFillLight);
 
-    const rimLight = new THREE.DirectionalLight(0xd5f05b, 2.2);
+    const rimLight = new THREE.DirectionalLight(0x12e2c4, 2.2);
     rimLight.position.set(-5, 4, -4);
     scene.add(rimLight);
 
-    const orangeLight = new THREE.PointLight(0xf15a29, 3.0, 15);
+    const orangeLight = new THREE.PointLight(0xf59e0b, 3.0, 15);
     orangeLight.position.set(0, -1, 2);
     scene.add(orangeLight);
 
@@ -78,7 +78,7 @@ export default function Hero3DScene() {
 
     const floorGeo = new THREE.RingGeometry(1.8, 6.5, 64);
     const trackMaterial = new THREE.MeshBasicMaterial({
-      color: 0x1f232b,
+      color: 0x131b38,
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.6,
@@ -90,7 +90,7 @@ export default function Hero3DScene() {
 
     const lineGeo1 = new THREE.RingGeometry(2.8, 2.84, 64);
     const lineMat1 = new THREE.MeshBasicMaterial({
-      color: 0xd5f05b,
+      color: 0x12e2c4,
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.45,
@@ -102,7 +102,7 @@ export default function Hero3DScene() {
 
     const lineGeo2 = new THREE.RingGeometry(4.2, 4.24, 64);
     const lineMat2 = new THREE.MeshBasicMaterial({
-      color: 0xf15a29,
+      color: 0xf59e0b,
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.35,
@@ -112,7 +112,7 @@ export default function Hero3DScene() {
     lineMesh2.position.y = -1.49;
     arenaGroup.add(lineMesh2);
 
-    const gridHelper = new THREE.GridHelper(14, 28, 0xd5f05b, 0x1d212a);
+    const gridHelper = new THREE.GridHelper(14, 28, 0x12e2c4, 0x182244);
     gridHelper.position.y = -1.51;
     (gridHelper.material as THREE.Material).transparent = true;
     (gridHelper.material as THREE.Material).opacity = 0.25;
@@ -133,15 +133,15 @@ export default function Hero3DScene() {
     });
 
     const obsidianMaterial = new THREE.MeshStandardMaterial({
-      color: 0x161922,
+      color: 0x131b38,
       metalness: 0.6,
       roughness: 0.35,
       envMapIntensity: 1.0,
     });
 
     const limeAccentMaterial = new THREE.MeshStandardMaterial({
-      color: 0xd5f05b,
-      emissive: 0xd5f05b,
+      color: 0x12e2c4,
+      emissive: 0x12e2c4,
       emissiveIntensity: 0.45,
       metalness: 0.8,
       roughness: 0.2,
@@ -219,9 +219,9 @@ export default function Hero3DScene() {
     const positions = new Float32Array(particleCount * 3);
     const colors = new Float32Array(particleCount * 3);
 
-    const cGold = new THREE.Color(0xf15a29);
-    const cLime = new THREE.Color(0xd5f05b);
-    const cWhite = new THREE.Color(0xf4f1ea);
+    const cGold = new THREE.Color(0xf59e0b);
+    const cLime = new THREE.Color(0x12e2c4);
+    const cWhite = new THREE.Color(0xf8fafc);
 
     for (let i = 0; i < particleCount; i++) {
       const radius = 1.2 + Math.random() * 4.5;
@@ -364,9 +364,9 @@ export default function Hero3DScene() {
 
       {/* Centered Atmospheric Ring + Trophy Fallback when WebGL unavailable */}
       {!webGLSupported && (
-        <div className="absolute inset-0 flex items-center justify-center bg-radial from-[#1B1D21]/80 via-[#101114] to-[#0A0B0E]">
-          <div className="relative w-80 h-80 rounded-full border border-[#D5F05B]/20 animate-pulse flex items-center justify-center">
-            <div className="w-56 h-56 rounded-full border border-[#F15A29]/25 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center bg-radial from-[#182244]/80 via-[#0B1124] to-[#080D1C]">
+          <div className="relative w-80 h-80 rounded-full border border-[#12E2C4]/20 animate-pulse flex items-center justify-center">
+            <div className="w-56 h-56 rounded-full border border-[#F59E0B]/25 flex items-center justify-center">
               <svg
                 viewBox="0 0 120 120"
                 className="w-36 h-36 opacity-80 drop-shadow-[0_0_24px_rgba(243,198,79,0.3)]"
@@ -391,8 +391,8 @@ export default function Hero3DScene() {
                   strokeLinecap="round"
                 />
                 <rect x="54" y="75" width="12" height="16" rx="2" fill="url(#heroTrophyGoldFallback)" />
-                <rect x="40" y="91" width="40" height="11" rx="3" fill="#1B1E28" stroke="#D5F05B" strokeWidth="2" />
-                <polygon points="60,10 66,18 60,26 54,18" fill="#D5F05B" />
+                <rect x="40" y="91" width="40" height="11" rx="3" fill="#131B38" stroke="#12E2C4" strokeWidth="2" />
+                <polygon points="60,10 66,18 60,26 54,18" fill="#12E2C4" />
               </svg>
             </div>
           </div>
@@ -400,8 +400,8 @@ export default function Hero3DScene() {
       )}
 
       {/* Light bottom vignette to blend 3D scene into page */}
-      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#101114] via-[#101114]/50 to-transparent pointer-events-none" />
-      <div className="absolute inset-0 bg-radial from-transparent via-transparent to-[#101114]/70 pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#0B1124] via-[#0B1124]/50 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-radial from-transparent via-transparent to-[#0B1124]/70 pointer-events-none" />
     </div>
   );
 }

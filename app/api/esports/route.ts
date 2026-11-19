@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { getAdminSession, hasPagePermission } from '@/lib/auth';
+import { cookies } from 'next/headers';
 
 // GET - Get esports settings
 export async function GET(request: NextRequest) {
@@ -30,6 +32,18 @@ export async function GET(request: NextRequest) {
 // PATCH - Update esports settings
 export async function PATCH(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get('admin_session')?.value;
+    const session = await getAdminSession(sessionId);
+
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!hasPagePermission(session, '/admin/esports', 'edit')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { isOpen, openDate, closeDate, announcement } = body;
 

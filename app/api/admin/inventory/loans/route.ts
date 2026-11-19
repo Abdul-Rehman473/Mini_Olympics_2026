@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAdminSession } from '@/lib/auth';
+import { getAdminSession, hasPagePermission } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { cookies } from 'next/headers';
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['super_admin', 'inventory_admin'].includes(session.role)) {
+    if (!hasPagePermission(session, '/admin/inventory', 'view') && !hasPagePermission(session, '/admin/dashboard', 'view')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['super_admin', 'inventory_admin'].includes(session.role)) {
+    if (!hasPagePermission(session, '/admin/inventory', 'edit')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -131,7 +131,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['super_admin', 'inventory_admin'].includes(session.role)) {
+    if (!hasPagePermission(session, '/admin/inventory', 'edit')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

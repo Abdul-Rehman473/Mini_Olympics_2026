@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAdminSession } from '@/lib/auth';
+import { getAdminSession, hasPagePermission } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['super_admin', 'admin', 'hoc_admin'].includes(session.role)) {
+    if (!hasPagePermission(session, '/admin/hoc', 'view')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['super_admin', 'admin', 'hoc_admin'].includes(session.role)) {
+    if (!hasPagePermission(session, '/admin/hoc', 'view')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -223,7 +223,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['super_admin', 'admin', 'hoc_admin'].includes(session.role)) {
+    if (!hasPagePermission(session, '/admin/hoc', 'view')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

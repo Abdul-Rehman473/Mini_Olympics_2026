@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { getAdminSession, hasPagePermission } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { cookies } from 'next/headers';
 import { sendPaymentReceivedEmail, sendPaymentNotReceivedEmail } from '@/lib/email';
@@ -12,6 +13,16 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('admin_session')?.value;
+    const session = await getAdminSession(sessionToken);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!hasPagePermission(session, '/admin/registrations', 'view')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const result = await sql`SELECT * FROM registrations WHERE id = ${params.id}` as any[];
     const registration = result[0] || null;
 
@@ -41,23 +52,18 @@ export async function PATCH(
     // Verify admin authentication
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('admin_session')?.value;
-    if (!sessionToken) {
+    const session = await getAdminSession(sessionToken);
+    if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized - Admin authentication required' },
         { status: 401 }
       );
     }
 
-    // Verify session in database
-    const sessionResult = await sql`
-      SELECT * FROM admin_sessions 
-      WHERE session_token = ${sessionToken} AND expires_at > NOW()
-    ` as any[];
-    
-    if (!sessionResult || sessionResult.length === 0) {
+    if (!hasPagePermission(session, '/admin/registrations', 'edit')) {
       return NextResponse.json(
-        { error: 'Unauthorized - Invalid or expired session' },
-        { status: 401 }
+        { error: 'Forbidden - Registration edit permission required' },
+        { status: 403 }
       );
     }
 
@@ -220,6 +226,16 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('admin_session')?.value;
+    const session = await getAdminSession(sessionToken);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!hasPagePermission(session, '/admin/registrations', 'edit')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await sql`DELETE FROM registrations WHERE id = ${params.id}`;
 
     return NextResponse.json({ success: true, message: 'Registration deleted' });

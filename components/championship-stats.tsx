@@ -86,8 +86,8 @@ export default function ChampionshipStats() {
       suffix: '+',
       label: 'OFFICIAL DISCIPLINES',
       subtitle: 'Across team sports, racket, board, track sprint & esports divisions',
-      accent: '#F15A29',
-      icon: <Trophy className="w-5 h-5 text-[#F15A29]" />,
+      accent: '#F59E0B',
+      icon: <Trophy className="w-5 h-5 text-[#F59E0B]" />,
     },
     {
       id: 'athletes',
@@ -95,8 +95,8 @@ export default function ChampionshipStats() {
       suffix: '+',
       label: 'EXPECTED ATHLETES',
       subtitle: 'PUCIT BS CS, SE, IT, and Data Science undergraduate students',
-      accent: '#D5F05B',
-      icon: <Users className="w-5 h-5 text-[#D5F05B]" />,
+      accent: '#12E2C4',
+      icon: <Users className="w-5 h-5 text-[#12E2C4]" />,
     },
     {
       id: 'teams',
@@ -104,8 +104,8 @@ export default function ChampionshipStats() {
       suffix: '+',
       label: 'REGISTERED TEAMS',
       subtitle: 'Multi-discipline squads battling for the annual championship trophy',
-      accent: '#00E5FF',
-      icon: <Zap className="w-5 h-5 text-[#00E5FF]" />,
+      accent: '#3B82F6',
+      icon: <Zap className="w-5 h-5 text-[#3B82F6]" />,
     },
     {
       id: 'status',
@@ -122,13 +122,13 @@ export default function ChampionshipStats() {
     <section
       id="stats"
       ref={sectionRef}
-      className="relative w-full py-24 sm:py-32 px-4 sm:px-6 lg:px-8 bg-[#0D0E12] border-t border-b border-white/[0.06] overflow-hidden"
+      className="relative w-full py-24 sm:py-32 px-4 sm:px-6 lg:px-8 bg-[#0D132B] border-t border-b border-white/[0.06] overflow-hidden"
     >
       {/* Stadium Grid Lines Background */}
       <div
         className="absolute inset-0 opacity-[0.03] pointer-events-none"
         style={{
-          backgroundImage: `linear-gradient(to right, #F4F1EA 1px, transparent 1px), linear-gradient(to bottom, #F4F1EA 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(to right, #F8FAFC 1px, transparent 1px), linear-gradient(to bottom, #F8FAFC 1px, transparent 1px)`,
           backgroundSize: '40px 40px',
         }}
       />
@@ -137,18 +137,18 @@ export default function ChampionshipStats() {
         {/* Editorial Subheader */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-14 sm:mb-20">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#1B1D21] border border-white/[0.08] text-xs font-mono text-[#D5F05B] uppercase tracking-wider mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#182244] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-3">
               <span>// TOURNAMENT SCALE & REACH</span>
             </div>
-            <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-[#F4F1EA] uppercase font-['Space_Grotesk'] leading-[0.95]">
+            <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-[#F8FAFC] uppercase font-['Space_Grotesk'] leading-[0.95]">
               NUMBERS THAT DEFINE<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D5F05B] to-[#F15A29]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#12E2C4] to-[#F59E0B]">
                 AN OLYMPIC LEGACY.
               </span>
             </h2>
           </div>
 
-          <p className="max-w-md text-xs sm:text-sm font-mono text-[#A4A5AA] leading-relaxed">
+          <p className="max-w-md text-xs sm:text-sm font-mono text-[#94A3B8] leading-relaxed">
             The largest collegiate sports event at PUCIT. Verified records, structured refereeing, and university-wide participation.
           </p>
         </div>
@@ -159,33 +159,33 @@ export default function ChampionshipStats() {
             return (
               <div
                 key={item.id}
-                className="group relative p-8 rounded-2xl bg-[#14161C] border border-white/[0.08] hover:border-white/[0.2] transition-all duration-300 hover:-translate-y-1"
+                className="group relative p-8 rounded-2xl bg-[#131B38] border border-white/[0.08] hover:border-white/[0.2] transition-all duration-300 hover:-translate-y-1"
               >
                 {/* Top Corner Icon & Sequence Number */}
                 <div className="flex items-center justify-between mb-8">
                   <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06]">
                     {item.icon}
                   </div>
-                  <span className="text-xs font-mono text-[#A4A5AA]/60 tracking-widest">
+                  <span className="text-xs font-mono text-[#94A3B8]/60 tracking-widest">
                     0{index + 1}
                   </span>
                 </div>
 
                 {/* Massive Kinetic Typography */}
-                <div className="flex items-baseline font-black tracking-tighter text-[#F4F1EA] font-['Space_Grotesk'] leading-none mb-3">
-                  <span className="text-6xl sm:text-7xl font-extrabold tabular-nums group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#F4F1EA] group-hover:to-[#D5F05B] transition-all">
+                <div className="flex items-baseline font-black tracking-tighter text-[#F8FAFC] font-['Space_Grotesk'] leading-none mb-3">
+                  <span className="text-6xl sm:text-7xl font-extrabold tabular-nums group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#F8FAFC] group-hover:to-[#12E2C4] transition-all">
                     {counts[item.id] ?? 0}
                   </span>
-                  <span className="text-4xl sm:text-5xl font-black text-[#D5F05B] ml-1">
+                  <span className="text-4xl sm:text-5xl font-black text-[#12E2C4] ml-1">
                     {item.suffix}
                   </span>
                 </div>
 
                 {/* Label & Description */}
-                <h3 className="text-sm font-mono font-bold tracking-wider text-[#F4F1EA] uppercase mb-2">
+                <h3 className="text-sm font-mono font-bold tracking-wider text-[#F8FAFC] uppercase mb-2">
                   {item.label}
                 </h3>
-                <p className="text-xs text-[#A4A5AA] leading-relaxed font-normal">
+                <p className="text-xs text-[#94A3B8] leading-relaxed font-normal">
                   {item.subtitle}
                 </p>
 

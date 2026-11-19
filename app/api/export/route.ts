@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAdminSession } from '@/lib/auth';
+import { getAdminSession, hasPagePermission } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
 // Force dynamic rendering – never cache export in production
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (!['super_admin', 'admin', 'registration_admin'].includes(session.role)) {
+    if (!hasPagePermission(session, '/admin/registrations', 'view')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

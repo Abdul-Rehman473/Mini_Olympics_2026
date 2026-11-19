@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAdminSession } from '@/lib/auth';
+import { getAdminSession, hasPagePermission } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -37,8 +37,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Forbidden - Super Admin only' }, { status: 403 });
+    if (!hasPagePermission(session, '/admin/settings', 'view')) {
+      return NextResponse.json({ error: 'Forbidden - Settings permission required' }, { status: 403 });
     }
 
     let rows: any[];
@@ -76,8 +76,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Forbidden - Super Admin only' }, { status: 403 });
+    if (!hasPagePermission(session, '/admin/settings', 'view')) {
+      return NextResponse.json({ error: 'Forbidden - Settings permission required' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -130,8 +130,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Forbidden - Super Admin only' }, { status: 403 });
+    if (!hasPagePermission(session, '/admin/settings', 'view')) {
+      return NextResponse.json({ error: 'Forbidden - Settings permission required' }, { status: 403 });
     }
 
     const id = request.nextUrl.searchParams.get('id');

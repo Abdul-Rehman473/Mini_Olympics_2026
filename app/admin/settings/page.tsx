@@ -48,6 +48,7 @@ type GamePricing = {
   gender: string;
   price: number;
   players: number | null;
+  category?: string | null;
 };
 
 export default function SettingsPage() {
@@ -133,8 +134,11 @@ export default function SettingsPage() {
   const [gameDialogOpen, setGameDialogOpen] = useState(false);
   const [editingGame, setEditingGame] = useState<GamePricing | null>(null);
   const [savingGame, setSavingGame] = useState(false);
+  const [syncingPdfGames, setSyncingPdfGames] = useState(false);
   const [gameForm, setGameForm] = useState({
+    original_game_name: '',
     game_name: '',
+    category: 'team',
     boys_price: '',
     boys_players: '',
     girls_price: '',
@@ -376,7 +380,9 @@ export default function SettingsPage() {
       
       setEditingGame(game);
       setGameForm({
+        original_game_name: gameName,
         game_name: gameName,
+        category: boysEntry?.category || girlsEntry?.category || 'team',
         boys_price: boysEntry?.price?.toString() || '',
         boys_players: boysEntry?.players?.toString() || '',
         girls_price: girlsEntry?.price?.toString() || '',
@@ -385,7 +391,9 @@ export default function SettingsPage() {
     } else {
       setEditingGame(null);
       setGameForm({
+        original_game_name: '',
         game_name: '',
+        category: 'team',
         boys_price: '',
         boys_players: '',
         girls_price: '',
@@ -403,21 +411,28 @@ export default function SettingsPage() {
 
     setSavingGame(true);
     try {
+      const nextName = gameForm.game_name.trim();
+      const origName = gameForm.original_game_name.trim();
+      let renamedOnce = false;
+
       // Save boys pricing if provided
       if (gameForm.boys_price) {
         await fetch('/api/admin/games', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            game_name: gameForm.game_name.trim(),
+            game_name: nextName,
+            original_game_name: origName && origName !== nextName ? origName : undefined,
+            category: gameForm.category,
             gender: 'boys',
             price: parseFloat(gameForm.boys_price),
             players: gameForm.boys_players ? parseInt(gameForm.boys_players) : null,
           }),
         });
+        renamedOnce = true;
       } else if (editingGame) {
         // Delete boys entry if price is removed
-        await fetch(`/api/admin/games?game_name=${encodeURIComponent(gameForm.game_name)}&gender=boys`, {
+        await fetch(`/api/admin/games?game_name=${encodeURIComponent(origName || nextName)}&gender=boys`, {
           method: 'DELETE',
         });
       }
@@ -428,7 +443,9 @@ export default function SettingsPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            game_name: gameForm.game_name.trim(),
+            game_name: nextName,
+            original_game_name: !renamedOnce && origName && origName !== nextName ? origName : undefined,
+            category: gameForm.category,
             gender: 'girls',
             price: parseFloat(gameForm.girls_price),
             players: gameForm.girls_players ? parseInt(gameForm.girls_players) : null,
@@ -436,7 +453,7 @@ export default function SettingsPage() {
         });
       } else if (editingGame) {
         // Delete girls entry if price is removed
-        await fetch(`/api/admin/games?game_name=${encodeURIComponent(gameForm.game_name)}&gender=girls`, {
+        await fetch(`/api/admin/games?game_name=${encodeURIComponent(nextName)}&gender=girls`, {
           method: 'DELETE',
         });
       }
@@ -447,6 +464,31 @@ export default function SettingsPage() {
       alert('Failed to save game');
     } finally {
       setSavingGame(false);
+    }
+  };
+
+  const handleSyncPdfGames = async () => {
+    if (!confirm('Sync all 45 official Mini Olympics 2026 PDF games and prices? Existing prices matching those games will be updated to the PDF values, and non-PDF games will be removed.')) {
+      return;
+    }
+    setSyncingPdfGames(true);
+    try {
+      const res = await fetch('/api/admin/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_pdf_defaults', replaceAll: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Synced ${data.syncedCount} official PDF games & prices!`);
+        loadGames();
+      } else {
+        alert(data.error || 'Failed to sync games');
+      }
+    } catch {
+      alert('Failed to sync official games');
+    } finally {
+      setSyncingPdfGames(false);
     }
   };
 
@@ -960,14 +1002,25 @@ export default function SettingsPage() {
                   Manage games, prices, and team sizes
                 </CardDescription>
               </div>
-              <Button
-                onClick={() => handleOpenGameDialog()}
-                size="sm"
-                className="bg-white/20 hover:bg-white/30 text-white"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Game
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={handleSyncPdfGames}
+                  disabled={syncingPdfGames}
+                  size="sm"
+                  className="bg-white/15 hover:bg-white/25 text-white"
+                >
+                  {syncingPdfGames ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+                  Sync PDF (45)
+                </Button>
+                <Button
+                  onClick={() => handleOpenGameDialog()}
+                  size="sm"
+                  className="bg-white/20 hover:bg-white/30 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Game
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-4">
@@ -1048,14 +1101,33 @@ export default function SettingsPage() {
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Game Name *</Label>
-              <Input
-                value={gameForm.game_name}
-                onChange={(e) => setGameForm({ ...gameForm, game_name: e.target.value })}
-                placeholder="e.g., Cricket, Football, Chess"
-                disabled={!!editingGame}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Game Name *</Label>
+                <Input
+                  value={gameForm.game_name}
+                  onChange={(e) => setGameForm({ ...gameForm, game_name: e.target.value })}
+                  placeholder="e.g., Cricket, Football, Chess"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={gameForm.category}
+                  onValueChange={(v) => setGameForm({ ...gameForm, category: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="team">Team Sports</SelectItem>
+                    <SelectItem value="indoor">Indoor &amp; Table Games</SelectItem>
+                    <SelectItem value="track">Track &amp; Field</SelectItem>
+                    <SelectItem value="fun">Fun Games</SelectItem>
+                    <SelectItem value="esports">E-Sports Arena</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

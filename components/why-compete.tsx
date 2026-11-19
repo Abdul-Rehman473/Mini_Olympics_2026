@@ -12,10 +12,10 @@ export default function WhyCompete() {
       tagline: 'OFFICIAL TROPHIES, PODIUM FINISHES & MEDALS',
       description:
         'Cement your legacy in FCIT sports history. Gold, silver, and bronze medals along with department championship shields and cash prizes for top bracket performers.',
-      highlightColor: '#F15A29',
+      highlightColor: '#F59E0B',
       number: '01',
       badgeText: 'PODIUM AWARDS',
-      icon: <Trophy className="w-6 h-6 text-[#F15A29]" />,
+      icon: <Trophy className="w-6 h-6 text-[#F59E0B]" />,
       points: [
         'Custom engraved Mini Olympics 2026 trophies',
         'Official certificates of excellence & medal recognition',
@@ -28,10 +28,10 @@ export default function WhyCompete() {
       tagline: 'SEAMLESS REGISTRATION & LIVE STATUS LOOKUP',
       description:
         'No paper delays. Register online, receive an encrypted digital pass with a QR code, and verify instantly via our cash desk kiosk or online receipt validation.',
-      highlightColor: '#D5F05B',
+      highlightColor: '#12E2C4',
       number: '02',
       badgeText: 'PAPERLESS TECH',
-      icon: <QrCode className="w-6 h-6 text-[#D5F05B]" />,
+      icon: <QrCode className="w-6 h-6 text-[#12E2C4]" />,
       points: [
         'Instant Slip ID generation (e.g. MO26-CASH-XXXX)',
         'Scannable QR codes for seamless entrance',
@@ -44,10 +44,10 @@ export default function WhyCompete() {
       tagline: 'OFFICIAL KNOCKOUTS & ROUND-ROBIN BRACKETS',
       description:
         'Every game is scheduled through the HOC management system. Official venues, standardized rule sets, qualified student referees, and transparent bracket progressions.',
-      highlightColor: '#00E5FF',
+      highlightColor: '#3B82F6',
       number: '03',
       badgeText: 'FAIR PLAY SYSTEM',
-      icon: <ShieldCheck className="w-6 h-6 text-[#00E5FF]" />,
+      icon: <ShieldCheck className="w-6 h-6 text-[#3B82F6]" />,
       points: [
         'Dedicated WhatsApp coordinators for every sport',
         'Live match timing updates & scheduled venues',
@@ -73,20 +73,20 @@ export default function WhyCompete() {
   ];
 
   return (
-    <section id="why" className="relative w-full py-24 sm:py-32 px-4 sm:px-6 lg:px-8 bg-[#101114] overflow-hidden">
+    <section id="why" className="relative w-full py-24 sm:py-32 px-4 sm:px-6 lg:px-8 bg-[#0B1124] overflow-hidden">
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Headline */}
         <div className="max-w-3xl mb-16 sm:mb-20">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#1B1D21] border border-white/[0.08] text-xs font-mono text-[#D5F05B] uppercase tracking-wider mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#182244] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-3">
             <span>// THE MINI OLYMPICS ADVANTAGE</span>
           </div>
-          <h2 className="text-4xl sm:text-6xl font-black tracking-tight text-[#F4F1EA] uppercase font-['Space_Grotesk'] leading-[0.95]">
+          <h2 className="text-4xl sm:text-6xl font-black tracking-tight text-[#F8FAFC] uppercase font-['Space_Grotesk'] leading-[0.95]">
             BUILT FOR ATHLETES.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F15A29] via-[#ff8a50] to-[#D5F05B]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F59E0B] via-[#FBBF24] to-[#12E2C4]">
               ORGANIZED FOR EXCELLENCE.
             </span>
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-[#A4A5AA] leading-relaxed">
+          <p className="mt-4 text-base sm:text-lg text-[#94A3B8] leading-relaxed">
             We overhauled the entire sports tournament experience so you can focus on performance. Transparent brackets, rapid verification, and tournament-grade equipment.
           </p>
         </div>
@@ -96,7 +96,7 @@ export default function WhyCompete() {
           {pillars.map((pillar) => (
             <div
               key={pillar.id}
-              className="group relative flex flex-col justify-between p-8 sm:p-10 rounded-3xl bg-[#16181F] border border-white/[0.08] hover:border-white/[0.2] transition-all duration-300 hover:-translate-y-1 shadow-2xl"
+              className="group relative flex flex-col justify-between p-8 sm:p-10 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-white/[0.2] transition-all duration-300 hover:-translate-y-1 shadow-2xl"
             >
               {/* Header Info */}
               <div>
@@ -111,7 +111,7 @@ export default function WhyCompete() {
                     >
                       {pillar.icon}
                     </div>
-                    <span className="px-3 py-1 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase bg-white/[0.05] text-[#A4A5AA] border border-white/[0.06]">
+                    <span className="px-3 py-1 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase bg-white/[0.05] text-[#94A3B8] border border-white/[0.06]">
                       {pillar.badgeText}
                     </span>
                   </div>
@@ -121,21 +121,21 @@ export default function WhyCompete() {
                   </span>
                 </div>
 
-                <h3 className="text-2xl sm:text-3xl font-black text-[#F4F1EA] uppercase font-['Space_Grotesk'] leading-tight mb-2">
+                <h3 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] leading-tight mb-2">
                   {pillar.title}
                 </h3>
-                <span className="text-xs font-mono font-bold tracking-wider text-[#D5F05B] uppercase block mb-4">
+                <span className="text-xs font-mono font-bold tracking-wider text-[#12E2C4] uppercase block mb-4">
                   {pillar.tagline}
                 </span>
 
-                <p className="text-sm text-[#A4A5AA] leading-relaxed mb-6 font-normal">
+                <p className="text-sm text-[#94A3B8] leading-relaxed mb-6 font-normal">
                   {pillar.description}
                 </p>
 
                 {/* Key Points Bullet List */}
                 <div className="space-y-2.5 pt-4 border-t border-white/[0.06]">
                   {pillar.points.map((pt, i) => (
-                    <div key={i} className="flex items-start gap-2.5 text-xs text-[#F4F1EA] font-mono">
+                    <div key={i} className="flex items-start gap-2.5 text-xs text-[#F8FAFC] font-mono">
                       <CheckCircle2
                         className="w-4 h-4 shrink-0 mt-0.5"
                         style={{ color: pillar.highlightColor }}
@@ -156,19 +156,19 @@ export default function WhyCompete() {
         </div>
 
         {/* Banner CTA */}
-        <div className="mt-16 p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-[#181B22] via-[#1E222B] to-[#181B22] border border-[#D5F05B]/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+        <div className="mt-16 p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-[#182244] via-[#182244] to-[#182244] border border-[#12E2C4]/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
           <div>
-            <h3 className="text-2xl sm:text-3xl font-black text-[#F4F1EA] uppercase font-['Space_Grotesk']">
+            <h3 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk']">
               ARE YOU READY TO REPRESENT YOUR BATCH?
             </h3>
-            <p className="text-xs sm:text-sm text-[#A4A5AA] mt-1 font-mono">
+            <p className="text-xs sm:text-sm text-[#94A3B8] mt-1 font-mono">
               Registrations are open for all 50+ athletic and esports disciplines.
             </p>
           </div>
 
           <Link
             href="/register"
-            className="shrink-0 inline-flex items-center gap-2 px-8 py-4 rounded-xl text-sm font-black tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] transition-all uppercase font-['Space_Grotesk'] shadow-xl shadow-[#D5F05B]/20"
+            className="shrink-0 inline-flex items-center gap-2 px-8 py-4 rounded-xl text-sm font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-all uppercase font-['Space_Grotesk'] shadow-xl shadow-[#12E2C4]/20"
           >
             <span>START REGISTRATION</span>
             <ArrowUpRight className="w-4 h-4" />

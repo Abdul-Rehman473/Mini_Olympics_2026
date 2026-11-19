@@ -7,7 +7,7 @@ import WhyCompete from '@/components/why-compete';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#101114] text-[#F4F1EA] selection:bg-[#D5F05B] selection:text-[#101114]">
+    <div className="min-h-screen bg-[#0B1124] text-[#F8FAFC] selection:bg-[#12E2C4] selection:text-[#0B1124]">
       {/* Premium Navigation */}
       <Navbar />
 

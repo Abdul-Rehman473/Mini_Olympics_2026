@@ -19,7 +19,6 @@ import {
 import {
   CATEGORIES,
   DivisionFilter,
-  GAMES_DATA,
   GameInfo,
   SortOption,
   SportCategory,
@@ -32,6 +31,7 @@ import {
   matchesTeamSizeFilter,
   sortByCategoryOrder,
 } from '@/lib/games-data';
+import { useLiveGames } from '@/lib/use-live-games';
 import {
   Select,
   SelectContent,
@@ -153,7 +153,7 @@ function CardActions({
       <button
         type="button"
         onClick={() => onOpenInfo(game)}
-        className={`${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} rounded-xl text-xs font-mono font-semibold text-[#A4A5AA] hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-colors`}
+        className={`${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} rounded-xl text-xs font-mono font-semibold text-[#94A3B8] hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-colors`}
       >
         Rules
       </button>
@@ -164,8 +164,8 @@ function CardActions({
         aria-pressed={isSelected}
         className={`${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} rounded-xl text-xs font-mono font-semibold inline-flex items-center gap-1 border transition-colors ${
           isSelected
-            ? 'bg-[#D5F05B]/15 text-[#D5F05B] border-[#D5F05B]/50'
-            : 'bg-white/[0.05] text-[#F4F1EA] hover:bg-white/[0.1] border-white/[0.08]'
+            ? 'bg-[#12E2C4]/15 text-[#12E2C4] border-[#12E2C4]/50'
+            : 'bg-white/[0.05] text-[#F8FAFC] hover:bg-white/[0.1] border-white/[0.08]'
         }`}
       >
         {isSelected ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
@@ -176,7 +176,7 @@ function CardActions({
         href={`/register?game=${encodeURIComponent(game.name)}`}
         className={`ml-auto inline-flex items-center justify-center gap-1 ${
           compact ? 'px-3 py-1.5' : 'px-3.5 py-2'
-        } rounded-xl text-xs font-mono font-bold text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] transition-colors`}
+        } rounded-xl text-xs font-mono font-bold text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-colors`}
       >
         <span>Register</span>
         <ArrowUpRight className="w-3.5 h-3.5" />
@@ -200,14 +200,14 @@ function GameDirectoryCard({
 }) {
   const lowestFee = getLowestFee(game);
   const borderClass = isSelected
-    ? 'border-[#D5F05B] shadow-lg shadow-[#D5F05B]/10'
+    ? 'border-[#12E2C4] shadow-lg shadow-[#12E2C4]/10'
     : 'border-white/[0.08] hover:border-white/[0.22]';
 
   // 1. Spotlight wide card (lead card in 5+ groups)
   if (slot.variant === 'spotlight') {
     return (
       <article
-        className={`${slot.colSpanClass} group rounded-3xl overflow-hidden bg-[#14161F] border ${borderClass} transition-colors grid grid-cols-1 md:grid-cols-12`}
+        className={`${slot.colSpanClass} group rounded-3xl overflow-hidden bg-[#131B38] border ${borderClass} transition-colors grid grid-cols-1 md:grid-cols-12`}
       >
         <div className="relative min-h-[220px] md:col-span-6 overflow-hidden bg-black">
           <img
@@ -217,7 +217,7 @@ function GameDirectoryCard({
             decoding="async"
             className="w-full h-full object-cover object-center opacity-85 group-hover:scale-105 transition-transform duration-500"
           />
-          <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-[#14161F]/90 via-transparent to-black/30" />
+          <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-[#131B38]/90 via-transparent to-black/30" />
           <span
             className="absolute top-4 left-4 px-3 py-1 rounded-full bg-black/75 border border-white/[0.12] text-[10px] font-mono font-bold uppercase tracking-wider"
             style={{ color: game.accentColor }}
@@ -228,27 +228,27 @@ function GameDirectoryCard({
 
         <div className="md:col-span-6 p-6 sm:p-7 flex flex-col justify-between gap-5">
           <div>
-            <div className="flex items-center justify-between gap-2 text-xs font-mono text-[#A4A5AA] mb-2">
+            <div className="flex items-center justify-between gap-2 text-xs font-mono text-[#94A3B8] mb-2">
               <span className="px-2.5 py-0.5 rounded-md bg-white/[0.05] border border-white/[0.08]">
                 {getDivisionLabel(game.division)}
               </span>
-              <span className="inline-flex items-center gap-1.5 text-[#F4F1EA]">
-                <Users className="w-3.5 h-3.5 text-[#D5F05B]" />
+              <span className="inline-flex items-center gap-1.5 text-[#F8FAFC]">
+                <Users className="w-3.5 h-3.5 text-[#12E2C4]" />
                 {getCompactPlayerLabel(game)}
               </span>
             </div>
 
-            <h3 className="text-2xl sm:text-3xl font-black font-['Space_Grotesk'] text-[#F4F1EA] leading-tight">
+            <h3 className="text-2xl sm:text-3xl font-black font-['Space_Grotesk'] text-[#F8FAFC] leading-tight">
               {game.name}
             </h3>
 
-            <p className="mt-2 text-xs sm:text-sm text-[#A4A5AA] leading-relaxed line-clamp-3">
+            <p className="mt-2 text-xs sm:text-sm text-[#94A3B8] leading-relaxed line-clamp-3">
               {game.tagline}
             </p>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-mono text-[#A4A5AA]">
-              <span className="inline-flex items-center gap-1.5 text-[#F4F1EA]">
-                <MapPin className="w-3.5 h-3.5 text-[#F15A29]" />
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-mono text-[#94A3B8]">
+              <span className="inline-flex items-center gap-1.5 text-[#F8FAFC]">
+                <MapPin className="w-3.5 h-3.5 text-[#F59E0B]" />
                 {game.venueNote}
               </span>
               <span className="text-white/20">•</span>
@@ -258,8 +258,8 @@ function GameDirectoryCard({
 
           <div className="pt-4 border-t border-white/[0.08] space-y-3">
             <div className="flex items-baseline justify-between">
-              <span className="text-[11px] font-mono text-[#A4A5AA] uppercase">Entry Fee</span>
-              <span className="text-xl font-black font-['Space_Grotesk'] text-[#D5F05B]">
+              <span className="text-[11px] font-mono text-[#94A3B8] uppercase">Entry Fee</span>
+              <span className="text-xl font-black font-['Space_Grotesk'] text-[#12E2C4]">
                 {lowestFee > 0 ? `Rs. ${lowestFee.toLocaleString()}` : 'Free'}
               </span>
             </div>
@@ -280,7 +280,7 @@ function GameDirectoryCard({
   if (slot.variant === 'poster') {
     return (
       <article
-        className={`${slot.colSpanClass} group relative rounded-3xl overflow-hidden bg-[#14161F] border ${borderClass} transition-colors flex flex-col justify-between min-h-[320px]`}
+        className={`${slot.colSpanClass} group relative rounded-3xl overflow-hidden bg-[#131B38] border ${borderClass} transition-colors flex flex-col justify-between min-h-[320px]`}
       >
         <div className="absolute inset-0 z-0 overflow-hidden bg-black">
           <img
@@ -290,11 +290,11 @@ function GameDirectoryCard({
             decoding="async"
             className="w-full h-full object-cover object-center opacity-50 group-hover:opacity-65 group-hover:scale-105 transition-all duration-500"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#101114] via-[#101114]/75 to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0B1124] via-[#0B1124]/75 to-black/40" />
         </div>
 
         <div className="relative z-10 p-5 flex items-center justify-between">
-          <span className="px-2.5 py-1 rounded-md bg-black/70 border border-white/[0.12] text-[10px] font-mono font-semibold text-[#F4F1EA]">
+          <span className="px-2.5 py-1 rounded-md bg-black/70 border border-white/[0.12] text-[10px] font-mono font-semibold text-[#F8FAFC]">
             {getDivisionLabel(game.division)}
           </span>
           <div
@@ -307,21 +307,21 @@ function GameDirectoryCard({
 
         <div className="relative z-10 p-5 pt-12 space-y-4">
           <div>
-            <div className="text-[11px] font-mono text-[#D5F05B] mb-1">
+            <div className="text-[11px] font-mono text-[#12E2C4] mb-1">
               {game.matchFormat} · {getCompactPlayerLabel(game)}
             </div>
-            <h3 className="text-2xl font-black font-['Space_Grotesk'] text-[#F4F1EA] leading-tight">
+            <h3 className="text-2xl font-black font-['Space_Grotesk'] text-[#F8FAFC] leading-tight">
               {game.name}
             </h3>
-            <p className="mt-1.5 text-xs text-[#A4A5AA] leading-relaxed line-clamp-2">
+            <p className="mt-1.5 text-xs text-[#94A3B8] leading-relaxed line-clamp-2">
               {game.tagline}
             </p>
           </div>
 
           <div className="pt-3 border-t border-white/[0.1] space-y-3">
             <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-[#A4A5AA]">Entry Fee</span>
-              <span className="font-bold text-[#F4F1EA]">
+              <span className="text-[#94A3B8]">Entry Fee</span>
+              <span className="font-bold text-[#F8FAFC]">
                 {lowestFee > 0 ? `Rs. ${lowestFee.toLocaleString()}` : 'Free'}
               </span>
             </div>
@@ -343,7 +343,7 @@ function GameDirectoryCard({
   if (slot.variant === 'horizontal') {
     return (
       <article
-        className={`${slot.colSpanClass} group rounded-2xl overflow-hidden bg-[#14161F] border ${borderClass} transition-colors flex flex-col sm:flex-row`}
+        className={`${slot.colSpanClass} group rounded-2xl overflow-hidden bg-[#131B38] border ${borderClass} transition-colors flex flex-col sm:flex-row`}
       >
         <div className="relative h-40 sm:h-auto sm:w-44 lg:w-48 shrink-0 overflow-hidden bg-black">
           <img
@@ -353,7 +353,7 @@ function GameDirectoryCard({
             decoding="async"
             className="w-full h-full object-cover object-center opacity-80 group-hover:opacity-95 transition-opacity"
           />
-          <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-transparent to-[#14161F]/60" />
+          <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-transparent to-[#131B38]/60" />
           <div
             className="absolute top-3 left-3 w-8 h-8 rounded-lg bg-black/75 border border-white/[0.1] flex items-center justify-center"
             style={{ color: game.accentColor }}
@@ -364,27 +364,27 @@ function GameDirectoryCard({
 
         <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-3">
           <div>
-            <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-[#A4A5AA] mb-1.5">
+            <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-[#94A3B8] mb-1.5">
               <span>{getDivisionLabel(game.division)}</span>
-              <span className="inline-flex items-center gap-1 text-[#F4F1EA]">
-                <Users className="w-3 h-3 text-[#D5F05B]" />
+              <span className="inline-flex items-center gap-1 text-[#F8FAFC]">
+                <Users className="w-3 h-3 text-[#12E2C4]" />
                 {getCompactPlayerLabel(game)}
               </span>
             </div>
 
-            <h3 className="text-lg sm:text-xl font-bold font-['Space_Grotesk'] text-[#F4F1EA] leading-snug">
+            <h3 className="text-lg sm:text-xl font-bold font-['Space_Grotesk'] text-[#F8FAFC] leading-snug">
               {game.name}
             </h3>
 
-            <p className="mt-1 text-xs text-[#A4A5AA] leading-relaxed line-clamp-2">
+            <p className="mt-1 text-xs text-[#94A3B8] leading-relaxed line-clamp-2">
               {game.tagline}
             </p>
           </div>
 
           <div className="pt-3 border-t border-white/[0.06] space-y-2.5">
             <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-[#A4A5AA] truncate max-w-[65%]">{game.matchFormat}</span>
-              <span className="font-bold text-[#F4F1EA]">
+              <span className="text-[#94A3B8] truncate max-w-[65%]">{game.matchFormat}</span>
+              <span className="font-bold text-[#F8FAFC]">
                 {lowestFee > 0 ? `Rs. ${lowestFee.toLocaleString()}` : 'Free'}
               </span>
             </div>
@@ -405,7 +405,7 @@ function GameDirectoryCard({
   // 4. Standard vertical card (used in <=4 sections & 3-up Bento rows)
   return (
     <article
-      className={`${slot.colSpanClass} group rounded-2xl overflow-hidden bg-[#14161F] border ${borderClass} transition-colors flex flex-col justify-between`}
+      className={`${slot.colSpanClass} group rounded-2xl overflow-hidden bg-[#131B38] border ${borderClass} transition-colors flex flex-col justify-between`}
     >
       <div>
         <div className="relative h-40 w-full overflow-hidden bg-black">
@@ -416,7 +416,7 @@ function GameDirectoryCard({
             decoding="async"
             className="w-full h-full object-cover object-center opacity-75 group-hover:opacity-90 transition-opacity"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#14161F] via-transparent to-black/45" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#131B38] via-transparent to-black/45" />
 
           <span
             className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/75 border border-white/[0.1] text-[10px] font-mono font-semibold"
@@ -434,27 +434,27 @@ function GameDirectoryCard({
         </div>
 
         <div className="p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-[#A4A5AA] mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-[#94A3B8] mb-2">
             <span className="px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.06]">
               {getDivisionLabel(game.division)}
             </span>
-            <span className="inline-flex items-center gap-1 text-[#F4F1EA]">
-              <Users className="w-3.5 h-3.5 text-[#D5F05B]" />
+            <span className="inline-flex items-center gap-1 text-[#F8FAFC]">
+              <Users className="w-3.5 h-3.5 text-[#12E2C4]" />
               {getCompactPlayerLabel(game)}
             </span>
           </div>
 
-          <h3 className="text-xl font-bold font-['Space_Grotesk'] text-[#F4F1EA] leading-snug">
+          <h3 className="text-xl font-bold font-['Space_Grotesk'] text-[#F8FAFC] leading-snug">
             {game.name}
           </h3>
 
-          <p className="mt-1.5 text-xs text-[#A4A5AA] leading-relaxed line-clamp-2">
+          <p className="mt-1.5 text-xs text-[#94A3B8] leading-relaxed line-clamp-2">
             {game.tagline}
           </p>
 
           <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
-            <span className="text-[#A4A5AA] truncate max-w-[60%]">{game.matchFormat}</span>
-            <span className="font-bold text-[#F4F1EA]">
+            <span className="text-[#94A3B8] truncate max-w-[60%]">{game.matchFormat}</span>
+            <span className="font-bold text-[#F8FAFC]">
               {lowestFee > 0 ? `Rs. ${lowestFee.toLocaleString()}` : 'Free'}
             </span>
           </div>
@@ -509,6 +509,7 @@ function GamesCollectionGrid({
 }
 
 export default function GamesDirectory() {
+  const { games: liveGames } = useLiveGames();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -571,7 +572,7 @@ export default function GamesDirectory() {
       counts[c.id] = 0;
     });
 
-    GAMES_DATA.forEach((game) => {
+    liveGames.forEach((game) => {
       if (matchesNonCategoryFilters(game)) {
         counts.all += 1;
         counts[game.category] = (counts[game.category] || 0) + 1;
@@ -579,10 +580,10 @@ export default function GamesDirectory() {
     });
 
     return counts;
-  }, [matchesNonCategoryFilters]);
+  }, [matchesNonCategoryFilters, liveGames]);
 
   const filteredGames = useMemo(() => {
-    const list = GAMES_DATA.filter((game) => {
+    const list = liveGames.filter((game) => {
       if (category !== 'all' && game.category !== category) return false;
       return matchesNonCategoryFilters(game);
     });
@@ -606,7 +607,7 @@ export default function GamesDirectory() {
       default:
         return sortByCategoryOrder(list);
     }
-  }, [category, matchesNonCategoryFilters, sortBy]);
+  }, [category, matchesNonCategoryFilters, sortBy, liveGames]);
 
   const showGroupedView =
     category === 'all' && sortBy === 'default' && !searchQuery.trim() && filteredGames.length > 0;
@@ -630,13 +631,13 @@ export default function GamesDirectory() {
 
   const selectedEstimatedTotal = useMemo(() => {
     return selectedGames.reduce((sum, name) => {
-      const found = GAMES_DATA.find((g) => g.name === name);
+      const found = liveGames.find((g) => g.name === name);
       return sum + (found ? getLowestFee(found) : 0);
     }, 0);
-  }, [selectedGames]);
+  }, [selectedGames, liveGames]);
 
   return (
-    <div className="min-h-screen bg-[#101114] text-[#F4F1EA]">
+    <div className="min-h-screen bg-[#0B1124] text-[#F8FAFC]">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-28">
         {/* Directory Title & Summary */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-8 border-b border-white/[0.08]">
@@ -644,30 +645,30 @@ export default function GamesDirectory() {
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight uppercase font-['Space_Grotesk'] leading-none">
               All Championship Disciplines
             </h1>
-            <p className="mt-2.5 text-sm sm:text-base text-[#A4A5AA] max-w-2xl">
-              Showing {filteredGames.length} of {GAMES_DATA.length} events across {CATEGORIES.length} categories. Select events to pre-fill your registration.
+            <p className="mt-2.5 text-sm sm:text-base text-[#94A3B8] max-w-2xl">
+              Showing {filteredGames.length} of {liveGames.length} events across {CATEGORIES.length} categories. Select events to pre-fill your registration.
             </p>
           </div>
         </div>
 
         {/* Non-Sticky Search & Filter Toolbar (scrolls naturally with the page) */}
-        <div className="mt-6 p-4 rounded-2xl bg-[#14161E] border border-white/[0.1] space-y-4">
+        <div className="mt-6 p-4 rounded-2xl bg-[#131B38] border border-white/[0.1] space-y-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-[#A4A5AA] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search games, formats, or venues (e.g. Cricket, PUBG, Chess)..."
                 aria-label="Search disciplines"
-                className="w-full bg-[#101114] text-[#F4F1EA] text-xs sm:text-sm font-mono pl-10 pr-9 py-2.5 rounded-xl border border-white/[0.1] placeholder:text-[#A4A5AA]/60 focus:outline-none focus:border-[#D5F05B]"
+                className="w-full bg-[#0B1124] text-[#F8FAFC] text-xs sm:text-sm font-mono pl-10 pr-9 py-2.5 rounded-xl border border-white/[0.1] placeholder:text-[#94A3B8]/60 focus:outline-none focus:border-[#12E2C4]"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A4A5AA] hover:text-white p-0.5"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-white p-0.5"
                   aria-label="Clear search"
                 >
                   <X className="w-4 h-4" />
@@ -680,9 +681,9 @@ export default function GamesDirectory() {
                 type="button"
                 onClick={() => setMobileFiltersOpen((v) => !v)}
                 aria-expanded={mobileFiltersOpen}
-                className="sm:hidden flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#101114] border border-white/[0.1] text-xs font-mono text-[#F4F1EA]"
+                className="sm:hidden flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0B1124] border border-white/[0.1] text-xs font-mono text-[#F8FAFC]"
               >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#D5F05B]" />
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#12E2C4]" />
                 <span>Filters</span>
               </button>
 
@@ -690,22 +691,22 @@ export default function GamesDirectory() {
                 <SelectTrigger
                   id="games-sort"
                   aria-label="Sort disciplines"
-                  className="w-full sm:w-auto min-w-[235px] h-[42px] bg-[#101114] hover:bg-[#161922] text-[#F4F1EA] text-xs font-mono px-3.5 py-2.5 rounded-xl border border-white/[0.12] hover:border-white/[0.25] focus:ring-1 focus:ring-[#D5F05B] focus:ring-offset-0 focus:border-[#D5F05B] transition-colors gap-2"
+                  className="w-full sm:w-auto min-w-[235px] h-[42px] bg-[#0B1124] hover:bg-[#161922] text-[#F8FAFC] text-xs font-mono px-3.5 py-2.5 rounded-xl border border-white/[0.12] hover:border-white/[0.25] focus:ring-1 focus:ring-[#12E2C4] focus:ring-offset-0 focus:border-[#12E2C4] transition-colors gap-2"
                 >
                   <span className="inline-flex items-center gap-2 truncate">
-                    <ArrowUpDown className="w-3.5 h-3.5 text-[#D5F05B] shrink-0" />
+                    <ArrowUpDown className="w-3.5 h-3.5 text-[#12E2C4] shrink-0" />
                     <SelectValue placeholder="Sort disciplines" />
                   </span>
                 </SelectTrigger>
                 <SelectContent
                   align="end"
-                  className="bg-[#161923] border border-white/[0.15] text-[#F4F1EA] rounded-xl shadow-2xl shadow-black/80 p-1.5 backdrop-blur-xl min-w-[240px]"
+                  className="bg-[#131B38] border border-white/[0.15] text-[#F8FAFC] rounded-xl shadow-2xl shadow-black/80 p-1.5 backdrop-blur-xl min-w-[240px]"
                 >
                   {SORT_OPTIONS.map((opt) => (
                     <SelectItem
                       key={opt.id}
                       value={opt.id}
-                      className="rounded-lg text-xs font-mono py-2.5 pl-8 pr-3 cursor-pointer text-[#A4A5AA] focus:bg-[#D5F05B]/15 focus:text-[#D5F05B] data-[state=checked]:text-[#D5F05B] data-[state=checked]:font-semibold"
+                      className="rounded-lg text-xs font-mono py-2.5 pl-8 pr-3 cursor-pointer text-[#94A3B8] focus:bg-[#12E2C4]/15 focus:text-[#12E2C4] data-[state=checked]:text-[#12E2C4] data-[state=checked]:font-semibold"
                     >
                       {opt.label}
                     </SelectItem>
@@ -717,7 +718,7 @@ export default function GamesDirectory() {
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="px-3 py-2.5 rounded-xl text-xs font-mono text-[#F15A29] hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] whitespace-nowrap transition-colors"
+                  className="px-3 py-2.5 rounded-xl text-xs font-mono text-[#F59E0B] hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] whitespace-nowrap transition-colors"
                 >
                   Reset
                 </button>
@@ -731,8 +732,8 @@ export default function GamesDirectory() {
               onClick={() => setCategory('all')}
               className={`px-3.5 py-2 rounded-xl text-xs font-mono font-semibold whitespace-nowrap transition-colors ${
                 category === 'all'
-                  ? 'bg-[#D5F05B] text-[#101114]'
-                  : 'bg-[#101114] text-[#A4A5AA] hover:text-[#F4F1EA] border border-white/[0.08]'
+                  ? 'bg-[#12E2C4] text-[#0B1124]'
+                  : 'bg-[#0B1124] text-[#94A3B8] hover:text-[#F8FAFC] border border-white/[0.08]'
               }`}
             >
               All Events ({categoryCounts.all})
@@ -748,10 +749,10 @@ export default function GamesDirectory() {
                   onClick={() => setCategory(cat.id)}
                   className={`px-3.5 py-2 rounded-xl text-xs font-mono font-semibold whitespace-nowrap transition-colors ${
                     isActive
-                      ? 'bg-[#D5F05B] text-[#101114]'
+                      ? 'bg-[#12E2C4] text-[#0B1124]'
                       : count === 0
-                        ? 'bg-[#101114]/60 text-[#A4A5AA]/40 border border-white/[0.04]'
-                        : 'bg-[#101114] text-[#A4A5AA] hover:text-[#F4F1EA] border border-white/[0.08]'
+                        ? 'bg-[#0B1124]/60 text-[#94A3B8]/40 border border-white/[0.04]'
+                        : 'bg-[#0B1124] text-[#94A3B8] hover:text-[#F8FAFC] border border-white/[0.08]'
                   }`}
                 >
                   {cat.label} ({count})
@@ -766,7 +767,7 @@ export default function GamesDirectory() {
             } flex-col lg:flex-row lg:items-center justify-between gap-3 pt-3 border-t border-white/[0.06]`}
           >
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] font-mono text-[#A4A5AA] mr-1">Division:</span>
+              <span className="text-[11px] font-mono text-[#94A3B8] mr-1">Division:</span>
               {DIVISION_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
@@ -775,7 +776,7 @@ export default function GamesDirectory() {
                   className={`px-2.5 py-1.5 rounded-lg text-[11px] font-mono transition-colors ${
                     division === opt.id
                       ? 'bg-white/[0.15] text-white font-bold'
-                      : 'bg-[#101114] text-[#A4A5AA] hover:text-white border border-white/[0.06]'
+                      : 'bg-[#0B1124] text-[#94A3B8] hover:text-white border border-white/[0.06]'
                   }`}
                 >
                   {opt.label}
@@ -784,7 +785,7 @@ export default function GamesDirectory() {
             </div>
 
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] font-mono text-[#A4A5AA] mr-1">Format:</span>
+              <span className="text-[11px] font-mono text-[#94A3B8] mr-1">Format:</span>
               {TEAM_SIZE_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
@@ -793,7 +794,7 @@ export default function GamesDirectory() {
                   className={`px-2.5 py-1.5 rounded-lg text-[11px] font-mono transition-colors ${
                     teamSize === opt.id
                       ? 'bg-white/[0.15] text-white font-bold'
-                      : 'bg-[#101114] text-[#A4A5AA] hover:text-white border border-white/[0.06]'
+                      : 'bg-[#0B1124] text-[#94A3B8] hover:text-white border border-white/[0.06]'
                   }`}
                 >
                   {opt.label}
@@ -805,20 +806,20 @@ export default function GamesDirectory() {
 
         {/* Empty State */}
         {filteredGames.length === 0 && (
-          <div className="mt-10 text-center py-20 px-4 rounded-3xl bg-[#14161E] border border-white/[0.08]">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-[#F15A29]">
+          <div className="mt-10 text-center py-20 px-4 rounded-3xl bg-[#131B38] border border-white/[0.08]">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-[#F59E0B]">
               <Info className="w-7 h-7" />
             </div>
-            <h2 className="text-2xl font-bold font-['Space_Grotesk'] text-[#F4F1EA]">
+            <h2 className="text-2xl font-bold font-['Space_Grotesk'] text-[#F8FAFC]">
               No Disciplines Match Your Filters
             </h2>
-            <p className="text-sm text-[#A4A5AA] mt-2 font-mono max-w-md mx-auto">
+            <p className="text-sm text-[#94A3B8] mt-2 font-mono max-w-md mx-auto">
               Try clearing your search query or switching to All Divisions.
             </p>
             <button
               type="button"
               onClick={resetFilters}
-              className="mt-6 px-6 py-3 rounded-xl text-xs font-bold font-mono tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] uppercase transition-colors"
+              className="mt-6 px-6 py-3 rounded-xl text-xs font-bold font-mono tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase transition-colors"
             >
               Reset All Filters
             </button>
@@ -839,21 +840,21 @@ export default function GamesDirectory() {
                       <div className="flex items-center gap-2.5">
                         <h2
                           id={`cat-${cat.id}`}
-                          className="text-2xl sm:text-3xl font-black font-['Space_Grotesk'] uppercase text-[#F4F1EA]"
+                          className="text-2xl sm:text-3xl font-black font-['Space_Grotesk'] uppercase text-[#F8FAFC]"
                         >
                           {cat.label}
                         </h2>
-                        <span className="px-2.5 py-0.5 rounded-full bg-[#181B22] border border-white/[0.1] text-xs font-mono text-[#D5F05B]">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#182244] border border-white/[0.1] text-xs font-mono text-[#12E2C4]">
                           {items.length}
                         </span>
                       </div>
-                      <p className="text-xs sm:text-sm text-[#A4A5AA] mt-1">{cat.description}</p>
+                      <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">{cat.description}</p>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => setCategory(cat.id)}
-                      className="self-start sm:self-auto text-xs font-mono text-[#D5F05B] hover:underline"
+                      className="self-start sm:self-auto text-xs font-mono text-[#12E2C4] hover:underline"
                     >
                       Focus {cat.label} →
                     </button>
@@ -886,15 +887,15 @@ export default function GamesDirectory() {
 
       {/* Multi-Event Quick Select Bar */}
       {selectedGames.length > 0 && (
-        <div className="fixed bottom-4 inset-x-4 z-40 max-w-3xl mx-auto rounded-2xl bg-[#161923]/95 border border-[#D5F05B]/45 backdrop-blur-xl shadow-2xl px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="fixed bottom-4 inset-x-4 z-40 max-w-3xl mx-auto rounded-2xl bg-[#131B38]/95 border border-[#12E2C4]/45 backdrop-blur-xl shadow-2xl px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-bold font-['Space_Grotesk'] text-[#F4F1EA]">
+            <div className="text-sm font-bold font-['Space_Grotesk'] text-[#F8FAFC]">
               {selectedGames.length} {selectedGames.length === 1 ? 'event' : 'events'} selected
-              <span className="text-[#D5F05B] font-mono ml-2">
+              <span className="text-[#12E2C4] font-mono ml-2">
                 · Est. Rs. {selectedEstimatedTotal.toLocaleString()}
               </span>
             </div>
-            <div className="text-xs font-mono text-[#A4A5AA] truncate max-w-md">
+            <div className="text-xs font-mono text-[#94A3B8] truncate max-w-md">
               {selectedGames.join(', ')}
             </div>
           </div>
@@ -903,13 +904,13 @@ export default function GamesDirectory() {
             <button
               type="button"
               onClick={() => setSelectedGames([])}
-              className="px-3 py-2 rounded-xl text-xs font-mono text-[#A4A5AA] hover:text-white bg-white/[0.05] border border-white/[0.08]"
+              className="px-3 py-2 rounded-xl text-xs font-mono text-[#94A3B8] hover:text-white bg-white/[0.05] border border-white/[0.08]"
             >
               Clear
             </button>
             <Link
               href={`/register?games=${encodeURIComponent(selectedGames.join(','))}`}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black font-['Space_Grotesk'] uppercase text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a]"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black font-['Space_Grotesk'] uppercase text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE]"
             >
               <span>Continue to Register</span>
               <ArrowRight className="w-3.5 h-3.5" />

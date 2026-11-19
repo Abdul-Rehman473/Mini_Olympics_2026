@@ -620,10 +620,10 @@ function RegisterForm() {
   // Loading status state
   if (registrationOpen === null) {
     return (
-      <div className="min-h-screen bg-[#101114] flex items-center justify-center py-12 px-4">
+      <div className="min-h-screen bg-[#0B1124] flex items-center justify-center py-12 px-4">
         <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-2 border-[#D5F05B] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-mono text-[#A4A5AA] tracking-widest uppercase">
+          <div className="w-12 h-12 border-2 border-[#12E2C4] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-mono text-[#94A3B8] tracking-widest uppercase">
             CONNECTING TO TOURNAMENT TERMINAL...
           </p>
         </div>
@@ -634,26 +634,26 @@ function RegisterForm() {
   // Registrations closed state
   if (registrationOpen === false) {
     return (
-      <div className="min-h-screen bg-[#101114] text-[#F4F1EA] py-16 px-4 flex items-center justify-center">
-        <div className="max-w-md w-full p-8 rounded-3xl bg-[#161820] border border-white/[0.08] text-center shadow-2xl">
-          <div className="w-16 h-16 rounded-2xl bg-[#F15A29]/15 border border-[#F15A29]/30 flex items-center justify-center mx-auto mb-6">
-            <Lock className="w-8 h-8 text-[#F15A29]" />
+      <div className="min-h-screen bg-[#0B1124] text-[#F8FAFC] py-16 px-4 flex items-center justify-center">
+        <div className="max-w-md w-full p-8 rounded-3xl bg-[#131B38] border border-white/[0.08] text-center shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-[#F59E0B]/15 border border-[#F59E0B]/30 flex items-center justify-center mx-auto mb-6">
+            <Lock className="w-8 h-8 text-[#F59E0B]" />
           </div>
           <h2 className="text-2xl font-black font-['Space_Grotesk'] uppercase mb-2">
             REGISTRATIONS ARE CLOSED
           </h2>
-          <p className="text-sm text-[#A4A5AA] leading-relaxed mb-6 font-normal">
+          <p className="text-sm text-[#94A3B8] leading-relaxed mb-6 font-normal">
             The registration window for Mini Olympics 2026 is currently closed. For queries, contact the FCIT Sports Society.
           </p>
           <a
             href="mailto:sports.oc@pucit.edu.pk"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#101114] bg-[#D5F05B] uppercase"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#0B1124] bg-[#12E2C4] uppercase"
           >
             <Mail className="w-4 h-4" />
             <span>sports.oc@pucit.edu.pk</span>
           </a>
           <div className="mt-6 pt-6 border-t border-white/[0.06]">
-            <Link href="/" className="text-xs font-mono text-[#A4A5AA] hover:text-white transition-colors">
+            <Link href="/" className="text-xs font-mono text-[#94A3B8] hover:text-white transition-colors">
               ← Return to Main Overview
             </Link>
           </div>
@@ -670,25 +670,25 @@ function RegisterForm() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#101114] text-[#F4F1EA] selection:bg-[#D5F05B] selection:text-[#101114] py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#0B1124] text-[#F8FAFC] selection:bg-[#12E2C4] selection:text-[#0B1124] py-10 px-4 sm:px-6 lg:px-8">
       {/* Background Lighting */}
-      <div className="absolute top-0 left-1/3 w-[600px] h-[400px] bg-[#F15A29]/10 rounded-full blur-[160px] pointer-events-none" />
-      <div className="absolute top-1/2 right-1/4 w-[600px] h-[500px] bg-[#D5F05B]/10 rounded-full blur-[180px] pointer-events-none" />
+      <div className="absolute top-0 left-1/3 w-[600px] h-[400px] bg-[#F59E0B]/10 rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute top-1/2 right-1/4 w-[600px] h-[500px] bg-[#12E2C4]/10 rounded-full blur-[180px] pointer-events-none" />
 
       <div className="max-w-5xl mx-auto relative z-10">
         {/* Top Header Bar */}
         <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/[0.08]">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-xs font-mono text-[#A4A5AA] hover:text-[#D5F05B] transition-colors uppercase tracking-wider"
+            className="inline-flex items-center gap-2 text-xs font-mono text-[#94A3B8] hover:text-[#12E2C4] transition-colors uppercase tracking-wider"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Return to Portal Overview</span>
           </Link>
 
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#D5F05B] animate-pulse" />
-            <span className="text-xs font-mono text-[#D5F05B] tracking-widest uppercase">
+            <span className="w-2 h-2 rounded-full bg-[#12E2C4] animate-pulse" />
+            <span className="text-xs font-mono text-[#12E2C4] tracking-widest uppercase">
               LIVE REGISTRATION ARENA
             </span>
           </div>
@@ -705,55 +705,55 @@ function RegisterForm() {
               <div
                 key={st.number}
                 className={`relative p-3.5 rounded-2xl border transition-all ${isCurrent
-                    ? 'bg-[#1C2028] border-[#D5F05B] shadow-lg shadow-[#D5F05B]/15'
+                    ? 'bg-[#182244] border-[#12E2C4] shadow-lg shadow-[#12E2C4]/15'
                     : isCompleted
-                      ? 'bg-[#14161C] border-[#D5F05B]/40 text-[#A4A5AA]'
-                      : 'bg-[#14161C]/60 border-white/[0.06] text-[#A4A5AA]/50'
+                      ? 'bg-[#131B38] border-[#12E2C4]/40 text-[#94A3B8]'
+                      : 'bg-[#131B38]/60 border-white/[0.06] text-[#94A3B8]/50'
                   }`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span
-                    className={`text-xs font-mono font-bold ${isCurrent ? 'text-[#D5F05B]' : isCompleted ? 'text-[#D5F05B]' : 'text-white/30'
+                    className={`text-xs font-mono font-bold ${isCurrent ? 'text-[#12E2C4]' : isCompleted ? 'text-[#12E2C4]' : 'text-white/30'
                       }`}
                   >
                     STEP {st.number}
                   </span>
                   {isCompleted ? (
-                    <CheckCircle2 className="w-4 h-4 text-[#D5F05B]" />
+                    <CheckCircle2 className="w-4 h-4 text-[#12E2C4]" />
                   ) : (
                     <Circle className="w-4 h-4 text-white/20" />
                   )}
                 </div>
-                <div className="font-bold text-xs sm:text-sm text-[#F4F1EA] font-['Space_Grotesk'] uppercase">
+                <div className="font-bold text-xs sm:text-sm text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
                   {st.title}
                 </div>
-                <div className="text-[10px] text-[#A4A5AA] font-mono truncate">{st.desc}</div>
+                <div className="text-[10px] text-[#94A3B8] font-mono truncate">{st.desc}</div>
               </div>
             );
           })}
         </div>
 
         {/* Main Content Box */}
-        <div className="p-6 sm:p-10 rounded-3xl bg-[#161820] border border-white/[0.08] shadow-2xl relative">
+        <div className="p-6 sm:p-10 rounded-3xl bg-[#131B38] border border-white/[0.08] shadow-2xl relative">
           <div key={step} className="register-step-enter">
           {/* STEP 1: Personal Information */}
           {step === 1 && (
             <div className="space-y-6">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#1B1D21] border border-white/[0.08] text-xs font-mono text-[#D5F05B] uppercase tracking-wider mb-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#182244] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
                   <span>// STEP 01: ATHLETE & SQUAD IDENTITY</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-[#F4F1EA] uppercase font-['Space_Grotesk']">
+                <h2 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk']">
                   Captain & Participant Information
                 </h2>
-                <p className="text-xs sm:text-sm text-[#A4A5AA] font-mono mt-1">
+                <p className="text-xs sm:text-sm text-[#94A3B8] font-mono mt-1">
                   Enter your official university student credentials. You will act as the team captain.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
                 <div>
-                  <Label htmlFor="email" className="text-xs font-mono text-[#A4A5AA] uppercase">
+                  <Label htmlFor="email" className="text-xs font-mono text-[#94A3B8] uppercase">
                     University Email *
                   </Label>
                   <Input
@@ -762,12 +762,12 @@ function RegisterForm() {
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="student@pucit.edu.pk"
-                    className="mt-1.5 bg-[#101114] border-white/[0.1] text-sm text-[#F4F1EA] rounded-xl focus:border-[#D5F05B]"
+                    className="mt-1.5 bg-[#0B1124] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="name" className="text-xs font-mono text-[#A4A5AA] uppercase">
+                  <Label htmlFor="name" className="text-xs font-mono text-[#94A3B8] uppercase">
                     Full Name *
                   </Label>
                   <Input
@@ -775,12 +775,12 @@ function RegisterForm() {
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="e.g. RANA ABDUL REHMAN"
-                    className="mt-1.5 bg-[#101114] border-white/[0.1] text-sm text-[#F4F1EA] rounded-xl focus:border-[#D5F05B]"
+                    className="mt-1.5 bg-[#0B1124] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="rollNumber" className="text-xs font-mono text-[#A4A5AA] uppercase">
+                  <Label htmlFor="rollNumber" className="text-xs font-mono text-[#94A3B8] uppercase">
                     PUCIT Roll Number *
                   </Label>
                   <Input
@@ -788,22 +788,22 @@ function RegisterForm() {
                     value={formData.rollNumber}
                     onChange={(e) => handleInputChange('rollNumber', e.target.value)}
                     placeholder="e.g. BCSF23M032"
-                    className="mt-1.5 bg-[#101114] border-white/[0.1] text-sm text-[#F4F1EA] rounded-xl focus:border-[#D5F05B]"
+                    className="mt-1.5 bg-[#0B1124] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="gender" className="text-xs font-mono text-[#A4A5AA] uppercase">
+                  <Label htmlFor="gender" className="text-xs font-mono text-[#94A3B8] uppercase">
                     Competition Division (Gender) *
                   </Label>
                   <Select
                     value={formData.gender}
                     onValueChange={(value) => handleInputChange('gender', value)}
                   >
-                    <SelectTrigger className="mt-1.5 bg-[#101114] border-white/[0.1] text-sm text-[#F4F1EA] rounded-xl focus:border-[#D5F05B]">
+                    <SelectTrigger className="mt-1.5 bg-[#0B1124] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]">
                       <SelectValue placeholder="Select division" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#181B22] border-white/[0.1] text-[#F4F1EA]">
+                    <SelectContent className="bg-[#182244] border-white/[0.1] text-[#F8FAFC]">
                       <SelectItem value="boys">Boys Division</SelectItem>
                       <SelectItem value="girls">Girls Division</SelectItem>
                     </SelectContent>
@@ -811,7 +811,7 @@ function RegisterForm() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <Label htmlFor="teamName" className="text-xs font-mono text-[#A4A5AA] uppercase">
+                  <Label htmlFor="teamName" className="text-xs font-mono text-[#94A3B8] uppercase">
                     Official Team Name *
                   </Label>
                   <div className="flex gap-2 mt-1.5">
@@ -820,10 +820,10 @@ function RegisterForm() {
                       value={formData.teamName}
                       onChange={(e) => handleInputChange('teamName', e.target.value)}
                       placeholder="e.g. Cyber Strikers / PUCIT Titans"
-                      className={`flex-1 bg-[#101114] border-white/[0.1] text-sm text-[#F4F1EA] rounded-xl ${teamNameStatus === 'taken'
+                      className={`flex-1 bg-[#0B1124] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl ${teamNameStatus === 'taken'
                           ? 'border-red-500'
                           : teamNameStatus === 'available'
-                            ? 'border-[#D5F05B]'
+                            ? 'border-[#12E2C4]'
                             : ''
                         }`}
                     />
@@ -831,14 +831,14 @@ function RegisterForm() {
                       type="button"
                       onClick={checkTeamName}
                       disabled={!formData.teamName.trim() || teamNameStatus === 'checking'}
-                      className="px-6 rounded-xl text-xs font-mono font-bold tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a]"
+                      className="px-6 rounded-xl text-xs font-mono font-bold tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE]"
                     >
                       {teamNameStatus === 'checking' ? 'CHECKING...' : 'CHECK AVAILABILITY'}
                     </Button>
                   </div>
 
                   {teamNameStatus === 'available' && (
-                    <p className="text-xs text-[#D5F05B] font-mono mt-1.5 flex items-center gap-1.5">
+                    <p className="text-xs text-[#12E2C4] font-mono mt-1.5 flex items-center gap-1.5">
                       <Check className="w-3.5 h-3.5" />
                       Team name is available for registration!
                     </p>
@@ -850,14 +850,14 @@ function RegisterForm() {
                     </p>
                   )}
                   {teamNameStatus === 'idle' && (
-                    <p className="text-xs text-[#A4A5AA]/70 font-mono mt-1">
+                    <p className="text-xs text-[#94A3B8]/70 font-mono mt-1">
                       Choose a unique name and verify before proceeding.
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <Label htmlFor="contactNumber" className="text-xs font-mono text-[#A4A5AA] uppercase">
+                  <Label htmlFor="contactNumber" className="text-xs font-mono text-[#94A3B8] uppercase">
                     Primary WhatsApp Contact *
                   </Label>
                   <Input
@@ -866,12 +866,12 @@ function RegisterForm() {
                     value={formData.contactNumber}
                     onChange={(e) => handleInputChange('contactNumber', e.target.value)}
                     placeholder="0300-1234567"
-                    className="mt-1.5 bg-[#101114] border-white/[0.1] text-sm text-[#F4F1EA] rounded-xl focus:border-[#D5F05B]"
+                    className="mt-1.5 bg-[#0B1124] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="altContact" className="text-xs font-mono text-[#A4A5AA] uppercase">
+                  <Label htmlFor="altContact" className="text-xs font-mono text-[#94A3B8] uppercase">
                     Alternative Contact (Optional)
                   </Label>
                   <Input
@@ -880,7 +880,7 @@ function RegisterForm() {
                     value={formData.alternativeContactNumber}
                     onChange={(e) => handleInputChange('alternativeContactNumber', e.target.value)}
                     placeholder="0321-7654321"
-                    className="mt-1.5 bg-[#101114] border-white/[0.1] text-sm text-[#F4F1EA] rounded-xl focus:border-[#D5F05B]"
+                    className="mt-1.5 bg-[#0B1124] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]"
                   />
                 </div>
               </div>
@@ -892,14 +892,14 @@ function RegisterForm() {
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#1B1D21] border border-white/[0.08] text-xs font-mono text-[#D5F05B] uppercase tracking-wider mb-2">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#182244] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
                     <span>// STEP 02: DISCIPLINES & ROSTER</span>
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-[#F4F1EA] uppercase font-['Space_Grotesk']">
+                  <h2 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk']">
                     Select Your Events
                   </h2>
                 </div>
-                <div className="px-3.5 py-1.5 rounded-xl bg-[#101114] border border-white/[0.08] text-xs font-mono text-[#D5F05B]">
+                <div className="px-3.5 py-1.5 rounded-xl bg-[#0B1124] border border-white/[0.08] text-xs font-mono text-[#12E2C4]">
                   Division: <span className="font-bold uppercase">{formData.gender}</span>
                 </div>
               </div>
@@ -916,13 +916,13 @@ function RegisterForm() {
                       key={game.name}
                       onClick={() => handleGameToggle(game.name)}
                       className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${isSelected
-                          ? 'bg-[#1F2430] border-[#D5F05B] shadow-md shadow-[#D5F05B]/15'
-                          : 'bg-[#101114] border-white/[0.07] hover:border-white/[0.2]'
+                          ? 'bg-[#182244] border-[#12E2C4] shadow-md shadow-[#12E2C4]/15'
+                          : 'bg-[#0B1124] border-white/[0.07] hover:border-white/[0.2]'
                         }`}
                     >
                       <div>
-                        <div className="font-bold text-sm text-[#F4F1EA] font-['Space_Grotesk']">{game.name}</div>
-                        <div className="text-xs font-mono text-[#A4A5AA] mt-0.5">
+                        <div className="font-bold text-sm text-[#F8FAFC] font-['Space_Grotesk']">{game.name}</div>
+                        <div className="text-xs font-mono text-[#94A3B8] mt-0.5">
                           Rs. {price.toLocaleString()}
                           {formData.gender === 'boys' && game.boysPlayers && ` • ${game.boysPlayers} Players`}
                           {formData.gender === 'girls' && game.girlsPlayers && ` • ${game.girlsPlayers} Players`}
@@ -931,7 +931,7 @@ function RegisterForm() {
 
                       <div
                         className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-colors ${isSelected
-                            ? 'bg-[#D5F05B] border-[#D5F05B] text-[#101114]'
+                            ? 'bg-[#12E2C4] border-[#12E2C4] text-[#0B1124]'
                             : 'border-white/[0.2] text-transparent'
                           }`}
                       >
@@ -949,34 +949,34 @@ function RegisterForm() {
                 const teamMembers = formData.teamMembers[gameName] || [];
 
                 return (
-                  <div key={gameName} className="p-5 rounded-2xl bg-[#101114] border border-[#F15A29]/30">
-                    <h4 className="font-bold text-sm sm:text-base text-[#F4F1EA] font-['Space_Grotesk'] uppercase mb-1">
+                  <div key={gameName} className="p-5 rounded-2xl bg-[#0B1124] border border-[#F59E0B]/30">
+                    <h4 className="font-bold text-sm sm:text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase mb-1">
                       {gameName} — SQUAD ROSTER ({requiredPlayers} PLAYERS TOTAL)
                     </h4>
-                    <p className="text-xs text-[#A4A5AA] font-mono mb-4">
+                    <p className="text-xs text-[#94A3B8] font-mono mb-4">
                       You are Captain ({formData.name || 'Yourself'}). Please add the remaining {requiredPlayers - 1} team members:
                     </p>
 
                     <div className="space-y-3">
                       {teamMembers.map((member, idx) => (
-                        <div key={idx} className="p-3.5 rounded-xl bg-[#161820] border border-white/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div key={idx} className="p-3.5 rounded-xl bg-[#131B38] border border-white/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <Input
                             value={member.name}
                             onChange={(e) => handleTeamMemberChange(gameName, idx, 'name', e.target.value)}
                             placeholder={`Player ${idx + 2} Full Name`}
-                            className="bg-[#101114] border-white/[0.08] text-xs text-[#F4F1EA] rounded-lg"
+                            className="bg-[#0B1124] border-white/[0.08] text-xs text-[#F8FAFC] rounded-lg"
                           />
                           <Input
                             value={member.rollNumber}
                             onChange={(e) => handleTeamMemberChange(gameName, idx, 'rollNumber', e.target.value)}
                             placeholder="Roll Number (e.g. BCSF22M...)"
-                            className="bg-[#101114] border-white/[0.08] text-xs text-[#F4F1EA] rounded-lg"
+                            className="bg-[#0B1124] border-white/[0.08] text-xs text-[#F8FAFC] rounded-lg"
                           />
                           <Input
                             value={member.contactNumber}
                             onChange={(e) => handleTeamMemberChange(gameName, idx, 'contactNumber', e.target.value)}
                             placeholder="Contact Number (03XX...)"
-                            className="bg-[#101114] border-white/[0.08] text-xs text-[#F4F1EA] rounded-lg"
+                            className="bg-[#0B1124] border-white/[0.08] text-xs text-[#F8FAFC] rounded-lg"
                           />
                         </div>
                       ))}
@@ -991,24 +991,24 @@ function RegisterForm() {
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#1B1D21] border border-white/[0.08] text-xs font-mono text-[#D5F05B] uppercase tracking-wider mb-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#182244] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
                   <span>// STEP 03: PAYMENT TERMINAL</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-[#F4F1EA] uppercase font-['Space_Grotesk']">
+                <h2 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk']">
                   Complete Your Payment
                 </h2>
               </div>
 
               {/* Coupon Code Section */}
-              <div className="p-4 rounded-2xl bg-[#101114] border border-white/[0.08]">
-                <div className="flex items-center gap-2 text-xs font-mono text-[#D5F05B] mb-2 uppercase">
+              <div className="p-4 rounded-2xl bg-[#0B1124] border border-white/[0.08]">
+                <div className="flex items-center gap-2 text-xs font-mono text-[#12E2C4] mb-2 uppercase">
                   <Tag className="w-3.5 h-3.5" />
                   <span>Promotional Coupon Code</span>
                 </div>
 
                 {appliedCoupon ? (
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-[#D5F05B]/10 border border-[#D5F05B]/30">
-                    <span className="text-xs font-mono font-bold text-[#D5F05B]">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-[#12E2C4]/10 border border-[#12E2C4]/30">
+                    <span className="text-xs font-mono font-bold text-[#12E2C4]">
                       COUPON {appliedCoupon.code} APPLIED ({appliedCoupon.discountPercent}% OFF)
                     </span>
                     <button
@@ -1028,13 +1028,13 @@ function RegisterForm() {
                         setCouponError('');
                       }}
                       placeholder="ENTER CODE"
-                      className="bg-[#161820] border-white/[0.1] text-xs font-mono text-[#F4F1EA] uppercase rounded-xl"
+                      className="bg-[#131B38] border-white/[0.1] text-xs font-mono text-[#F8FAFC] uppercase rounded-xl"
                     />
                     <Button
                       type="button"
                       onClick={handleApplyCoupon}
                       disabled={validatingCoupon || !couponInput.trim()}
-                      className="rounded-xl text-xs font-mono font-bold text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a]"
+                      className="rounded-xl text-xs font-mono font-bold text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE]"
                     >
                       {validatingCoupon ? 'VERIFYING...' : 'APPLY'}
                     </Button>
@@ -1049,18 +1049,18 @@ function RegisterForm() {
                 <div
                   onClick={() => handleInputChange('paymentMethod', 'online')}
                   className={`p-5 rounded-2xl border cursor-pointer transition-all ${formData.paymentMethod === 'online'
-                      ? 'bg-[#1C2028] border-[#D5F05B] shadow-xl shadow-[#D5F05B]/10'
-                      : 'bg-[#101114] border-white/[0.08] hover:border-white/[0.2]'
+                      ? 'bg-[#182244] border-[#12E2C4] shadow-xl shadow-[#12E2C4]/10'
+                      : 'bg-[#0B1124] border-white/[0.08] hover:border-white/[0.2]'
                     }`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      <CreditCard className="w-5 h-5 text-[#D5F05B]" />
-                      <span className="font-bold text-sm sm:text-base text-[#F4F1EA] font-['Space_Grotesk'] uppercase">
+                      <CreditCard className="w-5 h-5 text-[#12E2C4]" />
+                      <span className="font-bold text-sm sm:text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
                         Online Transfer (Easypaisa / Bank)
                       </span>
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#D5F05B]/15 text-[#D5F05B]">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#12E2C4]/15 text-[#12E2C4]">
                       RECOMMENDED
                     </span>
                   </div>
@@ -1068,19 +1068,19 @@ function RegisterForm() {
                   {formData.paymentMethod === 'online' && (
                     <div className="mt-4 pt-4 border-t border-white/[0.08] space-y-4">
                       {/* Bank Details Box */}
-                      <div className="p-4 rounded-xl bg-[#101114] border border-white/[0.08] space-y-2.5 font-mono text-xs">
+                      <div className="p-4 rounded-xl bg-[#0B1124] border border-white/[0.08] space-y-2.5 font-mono text-xs">
                         <div className="flex justify-between">
-                          <span className="text-[#A4A5AA]">Bank / Provider:</span>
-                          <span className="font-bold text-[#F4F1EA]">Easypaisa</span>
+                          <span className="text-[#94A3B8]">Bank / Provider:</span>
+                          <span className="font-bold text-[#F8FAFC]">Easypaisa</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#A4A5AA]">Account Title:</span>
-                          <span className="font-bold text-[#F4F1EA]">Muhammad Moin U Din</span>
+                          <span className="text-[#94A3B8]">Account Title:</span>
+                          <span className="font-bold text-[#F8FAFC]">Muhammad Moin U Din</span>
                         </div>
                         <div className="flex items-center justify-between pt-1 border-t border-white/[0.06]">
-                          <span className="text-[#A4A5AA]">Account Number:</span>
+                          <span className="text-[#94A3B8]">Account Number:</span>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-[#D5F05B]">03028791634</span>
+                            <span className="font-bold text-[#12E2C4]">03028791634</span>
                             <button
                               type="button"
                               onClick={async () => {
@@ -1102,7 +1102,7 @@ function RegisterForm() {
                       </div>
 
                       <div>
-                        <Label htmlFor="txId" className="text-xs font-mono text-[#A4A5AA] uppercase">
+                        <Label htmlFor="txId" className="text-xs font-mono text-[#94A3B8] uppercase">
                           Bank Transaction ID / Reference *
                         </Label>
                         <Input
@@ -1110,12 +1110,12 @@ function RegisterForm() {
                           value={formData.transactionId}
                           onChange={(e) => handleInputChange('transactionId', e.target.value)}
                           placeholder="e.g. 2389104829"
-                          className="mt-1 bg-[#101114] border-white/[0.1] text-xs font-mono text-[#F4F1EA] rounded-xl"
+                          className="mt-1 bg-[#0B1124] border-white/[0.1] text-xs font-mono text-[#F8FAFC] rounded-xl"
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="proof" className="text-xs font-mono text-[#A4A5AA] uppercase">
+                        <Label htmlFor="proof" className="text-xs font-mono text-[#94A3B8] uppercase">
                           Upload Payment Proof Screenshot *
                         </Label>
                         <Input
@@ -1124,10 +1124,10 @@ function RegisterForm() {
                           accept="image/*"
                           disabled={compressingScreenshot}
                           onChange={handleFileUpload}
-                          className="mt-1 bg-[#101114] border-white/[0.1] text-xs text-[#F4F1EA] rounded-xl file:bg-[#181B22] file:text-white file:border-0 file:rounded-lg file:mr-3"
+                          className="mt-1 bg-[#0B1124] border-white/[0.1] text-xs text-[#F8FAFC] rounded-xl file:bg-[#182244] file:text-white file:border-0 file:rounded-lg file:mr-3"
                         />
                         {compressingScreenshot && (
-                          <p className="text-xs text-[#A4A5AA] font-mono mt-1.5">
+                          <p className="text-xs text-[#94A3B8] font-mono mt-1.5">
                             Optimizing screenshot for upload...
                           </p>
                         )}
@@ -1138,7 +1138,7 @@ function RegisterForm() {
                           </p>
                         )}
                         {formData.screenshotUrl && !compressingScreenshot && (
-                          <p className="text-xs text-[#D5F05B] font-mono mt-1.5 flex items-center gap-1">
+                          <p className="text-xs text-[#12E2C4] font-mono mt-1.5 flex items-center gap-1">
                             <Check className="w-3.5 h-3.5" />
                             Receipt proof attached successfully{screenshotInfo ? ` (${screenshotInfo})` : ''}.
                           </p>
@@ -1153,19 +1153,19 @@ function RegisterForm() {
                   <div
                     onClick={() => handleInputChange('paymentMethod', 'cash')}
                     className={`p-5 rounded-2xl border cursor-pointer transition-all ${formData.paymentMethod === 'cash'
-                        ? 'bg-[#1C2028] border-[#D5F05B] shadow-xl shadow-[#D5F05B]/10'
-                        : 'bg-[#101114] border-white/[0.08] hover:border-white/[0.2]'
+                        ? 'bg-[#182244] border-[#12E2C4] shadow-xl shadow-[#12E2C4]/10'
+                        : 'bg-[#0B1124] border-white/[0.08] hover:border-white/[0.2]'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <QrCode className="w-5 h-5 text-[#F15A29]" />
-                      <span className="font-bold text-sm sm:text-base text-[#F4F1EA] font-['Space_Grotesk'] uppercase">
+                      <QrCode className="w-5 h-5 text-[#F59E0B]" />
+                      <span className="font-bold text-sm sm:text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
                         Cash Desk Payment (Slip Verification)
                       </span>
                     </div>
 
                     {formData.paymentMethod === 'cash' && (
-                      <div className="mt-3 pt-3 border-t border-white/[0.08] text-xs font-mono text-[#A4A5AA]">
+                      <div className="mt-3 pt-3 border-t border-white/[0.08] text-xs font-mono text-[#94A3B8]">
                         An instant Cash Slip ID will be generated upon submission. Present your slip ID or QR code at the FCIT Sports Society registration desk to complete payment.
                       </div>
                     )}
@@ -1179,41 +1179,41 @@ function RegisterForm() {
           {step === 4 && (
             <div className="space-y-6">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#1B1D21] border border-white/[0.08] text-xs font-mono text-[#D5F05B] uppercase tracking-wider mb-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#182244] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
                   <span>// STEP 04: FINAL AUDIT & CONFIRMATION</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-[#F4F1EA] uppercase font-['Space_Grotesk']">
+                <h2 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk']">
                   Review Registration Details
                 </h2>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#101114] border border-white/[0.08] space-y-4 font-mono text-xs">
+              <div className="p-6 rounded-2xl bg-[#0B1124] border border-white/[0.08] space-y-4 font-mono text-xs">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-white/[0.06]">
                   <div>
-                    <span className="text-[#A4A5AA] block">ATHLETE NAME</span>
-                    <span className="text-sm font-bold text-[#F4F1EA]">{formData.name}</span>
+                    <span className="text-[#94A3B8] block">ATHLETE NAME</span>
+                    <span className="text-sm font-bold text-[#F8FAFC]">{formData.name}</span>
                   </div>
                   <div>
-                    <span className="text-[#A4A5AA] block">ROLL NUMBER</span>
-                    <span className="text-sm font-bold text-[#F4F1EA]">{formData.rollNumber}</span>
+                    <span className="text-[#94A3B8] block">ROLL NUMBER</span>
+                    <span className="text-sm font-bold text-[#F8FAFC]">{formData.rollNumber}</span>
                   </div>
                   <div>
-                    <span className="text-[#A4A5AA] block">OFFICIAL TEAM NAME</span>
-                    <span className="text-sm font-bold text-[#D5F05B]">{formData.teamName}</span>
+                    <span className="text-[#94A3B8] block">OFFICIAL TEAM NAME</span>
+                    <span className="text-sm font-bold text-[#12E2C4]">{formData.teamName}</span>
                   </div>
                   <div>
-                    <span className="text-[#A4A5AA] block">DIVISION & CONTACT</span>
-                    <span className="text-sm font-bold text-[#F4F1EA] uppercase">
+                    <span className="text-[#94A3B8] block">DIVISION & CONTACT</span>
+                    <span className="text-sm font-bold text-[#F8FAFC] uppercase">
                       {formData.gender} • {formData.contactNumber}
                     </span>
                   </div>
                 </div>
 
                 <div>
-                  <span className="text-[#A4A5AA] block mb-2">SELECTED DISCIPLINES ({formData.selectedGames.length})</span>
+                  <span className="text-[#94A3B8] block mb-2">SELECTED DISCIPLINES ({formData.selectedGames.length})</span>
                   <div className="flex flex-wrap gap-2">
                     {formData.selectedGames.map((g) => (
-                      <span key={g} className="px-3 py-1 rounded-lg bg-[#181B22] border border-white/[0.08] text-[#F4F1EA] font-semibold text-xs">
+                      <span key={g} className="px-3 py-1 rounded-lg bg-[#182244] border border-white/[0.08] text-[#F8FAFC] font-semibold text-xs">
                         {g}
                       </span>
                     ))}
@@ -1222,18 +1222,18 @@ function RegisterForm() {
 
                 <div className="pt-4 border-t border-white/[0.06] space-y-1.5">
                   <div className="flex justify-between">
-                    <span className="text-[#A4A5AA]">Subtotal:</span>
-                    <span className="font-bold text-[#F4F1EA]">Rs. {totalAmount.toLocaleString()}</span>
+                    <span className="text-[#94A3B8]">Subtotal:</span>
+                    <span className="font-bold text-[#F8FAFC]">Rs. {totalAmount.toLocaleString()}</span>
                   </div>
                   {appliedCoupon && (
-                    <div className="flex justify-between text-[#D5F05B]">
+                    <div className="flex justify-between text-[#12E2C4]">
                       <span>Discount ({appliedCoupon.code} - {appliedCoupon.discountPercent}%):</span>
                       <span>- Rs. {discountAmount.toLocaleString()}</span>
                     </div>
                   )}
                   <div className="flex justify-between pt-2 border-t border-white/[0.08] text-sm">
                     <span className="font-bold text-white uppercase">Final Payable Amount:</span>
-                    <span className="font-black text-lg text-[#D5F05B]">
+                    <span className="font-black text-lg text-[#12E2C4]">
                       Rs. {finalAmount.toLocaleString()}
                     </span>
                   </div>
@@ -1250,7 +1250,7 @@ function RegisterForm() {
               variant="outline"
               onClick={() => setStep((s) => Math.max(1, s - 1))}
               disabled={step === 1}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl text-xs font-mono font-bold tracking-wider uppercase bg-transparent text-[#A4A5AA] hover:text-white border-white/[0.1] hover:border-white/[0.2]"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl text-xs font-mono font-bold tracking-wider uppercase bg-transparent text-[#94A3B8] hover:text-white border-white/[0.1] hover:border-white/[0.2]"
             >
               PREVIOUS STEP
             </Button>
@@ -1260,7 +1260,7 @@ function RegisterForm() {
                 type="button"
                 onClick={() => setStep((s) => s + 1)}
                 disabled={!canProceed()}
-                className="w-full sm:w-auto px-8 py-3 rounded-xl text-xs font-mono font-black tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] uppercase transition-all shadow-lg shadow-[#D5F05B]/20"
+                className="w-full sm:w-auto px-8 py-3 rounded-xl text-xs font-mono font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase transition-all shadow-lg shadow-[#12E2C4]/20"
               >
                 PROCEED TO STEP {step + 1} →
               </Button>
@@ -1269,7 +1269,7 @@ function RegisterForm() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading || !canProceed()}
-                className="w-full sm:w-auto px-10 py-3.5 rounded-xl text-xs font-mono font-black tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] uppercase transition-all shadow-xl shadow-[#D5F05B]/30"
+                className="w-full sm:w-auto px-10 py-3.5 rounded-xl text-xs font-mono font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase transition-all shadow-xl shadow-[#12E2C4]/30"
               >
                 {loading ? 'SUBMITTING TO DATABASE...' : 'SUBMIT REGISTRATION NOW ✦'}
               </Button>
@@ -1285,8 +1285,8 @@ export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#101114] flex items-center justify-center">
-          <div className="w-10 h-10 border-2 border-[#D5F05B] border-t-transparent rounded-full animate-spin" />
+        <div className="min-h-screen bg-[#0B1124] flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-[#12E2C4] border-t-transparent rounded-full animate-spin" />
         </div>
       }
     >
