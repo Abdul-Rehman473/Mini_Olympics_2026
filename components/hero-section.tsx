@@ -37,11 +37,11 @@ export default function HeroSection() {
 
         {/* Massive Editorial Headline */}
         <h1 className="flex flex-col space-y-1 sm:space-y-2 text-5xl sm:text-7xl lg:text-8xl xl:text-9xl font-black tracking-tight text-[#F8FAFC] uppercase font-['Space_Grotesk'] leading-[0.92]">
-          <span className="hero-stagger hero-stagger-1">THE CAMPUS.</span>
+          <span className="hero-stagger hero-stagger-1">CLOSE THE IDE.</span>
           <span className="hero-stagger hero-stagger-2 text-transparent bg-clip-text bg-gradient-to-r from-[#F59E0B] via-[#FBBF24] to-[#12E2C4]">
-            THE COMPETITION.
+            HIT THE GROUND.
           </span>
-          <span className="hero-stagger hero-stagger-3">THE CHAMPIONS.</span>
+          <span className="hero-stagger hero-stagger-3">WIN SOMETHING.</span>
         </h1>
 
         {/* Supporting Editorial Paragraph */}
@@ -53,8 +53,8 @@ export default function HeroSection() {
             <span>•</span>
             <span>UNLIMITED GLORY</span>
           </div>
-          <p className="text-base sm:text-lg text-[#94A3B8] leading-relaxed font-normal">
-            From floodlit tape-ball cricket battles to 50m aquatic sprints, tactical arena esports, and intense tug-of-war showdowns. FCIT Sports Society hosts PUCIT’s premier annual athletic spectacle. Assemble your squad and stake your claim on university history.
+          <p className="text-base sm:text-lg text-[#E2E8F0] leading-relaxed font-normal">
+            When Mini Olympics hits FCIT, assignments wait and sidelines get loud in broad daylight. Batches back their own like every point is a final. Built by sports lovers, for anyone ready to leave it all on the pitch.
           </p>
         </div>
 
