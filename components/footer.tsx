@@ -3,7 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowUpRight, Trophy, Mail, ShieldCheck, Heart } from 'lucide-react';
+import { ArrowUpRight, Mail, ShieldCheck, Heart } from 'lucide-react';
+import OlympicRingsIcon from '@/components/olympic-rings-icon';
 
 /* Brand SVG Icons */
 const IconFacebook = () => (
@@ -37,10 +38,24 @@ export default function Footer() {
       {/* 1. Dramatic Finale Section (omitted on standalone /games directory) */}
       {!isStandaloneDirectory && (
       <div className="relative py-24 sm:py-32 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] overflow-hidden">
+        {/* Sports Equipment Left & Right Circular Edge Wings (Nothing Below Center Text) */}
+        <div aria-hidden="true" className="pointer-events-none select-none absolute inset-0 overflow-hidden">
+          <img
+            src="/images/sports-gear-left.png"
+            alt=""
+            className="hidden sm:block absolute left-0 inset-y-0 h-full w-auto object-contain object-left opacity-40 md:opacity-65 lg:opacity-80"
+          />
+          <img
+            src="/images/sports-gear-right.png"
+            alt=""
+            className="hidden sm:block absolute right-0 inset-y-0 h-full w-auto object-contain object-right opacity-40 md:opacity-65 lg:opacity-80"
+          />
+        </div>
+
         {/* Stadium Floodlight Glows */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-r from-[#F59E0B]/15 via-[#12E2C4]/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
 
-        <div className="max-w-5xl mx-auto text-center relative z-10">
+        <div className="max-w-3xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#182244] border border-white/[0.1] text-xs font-mono text-[#12E2C4] tracking-widest uppercase mb-6 shadow-xl">
             <span>✦ MINI OLYMPICS 2026 ✦ THE PODIUM AWAITS</span>
           </div>
@@ -82,11 +97,15 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F59E0B] via-[#12E2C4] to-[#0B1124] p-[1.5px]">
-                <div className="w-full h-full bg-[#0B1124] rounded-[10px] flex items-center justify-center">
-                  <Trophy className="w-5 h-5 text-[#12E2C4]" />
-                </div>
+            <div className="flex flex-wrap items-center gap-3.5">
+              <div className="flex items-center gap-3">
+                <OlympicRingsIcon className="w-12 h-6 shrink-0" />
+                <div className="h-7 w-px bg-white/[0.12]" aria-hidden="true" />
+                <img
+                  src="/images/foc-logo.png"
+                  alt="FOC Sports Society"
+                  className="h-10 w-auto object-contain shrink-0"
+                />
               </div>
               <div>
                 <span className="font-black text-xl tracking-wider text-[#F8FAFC] font-['Space_Grotesk'] uppercase block">

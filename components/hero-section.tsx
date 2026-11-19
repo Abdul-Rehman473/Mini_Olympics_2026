@@ -47,7 +47,7 @@ export default function HeroSection() {
         {/* Supporting Editorial Paragraph */}
         <div className="hero-stagger hero-stagger-sub mt-8 sm:mt-10 max-w-2xl">
           <div className="flex items-center gap-2 text-sm sm:text-base font-bold tracking-widest text-[#12E2C4] uppercase font-mono mb-2">
-            <span>{liveGames.length} GAMES</span>
+            <span>50+ GAMES</span>
             <span>•</span>
             <span>ONE CHAMPIONSHIP</span>
             <span>•</span>

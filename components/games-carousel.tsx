@@ -23,6 +23,7 @@ import {
 import { useLiveGames } from '@/lib/use-live-games';
 import { SportIcon } from './sport-icons';
 import GameDossierModal from './game-dossier-modal';
+import OlympicRingsIcon from './olympic-rings-icon';
 
 const AUTO_SCROLL_INTERVAL_MS = 2200;
 
@@ -180,8 +181,34 @@ export default function GamesCarousel() {
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header + View All CTA */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
-          <div className="max-w-2xl">
+        <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+          {/* Dual Logo Dull Visible Backdrop Above View All Games */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none select-none absolute -top-4 right-0 lg:right-2 flex items-center gap-5 sm:gap-8 opacity-25"
+          >
+            <div className="flex flex-col items-center">
+              <OlympicRingsIcon className="w-24 sm:w-32 h-12 sm:h-16" />
+              <div className="mt-1 text-center leading-none">
+                <span className="text-sm sm:text-lg font-black tracking-wide text-white font-['Space_Grotesk']">
+                  Mini{' '}
+                </span>
+                <span className="text-sm sm:text-lg font-black tracking-wide text-[#F43F5E] font-['Space_Grotesk']">
+                  OLYMPICS
+                </span>
+                <span className="block text-xs sm:text-sm font-bold tracking-[0.3em] text-[#12E2C4] font-mono mt-0.5">
+                  2026
+                </span>
+              </div>
+            </div>
+            <img
+              src="/images/foc-logo.png"
+              alt=""
+              className="h-20 sm:h-28 w-auto object-contain"
+            />
+          </div>
+
+          <div className="relative z-10 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#182244] border border-white/[0.08] text-[11px] font-mono tracking-wider text-[#12E2C4] mb-4">
               <span>{liveGames.length} Official Disciplines</span>
               <span className="text-white/25">•</span>
@@ -200,7 +227,7 @@ export default function GamesCarousel() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 self-start lg:self-end">
+          <div className="relative z-10 flex flex-wrap items-center gap-3 self-start lg:self-end">
             <Link
               href={viewAllHref}
               className="group inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl text-xs sm:text-sm font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-colors uppercase font-['Space_Grotesk'] shadow-lg shadow-[#12E2C4]/20"

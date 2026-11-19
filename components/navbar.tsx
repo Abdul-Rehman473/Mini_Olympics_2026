@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ArrowUpRight, ShieldCheck, Trophy } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import OlympicRingsIcon from '@/components/olympic-rings-icon';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -46,30 +47,26 @@ export default function Navbar() {
   }, [mobileMenuOpen]);
 
   const navLinks = [
-    { label: 'ALL GAMES', href: '/games', number: '01' },
-    { label: 'CHAMPIONSHIP STATS', href: '/#stats', number: '02' },
-    { label: 'WHY COMPETE', href: '/#why', number: '03' },
-    { label: 'VERIFY PASS', href: '/verify-cash', number: '04' },
+    { label: 'ALL GAMES', href: '/games' },
+    { label: 'CHAMPIONSHIP STATS', href: '/#stats' },
+    { label: 'WHY COMPETE', href: '/#why' },
+    { label: 'VERIFY PASS', href: '/verify-cash' },
   ];
 
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 w-full overflow-x-clip transition-all duration-300 ${
           scrolled
             ? 'bg-[#0B1124]/90 backdrop-blur-xl border-b border-white/[0.08] py-3.5 shadow-2xl shadow-black/60'
             : 'bg-transparent py-5 border-b border-white/[0.04]'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4 xl:gap-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between gap-3 xl:gap-6 min-w-0">
             {/* Brand Logo & Identity */}
-            <Link href="/" className="group flex items-center gap-2.5 xl:gap-3.5 text-left shrink-0">
-              <div className="relative w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-[#F59E0B] via-[#12E2C4] to-[#0B1124] p-[1.5px] transition-transform duration-300 group-hover:scale-105">
-                <div className="w-full h-full bg-[#0B1124] rounded-[10px] flex items-center justify-center">
-                  <Trophy className="w-5 h-5 text-[#12E2C4] transition-colors group-hover:text-white" />
-                </div>
-              </div>
+            <Link href="/" className="group flex items-center gap-3 xl:gap-3.5 text-left shrink-0">
+              <OlympicRingsIcon className="w-11 h-6 shrink-0 transition-transform duration-300 group-hover:scale-105" />
 
               <div className="flex flex-col whitespace-nowrap">
                 <div className="flex items-center gap-2">
@@ -86,17 +83,14 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-4 xl:gap-8">
+            {/* Desktop Navigation Links (Stretched & Fully Shown Without Numbers) */}
+            <nav className="hidden lg:flex flex-1 min-w-0 items-center justify-evenly px-2 xl:px-6 gap-3">
               {navLinks.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group relative flex items-baseline gap-1.5 whitespace-nowrap shrink-0 text-[11px] xl:text-xs font-semibold tracking-normal xl:tracking-wider text-[#94A3B8] hover:text-[#F8FAFC] transition-colors uppercase font-mono py-1"
+                  className="group relative flex items-center whitespace-nowrap shrink-0 text-[11px] xl:text-xs font-semibold tracking-normal xl:tracking-wider text-[#94A3B8] hover:text-[#F8FAFC] transition-colors uppercase font-mono py-1"
                 >
-                  <span className="text-[10px] text-[#F59E0B] opacity-70 group-hover:opacity-100 transition-opacity">
-                    {item.number}
-                  </span>
                   <span>{item.label}</span>
                   <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-[#12E2C4] transition-all duration-300 group-hover:w-full" />
                 </Link>
@@ -104,8 +98,8 @@ export default function Navbar() {
             </nav>
 
             {/* Right Side CTAs & Mobile Toggle */}
-            <div className="flex items-center gap-2 sm:gap-3 xl:gap-4 shrink-0">
-              <div className="hidden sm:flex items-center gap-2.5 xl:gap-4">
+            <div className="flex items-center gap-2 sm:gap-2.5 xl:gap-3 shrink-0">
+              <div className="hidden sm:flex items-center gap-2 xl:gap-3">
                 <Link
                   href="/admin/login"
                   className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 px-2.5 xl:px-3 py-1.5 text-xs font-medium tracking-wider text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-white/[0.04] rounded-lg border border-transparent hover:border-white/[0.08] transition-all uppercase font-mono"
@@ -116,7 +110,7 @@ export default function Navbar() {
 
                 <Link
                   href="/register"
-                  className="relative group inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 px-4 xl:px-5 py-2.5 rounded-lg text-xs font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-all duration-300 uppercase shadow-lg shadow-[#12E2C4]/20 hover:shadow-[#12E2C4]/35 hover:-translate-y-0.5 font-['Space_Grotesk']"
+                  className="relative group inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 px-3.5 xl:px-5 py-2.5 rounded-lg text-[11px] xl:text-xs font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-all duration-300 uppercase shadow-lg shadow-[#12E2C4]/20 hover:shadow-[#12E2C4]/35 hover:-translate-y-0.5 font-['Space_Grotesk']"
                 >
                   <span>REGISTER NOW</span>
                   <ArrowUpRight className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -172,7 +166,7 @@ export default function Navbar() {
                   className="flex items-center justify-between py-2 text-xl font-bold tracking-wider text-[#F8FAFC] hover:text-[#12E2C4] border-b border-white/[0.06] font-['Space_Grotesk']"
                 >
                   <span>{item.label}</span>
-                  <span className="text-xs font-mono text-[#F59E0B]">{item.number}</span>
+                  <ArrowUpRight className="w-4 h-4 text-[#12E2C4]" />
                 </Link>
               ))}
             </div>

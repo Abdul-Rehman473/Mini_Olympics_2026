@@ -83,34 +83,6 @@ export default function WhyCompete() {
           style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.28) 0%, transparent 70%)' }}
         />
 
-        {/* Subtle Sports Society Crest & Watermark */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center opacity-[0.04]">
-          <svg
-            viewBox="0 0 240 240"
-            className="w-[26rem] h-[26rem] sm:w-[36rem] sm:h-[36rem] text-[#12E2C4]"
-            fill="none"
-          >
-            <path
-              d="M120 18L202 50V116C202 167 166 205 120 222C74 205 38 167 38 116V50L120 18Z"
-              stroke="currentColor"
-              strokeWidth="2.5"
-            />
-            <path
-              d="M120 36L184 61V115C184 156 155 187 120 202C85 187 56 156 56 115V61L120 36Z"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeDasharray="6 6"
-            />
-            <circle cx="120" cy="116" r="42" stroke="#F59E0B" strokeWidth="2" />
-            <path
-              d="M102 98H138V114C138 124 130 132 120 132C110 132 102 124 102 114V98Z"
-              stroke="#F59E0B"
-              strokeWidth="2"
-            />
-            <path d="M120 132V146M108 146H132" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </div>
-
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-center whitespace-nowrap">
           <span className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-[0.22em] uppercase text-white/[0.03] font-['Space_Grotesk']">
             FCIT SPORTS SOCIETY
@@ -122,20 +94,30 @@ export default function WhyCompete() {
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Section Headline */}
-        <div className="max-w-3xl mb-16 sm:mb-20">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#182244] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-3">
-            <span>// THE MINI OLYMPICS ADVANTAGE</span>
+        {/* Section Headline + FOC Sports Society Visual Above Cards */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 mb-14 sm:mb-16">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#182244] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-3">
+              <span>// THE MINI OLYMPICS ADVANTAGE</span>
+            </div>
+            <h2 className="text-4xl sm:text-6xl font-black tracking-tight text-[#F8FAFC] uppercase font-['Space_Grotesk'] leading-[0.95]">
+              BUILT FOR ATHLETES.<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F59E0B] via-[#FBBF24] to-[#12E2C4]">
+                ORGANIZED FOR EXCELLENCE.
+              </span>
+            </h2>
+            <p className="mt-4 text-base sm:text-lg text-[#94A3B8] leading-relaxed">
+              We overhauled the entire sports tournament experience so you can focus on performance. Transparent brackets, rapid verification, and tournament-grade equipment.
+            </p>
           </div>
-          <h2 className="text-4xl sm:text-6xl font-black tracking-tight text-[#F8FAFC] uppercase font-['Space_Grotesk'] leading-[0.95]">
-            BUILT FOR ATHLETES.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F59E0B] via-[#FBBF24] to-[#12E2C4]">
-              ORGANIZED FOR EXCELLENCE.
-            </span>
-          </h2>
-          <p className="mt-4 text-base sm:text-lg text-[#94A3B8] leading-relaxed">
-            We overhauled the entire sports tournament experience so you can focus on performance. Transparent brackets, rapid verification, and tournament-grade equipment.
-          </p>
+
+          <div aria-hidden="true" className="pointer-events-none select-none flex items-center justify-center lg:justify-end shrink-0">
+            <img
+              src="/images/foc-logo.png"
+              alt=""
+              className="w-60 sm:w-72 lg:w-80 h-auto object-contain opacity-45"
+            />
+          </div>
         </div>
 
         {/* 4 Connected Visual Pillars: 2 Above, 2 Below, In Contact */}

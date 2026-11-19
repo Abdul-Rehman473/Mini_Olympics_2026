@@ -33,9 +33,6 @@ export const metadata: Metadata = {
     template: "%s | Mini Olympics",
   },
   description: "Registration portal for FCIT Sports Society Mini Olympics 2026",
-  icons: {
-    icon: "/icon.svg",
-  },
 };
 
 export default function RootLayout({

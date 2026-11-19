@@ -482,10 +482,10 @@ function RegisterForm() {
   };
 
   const amountEligibleForDiscount =
-    formData.gender && formData.selectedGames.length > 0
+    formData.gender === 'boys' || formData.gender === 'girls'
       ? formData.selectedGames
           .filter((name) => isGameCouponEligible(name))
-          .reduce((sum, name) => sum + (getGamePrice(name, formData.gender!) ?? 0), 0)
+          .reduce((sum, name) => sum + (getGamePrice(name, formData.gender as 'boys' | 'girls') ?? 0), 0)
       : 0;
   const discountAmount =
     appliedCoupon && amountEligibleForDiscount > 0
