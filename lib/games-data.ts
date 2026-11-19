@@ -1198,7 +1198,9 @@ export function mergeLiveGamesWithCatalog(liveRows: GamePrice[]): GameInfo[] {
     return GAMES_DATA;
   }
 
-  return liveRows.map((row) => {
+  const hasSyncedCatalog = liveRows.some((r) => Boolean(r.category)) || liveRows.length >= 35;
+
+  const convertRow = (row: GamePrice): GameInfo => {
     const exactMatch = findCatalogMatch(row.name);
     const hasBoys = row.boys !== null && row.boys !== undefined;
     const hasGirls = row.girls !== null && row.girls !== undefined;
@@ -1243,7 +1245,30 @@ export function mergeLiveGamesWithCatalog(liveRows: GamePrice[]): GameInfo[] {
       iconKey: exactMatch?.iconKey ?? 'trophy',
       image: exactMatch?.image ?? DEFAULT_FALLBACK_IMAGE,
     };
-  });
+  };
+
+  if (hasSyncedCatalog) {
+    return liveRows.map(convertRow);
+  }
+
+  // Legacy partial DB fallback: keep all 49 games visible while overlaying live DB prices/names
+  const matchedCatalogIds = new Set<string>();
+  const convertedByCatalogId = new Map<string, GameInfo>();
+  const extraDbGames: GameInfo[] = [];
+
+  for (const row of liveRows) {
+    const converted = convertRow(row);
+    const catalogMatch = findCatalogMatch(row.name);
+    if (catalogMatch) {
+      matchedCatalogIds.add(catalogMatch.id);
+      convertedByCatalogId.set(catalogMatch.id, converted);
+    } else {
+      extraDbGames.push(converted);
+    }
+  }
+
+  const merged49 = GAMES_DATA.map((g) => convertedByCatalogId.get(g.id) ?? g);
+  return [...merged49, ...extraDbGames];
 }
 
 export function getGameById(id: string): GameInfo | undefined {

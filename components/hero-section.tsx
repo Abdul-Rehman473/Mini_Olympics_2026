@@ -47,7 +47,7 @@ export default function HeroSection() {
         {/* Supporting Editorial Paragraph */}
         <div className="hero-stagger hero-stagger-sub mt-8 sm:mt-10 max-w-2xl">
           <div className="flex items-center gap-2 text-sm sm:text-base font-bold tracking-widest text-[#12E2C4] uppercase font-mono mb-2">
-            <span>{liveGames.length} GAMES</span>
+            <span>50+ GAMES</span>
             <span>•</span>
             <span>ONE CHAMPIONSHIP</span>
             <span>•</span>
@@ -91,7 +91,7 @@ export default function HeroSection() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
           <div className="flex flex-col space-y-0.5">
             <span className="text-[10px] font-mono tracking-widest text-[#F59E0B] uppercase">01 // DISCIPLINES</span>
-            <span className="text-xl sm:text-2xl font-black text-[#F8FAFC] font-['Space_Grotesk']">{liveGames.length} OFFICIAL SPORTS</span>
+            <span className="text-xl sm:text-2xl font-black text-[#F8FAFC] font-['Space_Grotesk']">50+ OFFICIAL SPORTS</span>
             <span className="text-xs text-[#94A3B8]">Team, Racket, Board & Esports</span>
           </div>
 
