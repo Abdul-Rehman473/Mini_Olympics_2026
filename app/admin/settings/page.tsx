@@ -117,6 +117,16 @@ export default function SettingsPage() {
     'registration_online' | 'registration_cash' | 'payment_received' | 'payment_rejected'
   >('registration_online');
 
+  const normalizeCategorySlug = (raw?: string | null): string => {
+    const val = String(raw || '').trim().toLowerCase();
+    if (val === 'team' || val.includes('team')) return 'team';
+    if (val === 'indoor' || val.includes('indoor') || val.includes('table') || val === 'racket' || val.includes('racket')) return 'indoor';
+    if (val === 'track' || val.includes('track') || val.includes('field') || val === 'race' || val.includes('race')) return 'track';
+    if (val === 'esports' || val.includes('esport')) return 'esports';
+    if (val === 'fun' || val.includes('fun') || val === 'board' || val.includes('board') || val.includes('strategy') || val === 'skill') return 'fun';
+    return 'team';
+  };
+
   // Games state
   const [games, setGames] = useState<GamePricing[]>([]);
   const [loadingGames, setLoadingGames] = useState(true);
@@ -127,7 +137,7 @@ export default function SettingsPage() {
   const [gameForm, setGameForm] = useState({
     original_game_name: '',
     game_name: '',
-    category: 'Team Sports',
+    category: 'team',
     is_active: true,
     coupon_eligible: true,
     boys_price: '',
@@ -424,7 +434,7 @@ export default function SettingsPage() {
       setGameForm({
         original_game_name: gameName,
         game_name: gameName,
-        category: boysEntry?.category || girlsEntry?.category || 'Team Sports',
+        category: normalizeCategorySlug(boysEntry?.category || girlsEntry?.category),
         is_active: (boysEntry?.is_active ?? girlsEntry?.is_active) !== false,
         coupon_eligible: (boysEntry?.coupon_eligible ?? girlsEntry?.coupon_eligible) !== false,
         boys_price: boysEntry && boysEntry.is_active !== false ? boysEntry.price.toString() : '',
@@ -437,7 +447,7 @@ export default function SettingsPage() {
       setGameForm({
         original_game_name: '',
         game_name: '',
-        category: 'Team Sports',
+        category: 'team',
         is_active: true,
         coupon_eligible: true,
         boys_price: '',
@@ -519,7 +529,7 @@ export default function SettingsPage() {
   const requestSyncPdfGames = () => {
     setConfirmState({
       open: true,
-      title: 'Sync official 49 PDF games & prices?',
+      title: 'Sync official 50+ PDF games & prices?',
       description:
         'All official championship games will be synced to PDF prices. Custom games with existing registrations are automatically deactivated instead of deleted.',
       confirmLabel: 'Sync Official Games',
@@ -715,7 +725,7 @@ export default function SettingsPage() {
                     className="border-white/15 bg-white/5 hover:bg-white/10 text-[#F8FAFC]"
                   >
                     {syncingPdfGames && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-                    Sync PDF (49)
+                    Sync PDF (50+)
                   </Button>
                   <Button
                     onClick={() => handleOpenGameDialog()}
@@ -931,238 +941,6 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Automated Email Templates */}
-        <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08] shadow-xl flex flex-col min-h-[420px]">
-          <CardHeader className="border-b border-white/[0.08]">
-            <CardTitle className="flex items-center gap-2 text-[#F8FAFC]">
-              <Mail className="h-5 w-5 text-[#12E2C4]" />
-              Automated Email Templates
-            </CardTitle>
-            <CardDescription className="text-[#94A3B8]">
-              Placeholders: name, regNum, slipId, teamName, gamesList, paymentAction.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 flex flex-col flex-1 min-h-0">
-            <div className="space-y-3 flex-1 flex flex-col min-h-0">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#94A3B8]">Template</Label>
-                <Select
-                  value={selectedEmailTemplate}
-                  onValueChange={(v) => setSelectedEmailTemplate(v as typeof selectedEmailTemplate)}
-                >
-                  <SelectTrigger className="w-full bg-[#0B1124] border-white/15 text-[#F8FAFC]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="registration_online">Registration submitted (online)</SelectItem>
-                    <SelectItem value="registration_cash">Registration submitted (cash)</SelectItem>
-                    <SelectItem value="payment_received">Payment received (confirmed)</SelectItem>
-                    <SelectItem value="payment_rejected">Payment rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2 flex-1 min-h-0 flex flex-col">
-                <Label className="text-xs text-[#94A3B8]">Subject</Label>
-                <Input
-                  value={
-                    selectedEmailTemplate === 'registration_online'
-                      ? emailTemplates.email_registration_submitted_online_subject
-                      : selectedEmailTemplate === 'registration_cash'
-                        ? emailTemplates.email_registration_submitted_cash_subject
-                        : selectedEmailTemplate === 'payment_received'
-                          ? emailTemplates.email_payment_received_subject
-                          : emailTemplates.email_payment_rejected_subject
-                  }
-                  disabled={!canEdit}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (selectedEmailTemplate === 'registration_online')
-                      setEmailTemplates((t) => ({ ...t, email_registration_submitted_online_subject: v }));
-                    else if (selectedEmailTemplate === 'registration_cash')
-                      setEmailTemplates((t) => ({ ...t, email_registration_submitted_cash_subject: v }));
-                    else if (selectedEmailTemplate === 'payment_received')
-                      setEmailTemplates((t) => ({ ...t, email_payment_received_subject: v }));
-                    else setEmailTemplates((t) => ({ ...t, email_payment_rejected_subject: v }));
-                  }}
-                  className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
-                />
-                <Label className="text-xs text-[#94A3B8]">Body (HTML)</Label>
-                <textarea
-                  value={
-                    selectedEmailTemplate === 'registration_online'
-                      ? emailTemplates.email_registration_submitted_online_body
-                      : selectedEmailTemplate === 'registration_cash'
-                        ? emailTemplates.email_registration_submitted_cash_body
-                        : selectedEmailTemplate === 'payment_received'
-                          ? emailTemplates.email_payment_received_body
-                          : emailTemplates.email_payment_rejected_body
-                  }
-                  disabled={!canEdit}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (selectedEmailTemplate === 'registration_online')
-                      setEmailTemplates((t) => ({ ...t, email_registration_submitted_online_body: v }));
-                    else if (selectedEmailTemplate === 'registration_cash')
-                      setEmailTemplates((t) => ({ ...t, email_registration_submitted_cash_body: v }));
-                    else if (selectedEmailTemplate === 'payment_received')
-                      setEmailTemplates((t) => ({ ...t, email_payment_received_body: v }));
-                    else setEmailTemplates((t) => ({ ...t, email_payment_rejected_body: v }));
-                  }}
-                  rows={7}
-                  className="w-full px-3 py-2 border border-white/15 bg-[#0B1124] text-[#F8FAFC] rounded-lg text-xs font-mono resize-y flex-1 min-h-[160px]"
-                />
-              </div>
-            </div>
-            {canEdit && (
-              <Button
-                onClick={handleSaveEmailTemplates}
-                disabled={savingTemplates}
-                className="mt-4 bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#080D1C] font-bold"
-              >
-                {savingTemplates ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : templatesSaveSuccess ? (
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                {templatesSaveSuccess ? 'Saved!' : 'Save Templates'}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* SMTP Email Settings */}
-        <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08] shadow-xl lg:col-span-2">
-          <CardHeader className="border-b border-white/[0.08]">
-            <CardTitle className="flex items-center gap-2 text-[#F8FAFC]">
-              <Server className="h-5 w-5 text-blue-400" />
-              Email Configuration (SMTP)
-            </CardTitle>
-            <CardDescription className="text-[#94A3B8]">
-              Secrets are masked when retrieved. Leave App Password unchanged to preserve existing password.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="smtpEmail" className="text-xs text-[#94A3B8]">
-                    Email Address *
-                  </Label>
-                  <Input
-                    id="smtpEmail"
-                    type="email"
-                    disabled={!canEdit}
-                    value={settings.smtp_email}
-                    onChange={(e) => setSettings({ ...settings, smtp_email: e.target.value })}
-                    placeholder="sports@pucit.edu.pk"
-                    className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="smtpPassword" className="text-xs text-[#94A3B8]">
-                    App Password *
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="smtpPassword"
-                      type={showSmtpPassword ? 'text' : 'password'}
-                      disabled={!canEdit}
-                      value={settings.smtp_password}
-                      onChange={(e) => setSettings({ ...settings, smtp_password: e.target.value })}
-                      autoComplete="off"
-                      placeholder="16-character app password"
-                      className="pr-10 bg-[#0B1124] border-white/15 text-[#F8FAFC]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowSmtpPassword(!showSmtpPassword)}
-                      aria-label="Toggle password visibility"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-white"
-                    >
-                      {showSmtpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="smtpFromName" className="text-xs text-[#94A3B8]">
-                    From Name
-                  </Label>
-                  <Input
-                    id="smtpFromName"
-                    disabled={!canEdit}
-                    value={settings.smtp_from_name}
-                    onChange={(e) => setSettings({ ...settings, smtp_from_name: e.target.value })}
-                    className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtpHost" className="text-xs text-[#94A3B8]">
-                      SMTP Server
-                    </Label>
-                    <Input
-                      id="smtpHost"
-                      disabled={!canEdit}
-                      value={settings.smtp_host}
-                      onChange={(e) => setSettings({ ...settings, smtp_host: e.target.value })}
-                      className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="smtpPort" className="text-xs text-[#94A3B8]">
-                      Port
-                    </Label>
-                    <Input
-                      id="smtpPort"
-                      disabled={!canEdit}
-                      value={settings.smtp_port}
-                      onChange={(e) => setSettings({ ...settings, smtp_port: e.target.value })}
-                      className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
-                    />
-                  </div>
-                </div>
-
-                {canEdit && (
-                  <div className="flex gap-3 pt-4">
-                    <Button
-                      onClick={handleSaveSmtp}
-                      disabled={savingSmtp}
-                      className="bg-blue-500 hover:bg-blue-600 text-white"
-                    >
-                      {savingSmtp ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : smtpSaveSuccess ? (
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                      ) : (
-                        <Save className="h-4 w-4 mr-2" />
-                      )}
-                      {smtpSaveSuccess ? 'Saved!' : 'Save SMTP'}
-                    </Button>
-                    <Button
-                      onClick={handleTestEmail}
-                      disabled={testingEmail || !settings.smtp_email}
-                      variant="outline"
-                      className="border-white/15 bg-white/5 text-[#F8FAFC] hover:bg-white/10"
-                    >
-                      {testingEmail ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4 mr-2" />
-                      )}
-                      Send Test Email
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Game Add/Edit Dialog */}
@@ -1199,12 +977,11 @@ export default function SettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Team Sports">Team Sports</SelectItem>
-                    <SelectItem value="Races & Track">Races &amp; Track</SelectItem>
-                    <SelectItem value="Racket Sports">Racket Sports</SelectItem>
-                    <SelectItem value="Esports">Esports</SelectItem>
-                    <SelectItem value="Board & Strategy">Board &amp; Strategy</SelectItem>
-                    <SelectItem value="Fun & Strength">Fun &amp; Strength</SelectItem>
+                    <SelectItem value="team">Team Sports</SelectItem>
+                    <SelectItem value="indoor">Indoor &amp; Table Games</SelectItem>
+                    <SelectItem value="track">Track &amp; Field</SelectItem>
+                    <SelectItem value="fun">Fun Games</SelectItem>
+                    <SelectItem value="esports">Esports Arena</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

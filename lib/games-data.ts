@@ -2,10 +2,9 @@ import type { GamePrice } from './games-pricing';
 
 export type SportCategory = 
   | 'team' 
-  | 'racket' 
-  | 'board' 
-  | 'race' 
-  | 'skill' 
+  | 'indoor' 
+  | 'track' 
+  | 'fun' 
   | 'esports';
 
 export interface GameInfo {
@@ -33,16 +32,15 @@ export interface GameInfo {
 }
 
 export const CATEGORIES: { id: SportCategory; label: string; count: number; description: string }[] = [
-  { id: 'team', label: 'Team Sports', count: 12, description: 'High-stakes squad athletic championships across the main campus arenas.' },
-  { id: 'race', label: 'Races & Relays', count: 4, description: 'Pure campus sprint velocity, endurance tests, and synchronized relays.' },
-  { id: 'racket', label: 'Racket Sports', count: 4, description: 'Speed, reflex, and precision tournaments in singles and doubles format.' },
-  { id: 'esports', label: 'Esports Arena', count: 4, description: 'Competitive digital battles in FIFA, Tekken, and mobile battle royale.' },
-  { id: 'board', label: 'Board & Card', count: 8, description: 'Strategic intellectual clashes, traditional tabletop matches, and tactical games.' },
-  { id: 'skill', label: 'Fun & Skill', count: 17, description: 'Target shooting, power tests, precision darts, and high-energy campus challenges.' },
+  { id: 'team', label: 'Team Sports', count: 10, description: 'Big matches & squad events across the main campus arenas.' },
+  { id: 'indoor', label: 'Indoor & Table Games', count: 12, description: 'Singles & doubles precision clashes across badminton, table tennis, carrom, ludo, foosball & darts.' },
+  { id: 'track', label: 'Track & Field', count: 9, description: 'Athletics events, sprint velocity, endurance tests, laser run & campus challenges.' },
+  { id: 'fun', label: 'Fun Games', count: 11, description: 'Target shooting, arm wrestling, strategy boards, and high-energy campus challenges.' },
+  { id: 'esports', label: 'Esports Arena', count: 7, description: 'Indoor, console & PC competitive battles in FIFA, Tekken, COD, PUBG & arcade speedruns.' },
 ];
 
 export const GAMES_DATA: GameInfo[] = [
-  // --- TEAM SPORTS (12) ---
+  // --- TEAM SPORTS (10) ---
   {
     id: 'cricket',
     name: 'Tape Ball Cricket',
@@ -88,25 +86,6 @@ export const GAMES_DATA: GameInfo[] = [
     accentColor: '#12E2C4',
     iconKey: 'football',
     image: '/images/games/football.avif',
-  },
-  {
-    id: 'hockey',
-    name: 'Field Hockey',
-    category: 'team',
-    categoryLabel: 'Team Sports',
-    headline: 'STICK MASTERY',
-    tagline: 'The national sport contested with collegiate intensity, sharp stickwork, and synthetic turf speed.',
-    division: 'boys_only',
-    playerFormat: '10 Players per Team',
-    matchFormat: '4 QUARTERS KNOCKOUT',
-    boysPlayers: 10,
-    boysFee: 1500,
-    isTeam: true,
-    rulesOverview: '10-a-side regulation match. Official turf stick rules and protective shin guards are strictly mandatory.',
-    venueNote: 'Outdoor Synthetic Turf',
-    accentColor: '#3B82F6',
-    iconKey: 'hockey',
-    image: 'https://images.unsplash.com/photo-1734158776592-4bf027643b2b?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'kabaddi',
@@ -256,50 +235,33 @@ export const GAMES_DATA: GameInfo[] = [
     image: 'https://images.unsplash.com/photo-1674986778924-7a33c1531443?auto=format&fit=crop&w=800&q=80',
   },
   {
-    id: 'basketball-1v1',
-    name: 'Basketball (1 vs 1)',
+    id: 'basketball-team',
+    name: 'Basketball Team',
     category: 'team',
     categoryLabel: 'Team Sports',
-    headline: 'ISOLATION HOOPS',
-    tagline: 'Isolation basketball. Handles, step-backs, and rim protection in half-court.',
-    division: 'boys_only',
-    playerFormat: 'Solo (1 vs 1)',
-    matchFormat: 'FIRST TO 11 POINTS',
-    boysPlayers: 1,
-    boysFee: 200,
-    isTeam: false,
-    rulesOverview: 'First to 11 points (1s & 2s) with winners-ball rule. 10-second shot clock.',
+    headline: 'FULL-COURT HOOPS',
+    tagline: 'Full-court squad basketball. Fast breaks, perimeter shooting, and rim protection.',
+    division: 'boys_and_girls',
+    playerFormat: '♂ 7 Players | ♀ 7 Players',
+    matchFormat: '4x8 MIN QUARTERS',
+    boysPlayers: 7,
+    girlsPlayers: 7,
+    boysFee: 2200,
+    girlsFee: 2200,
+    isTeam: true,
+    rulesOverview: '7-player squad roster (5 on court + 2 subs). Standard FIBA half/full court rules.',
     venueNote: 'Main Basketball Court',
     accentColor: '#FF8800',
     iconKey: 'basketball',
     image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'swimming',
-    name: 'Swimming Sprint',
-    category: 'team',
-    categoryLabel: 'Team Sports',
-    headline: 'AQUATIC VELOCITY',
-    tagline: 'Olympic distance freestyle sprint across university aquatic lanes.',
-    division: 'boys_only',
-    playerFormat: 'Solo (1 Swimmer)',
-    matchFormat: '50M TIMED HEATS',
-    boysPlayers: 1,
-    boysFee: 300,
-    isTeam: false,
-    rulesOverview: '50m Freestyle and Breaststroke timed heats. Top 4 times advance to finals.',
-    venueNote: 'Aquatics Complex',
-    accentColor: '#00D2FF',
-    iconKey: 'swimming',
-    image: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=800&q=80',
   },
 
   // --- RACKET SPORTS (4) ---
   {
     id: 'badminton-singles',
     name: 'Badminton Singles',
-    category: 'racket',
-    categoryLabel: 'Racket Sports',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'SHUTTLE FLIGHT',
     tagline: 'Sub-second drops, explosive jump smashes, and total court coverage in the indoor arena.',
     division: 'boys_and_girls',
@@ -321,8 +283,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'badminton-doubles',
     name: 'Badminton Doubles',
-    category: 'racket',
-    categoryLabel: 'Racket Sports',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'SMASH ROTATION',
     tagline: 'Synchronized tandem court coverage, net intercepts, and aggressive smash rotation.',
     division: 'boys_and_girls',
@@ -344,8 +306,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'table-tennis-singles',
     name: 'Table Tennis Singles',
-    category: 'racket',
-    categoryLabel: 'Racket Sports',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'HEAVY TOPSPIN',
     tagline: 'Sub-second spins, heavy topspins, and counter-looping showdowns.',
     division: 'boys_and_girls',
@@ -365,8 +327,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'table-tennis-doubles',
     name: 'Table Tennis Doubles',
-    category: 'racket',
-    categoryLabel: 'Racket Sports',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'CROSS-COURT REFLEXES',
     tagline: 'Alternate hitting sequences, cross-court placement, and rapid reflex exchanges.',
     division: 'boys_and_girls',
@@ -388,8 +350,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'chess',
     name: 'Championship Chess',
-    category: 'board',
-    categoryLabel: 'Board & Card',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: 'THE GRANDMASTER CLASH',
     tagline: '10+0 Blitz & Rapid classical formats under digital clocks. Precision calculation with no room for error.',
     division: 'boys_and_girls',
@@ -411,8 +373,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'ludo-singles',
     name: 'Ludo Singles',
-    category: 'board',
-    categoryLabel: 'Board & Card',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'TACTICAL DIE ROLLS',
     tagline: 'High-stakes token hunting, dice strategy, and competitive home-runs.',
     division: 'boys_and_girls',
@@ -432,8 +394,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'ludo-doubles',
     name: 'Ludo Doubles',
-    category: 'board',
-    categoryLabel: 'Board & Card',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'DIAGONAL ALLIANCE',
     tagline: 'Partner collaboration, cross-board shield blocks, and dual victory conditions.',
     division: 'boys_and_girls',
@@ -453,8 +415,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'carrom-singles',
     name: 'Carrom Singles',
-    category: 'board',
-    categoryLabel: 'Board & Card',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'THE QUEEN POCKET',
     tagline: 'Powdered surface striker mastery, scissor rebounds, and Queen pocketing.',
     division: 'boys_and_girls',
@@ -474,8 +436,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'carrom-doubles',
     name: 'Carrom Doubles',
-    category: 'board',
-    categoryLabel: 'Board & Card',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'CORNER TACTICS',
     tagline: 'Opposing corner tactics, defensive leaves, and synchronized board clearing.',
     division: 'boys_and_girls',
@@ -495,8 +457,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'jenga',
     name: 'Jenga Tower Challenge',
-    category: 'board',
-    categoryLabel: 'Board & Card',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: 'STEADY HAND PRESSURE',
     tagline: 'Steady hands, structural physics, and heart-stopping tension block pulls.',
     division: 'boys_and_girls',
@@ -516,8 +478,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'uno',
     name: 'Uno Championship',
-    category: 'board',
-    categoryLabel: 'Board & Card',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: 'WILD CARD WARFARE',
     tagline: 'Wild cards, Draw-fours, color shifts, and card-shedding campus warfare.',
     division: 'boys_and_girls',
@@ -537,8 +499,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'pucket',
     name: 'Pucket Fast-Track',
-    category: 'board',
-    categoryLabel: 'Board & Card',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: 'ELASTIC SLING SPEED',
     tagline: 'Fast-paced wooden puck slinging through the narrow center gate.',
     division: 'boys_and_girls',
@@ -560,8 +522,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: '100m-race',
     name: '100m Sprint Dash',
-    category: 'race',
-    categoryLabel: 'Races & Relays',
+    category: 'track',
+    categoryLabel: 'Track & Field',
     headline: 'FASTEST MAN ON CAMPUS',
     tagline: 'Laser-timed sprint showdown on the Olympic straight track for the championship title.',
     division: 'boys_and_girls',
@@ -583,8 +545,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: '3-leg-race',
     name: '3 Legged Race',
-    category: 'race',
-    categoryLabel: 'Races & Relays',
+    category: 'track',
+    categoryLabel: 'Track & Field',
     headline: 'BOUND SYNERGY',
     tagline: 'Synchronized running duos bound at the ankle. Coordination is everything.',
     division: 'boys_and_girls',
@@ -604,8 +566,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'relay-race',
     name: '4x100m Baton Relay',
-    category: 'race',
-    categoryLabel: 'Races & Relays',
+    category: 'track',
+    categoryLabel: 'Track & Field',
     headline: 'THE ANCHOR LEG',
     tagline: 'Precision baton transfers, anchor leg heroics, and department bragging rights.',
     division: 'boys_and_girls',
@@ -625,8 +587,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'egg-relay-race',
     name: 'Egg & Spoon Relay',
-    category: 'race',
-    categoryLabel: 'Races & Relays',
+    category: 'track',
+    categoryLabel: 'Track & Field',
     headline: 'CALM UNDER PACE',
     tagline: 'Speed balanced with extreme calm. Drop the egg and you restart the leg.',
     division: 'boys_and_girls',
@@ -643,13 +605,55 @@ export const GAMES_DATA: GameInfo[] = [
     iconKey: 'egg',
     image: 'https://images.unsplash.com/photo-1529570634977-ec042420117b?auto=format&fit=crop&w=800&q=80',
   },
+  {
+    id: 'laser-run',
+    name: 'Laser Run',
+    category: 'track',
+    categoryLabel: 'Track & Field',
+    headline: 'RUN & PRECISION TARGET',
+    tagline: 'Sprint bursts combined with laser-target accuracy in an Olympic modern pentathlon format.',
+    division: 'boys_and_girls',
+    playerFormat: 'Solo (1 Athlete)',
+    matchFormat: 'TIMED LASER HEATS',
+    boysPlayers: 1,
+    girlsPlayers: 1,
+    boysFee: 300,
+    girlsFee: 300,
+    isTeam: false,
+    rulesOverview: 'Alternating sprint laps and rapid laser-target hits. Fastest total time wins.',
+    venueNote: 'Track & Target Range',
+    accentColor: '#12E2C4',
+    iconKey: 'crosshair',
+    image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 'scavenger-hunt',
+    name: 'Scavenger Hunt',
+    category: 'track',
+    categoryLabel: 'Track & Field',
+    headline: 'CAMPUS CLUE CHASE',
+    tagline: 'High-speed campus clue decoding, checkpoint dashes, and race against the clock.',
+    division: 'boys_and_girls',
+    playerFormat: 'Solo (1 Runner)',
+    matchFormat: 'CHECKPOINT TIME TRIAL',
+    boysPlayers: 1,
+    girlsPlayers: 1,
+    boysFee: 400,
+    girlsFee: 400,
+    isTeam: false,
+    rulesOverview: 'Solve sequential campus riddles and reach all marshaled checkpoints in the shortest time.',
+    venueNote: 'PUCIT Old Campus Grounds',
+    accentColor: '#F59E0B',
+    iconKey: 'target',
+    image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=800&q=80',
+  },
 
   // --- FUN & SKILL GAMES (17) ---
   {
     id: 'arm-wrestling',
     name: 'Arm Wrestling',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: 'THE HOOK & TOP-ROLL',
     tagline: 'Top-roll, hook, and raw tendon strength on the official arm-wrestling table.',
     division: 'boys_and_girls',
@@ -669,8 +673,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'foosball-singles',
     name: 'Foosball Singles',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'ROD SPIN BAN',
     tagline: 'Table soccer lightning shots, bank passes, and wall snipes.',
     division: 'boys_and_girls',
@@ -690,8 +694,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'foosball-doubles',
     name: 'Foosball Doubles',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'TANDEM TABLE SOCCER',
     tagline: 'Goalkeeper defense paired with midfield and forward rod passing coordination.',
     division: 'boys_and_girls',
@@ -711,8 +715,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'darts-singles',
     name: 'Darts Singles (501)',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'DOUBLE-OUT CLUTCH',
     tagline: 'Bullseye accuracy, triple-20 bed groupings, and clinical double checkouts.',
     division: 'boys_and_girls',
@@ -732,8 +736,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'darts-doubles',
     name: 'Darts Doubles',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'indoor',
+    categoryLabel: 'Indoor & Table Games',
     headline: 'DUAL BOARD ACCURACY',
     tagline: 'Alternate leg throwing with partner strategy on the tournament bristle board.',
     division: 'boys_and_girls',
@@ -753,8 +757,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: '1v1-penalty',
     name: '1v1 Penalty Shootout',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'track',
+    categoryLabel: 'Track & Field',
     headline: 'FROM 12 YARDS',
     tagline: 'Striker versus Goalkeeper psychological duel from 12 yards out.',
     division: 'boys_and_girls',
@@ -774,8 +778,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'archery',
     name: 'Archery Target Shoot',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: 'THE GOLD BULLSEYE',
     tagline: 'Recurve bow precision, wind compensation, and concentric gold target rings.',
     division: 'boys_only',
@@ -793,8 +797,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'rifle-shooting',
     name: 'Air Rifle Target Shooting',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: '10-METER PRECISION',
     tagline: 'Breathing control, trigger squeeeze, and 10-meter precision paper targets.',
     division: 'boys_and_girls',
@@ -814,8 +818,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'gol-gappay-eating',
     name: 'Gol Gappay Challenge',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: '3-MINUTE FEAST',
     tagline: 'The ultimate culinary speed test. Down the most spicy gol gappay in 3 minutes.',
     division: 'boys_and_girls',
@@ -837,8 +841,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'plank',
     name: 'Plank Endurance Test',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'track',
+    categoryLabel: 'Track & Field',
     headline: 'CORE STEEL',
     tagline: 'Core stamina, isometric strength, and mental fortitude against the clock.',
     division: 'boys_and_girls',
@@ -858,8 +862,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'rope-jump',
     name: 'Rope Jump Sprint',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'track',
+    categoryLabel: 'Track & Field',
     headline: '60-SECOND CADENCE',
     tagline: 'Maximum speed rope revolutions in 60 seconds with double-under bonuses.',
     division: 'boys_and_girls',
@@ -879,8 +883,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'rubiks-cube',
     name: 'Rubik\'s Speedcubing',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: 'SUB-15 ALGORITHMS',
     tagline: '3x3x3 algorithm execution, fingertricks, and sub-15 second solutions.',
     division: 'boys_and_girls',
@@ -900,8 +904,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'thula',
     name: 'Thula Traditional',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: 'HERITAGE SKILL',
     tagline: 'Traditional campus skill contest tested across generations of PUCIT students.',
     division: 'boys_only',
@@ -919,8 +923,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'squid-game',
     name: 'Red Light Green Light',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'fun',
+    categoryLabel: 'Fun Games',
     headline: 'ZERO MOTION SENSOR',
     tagline: 'Sensory reflex obstacle course inspired by viral competitive survival games.',
     division: 'boys_and_girls',
@@ -940,8 +944,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'subway-surfers',
     name: 'Subway Surfers High Score',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'esports',
+    categoryLabel: 'Esports Arena',
     headline: 'INFINITE RUN MULTIPLIER',
     tagline: 'Single run infinite runner arcade challenge for the highest multiplier score.',
     division: 'boys_and_girls',
@@ -961,8 +965,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'blur-racing',
     name: 'Blur PC Racing',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'esports',
+    categoryLabel: 'Esports Arena',
     headline: 'POWER-UP DRIFTING',
     tagline: 'Power-up tactical racing, bolt shots, shields, and high-speed drifting.',
     division: 'boys_and_girls',
@@ -982,8 +986,8 @@ export const GAMES_DATA: GameInfo[] = [
   {
     id: 'piano-tiles',
     name: 'Piano Tiles Reflex Test',
-    category: 'skill',
-    categoryLabel: 'Fun & Skill',
+    category: 'esports',
+    categoryLabel: 'Esports Arena',
     headline: 'MAX BPM TAPS',
     tagline: 'Insane BPM tile taps without hitting black or missing a beat.',
     division: 'boys_and_girls',
@@ -1097,11 +1101,10 @@ export const GAMES_DATA: GameInfo[] = [
 
 export const CATEGORY_LABELS: Record<SportCategory, string> = {
   team: 'Team Sports',
-  race: 'Races & Relays',
-  racket: 'Racket Sports',
+  indoor: 'Indoor & Table Games',
+  track: 'Track & Field',
+  fun: 'Fun Games',
   esports: 'Esports Arena',
-  board: 'Board & Card',
-  skill: 'Fun & Skill',
 };
 
 const DEFAULT_FALLBACK_IMAGE =
@@ -1115,16 +1118,25 @@ function slugify(input: string): string {
 }
 
 function normalizeCategory(cat: string | undefined | null, fallbackName: string): SportCategory {
-  if (cat === 'team' || cat === 'race' || cat === 'racket' || cat === 'esports' || cat === 'board' || cat === 'skill') {
-    return cat;
-  }
-  const lower = fallbackName.toLowerCase();
-  if (/(fifa|tekken|cod|call of duty|pubg|esport)/.test(lower)) return 'esports';
-  if (/(badminton|table tennis)/.test(lower)) return 'racket';
-  if (/(100m|relay|3 leg|sprint dash)/.test(lower)) return 'race';
-  if (/(chess|ludo|carrom|jenga|uno|pucket)/.test(lower)) return 'board';
-  if (/(cricket|football|hockey|kabaddi|kabbadi|handball|volley|frisbee|pitho|tug of war|double wicket|basketball|swimming)/.test(lower)) return 'team';
-  return 'skill';
+  const lowerName = fallbackName.toLowerCase();
+  const catLower = (cat ?? '').trim().toLowerCase();
+
+  // Direct match to the 5 official PDF category slugs or labels
+  if (catLower === 'team' || catLower === 'team sports') return 'team';
+  if (catLower === 'indoor' || catLower === 'indoor & table games' || catLower === 'racket' || catLower === 'racket sports') return 'indoor';
+  if (catLower === 'track' || catLower === 'track & field' || catLower === 'race' || catLower === 'races & relays' || catLower === 'races & track') return 'track';
+  if (catLower === 'fun' || catLower === 'fun games' || catLower === 'fun & strength') return 'fun';
+  if (catLower === 'esports' || catLower === 'esports arena' || catLower === 'e-sports arena') return 'esports';
+
+  // Game-name mapping (also handles legacy 'board' and 'skill' DB rows cleanly)
+  if (/(fifa|tekken|cod|call of duty|pubg|blur|subway surfer|piano tiles|esport)/.test(lowerName)) return 'esports';
+  if (/(badminton|table tennis|carrom|ludo|foosball|dart)/.test(lowerName)) return 'indoor';
+  if (/(100m|relay|3 leg|sprint dash|rope jump|plank|laser run|scavenger|penalty)/.test(lowerName)) return 'track';
+  if (/(cricket|football|kabaddi|kabbadi|handball|volley|frisbee|pitho|tug of war|double wicket|basketball)/.test(lowerName)) return 'team';
+  if (/(chess|uno|jenga|pucket|rifle|arm wrestling|squid|red light|gol gappay|rubik|archery|thula)/.test(lowerName)) return 'fun';
+
+  if (catLower === 'board' || catLower === 'board & card' || catLower === 'board & strategy') return 'fun';
+  return 'fun';
 }
 
 function buildPlayerFormat(boysPlayers?: number, girlsPlayers?: number): string {
@@ -1155,6 +1167,8 @@ function findCatalogMatch(dbName: string): GameInfo | undefined {
     'volley ball': 'volleyball',
     'volleyball': 'volleyball',
     'frisbee': 'frisbee',
+    'basketball team': 'basketball-team',
+    'basketball': 'basketball-team',
     'double wicket': 'double-wicket',
     'darts singles': 'darts-singles',
     'dart singles': 'darts-singles',
@@ -1165,6 +1179,8 @@ function findCatalogMatch(dbName: string): GameInfo | undefined {
     'egg relay race': 'egg-relay-race',
     'rope jump': 'rope-jump',
     'plank': 'plank',
+    'laser run': 'laser-run',
+    'scavenger hunt': 'scavenger-hunt',
     '1 vs 1 penalty': '1v1-penalty',
     'rifle shooting': 'rifle-shooting',
     'squid game': 'squid-game',
@@ -1185,7 +1201,15 @@ function findCatalogMatch(dbName: string): GameInfo | undefined {
   };
   const targetId = reverseAliases[normalized];
   if (targetId) return GAMES_DATA.find((g) => g.id === targetId);
-  return GAMES_DATA.find((g) => g.name.toLowerCase().includes(normalized) || normalized.includes(g.name.toLowerCase()));
+  const substringMatches = GAMES_DATA.filter((g) => {
+    const gn = g.name.toLowerCase();
+    const isIncompatibleFormat =
+      (normalized.includes('singles') && gn.includes('doubles')) ||
+      (normalized.includes('doubles') && gn.includes('singles'));
+    if (isIncompatibleFormat) return false;
+    return gn.includes(normalized) || normalized.includes(gn);
+  });
+  return substringMatches.length === 1 ? substringMatches[0] : undefined;
 }
 
 /**
@@ -1198,7 +1222,16 @@ export function mergeLiveGamesWithCatalog(liveRows: GamePrice[]): GameInfo[] {
     return GAMES_DATA;
   }
 
-  const hasSyncedCatalog = liveRows.some((r) => Boolean(r.category)) || liveRows.length >= 35;
+  const filteredLiveRows = liveRows.filter((row) => {
+    const lower = row.name.trim().toLowerCase();
+    return lower !== 'field hockey' && lower !== 'hockey' && lower !== 'swimming sprint' && lower !== 'swimming';
+  });
+
+  if (filteredLiveRows.length === 0) {
+    return GAMES_DATA;
+  }
+
+  const hasSyncedCatalog = filteredLiveRows.some((r) => Boolean(r.category)) || filteredLiveRows.length >= 35;
 
   const convertRow = (row: GamePrice): GameInfo => {
     const exactMatch = findCatalogMatch(row.name);
@@ -1248,15 +1281,15 @@ export function mergeLiveGamesWithCatalog(liveRows: GamePrice[]): GameInfo[] {
   };
 
   if (hasSyncedCatalog) {
-    return liveRows.map(convertRow);
+    return filteredLiveRows.map(convertRow);
   }
 
-  // Legacy partial DB fallback: keep all 49 games visible while overlaying live DB prices/names
+  // Legacy partial DB fallback: keep catalog games visible while overlaying live DB prices/names
   const matchedCatalogIds = new Set<string>();
   const convertedByCatalogId = new Map<string, GameInfo>();
   const extraDbGames: GameInfo[] = [];
 
-  for (const row of liveRows) {
+  for (const row of filteredLiveRows) {
     const converted = convertRow(row);
     const catalogMatch = findCatalogMatch(row.name);
     if (catalogMatch) {
@@ -1267,8 +1300,8 @@ export function mergeLiveGamesWithCatalog(liveRows: GamePrice[]): GameInfo[] {
     }
   }
 
-  const merged49 = GAMES_DATA.map((g) => convertedByCatalogId.get(g.id) ?? g);
-  return [...merged49, ...extraDbGames];
+  const mergedCatalog = GAMES_DATA.map((g) => convertedByCatalogId.get(g.id) ?? g);
+  return [...mergedCatalog, ...extraDbGames];
 }
 
 export function getGameById(id: string): GameInfo | undefined {
@@ -1370,6 +1403,10 @@ const PRICING_ALIASES: Record<string, string> = {
   'volley ball': 'Volleyball Spike',
   'volleyball': 'Volleyball Spike',
   'frisbee': 'Ultimate Frisbee',
+  'basketball team': 'Basketball Team',
+  'basketball': 'Basketball Team',
+  'laser run': 'Laser Run',
+  'scavenger hunt': 'Scavenger Hunt',
   'chess': 'Championship Chess',
   'championship chess': 'Chess',
   'jenga': 'Jenga Tower Challenge',
@@ -1421,10 +1458,15 @@ export function resolvePricingName(input: string, availableNames: string[]): str
     if (aliased) return aliased;
   }
 
-  // Fallback substring match for catalog display names (e.g. "Fifa" in "EA Sports FC / FIFA 24")
-  const contains = availableNames.find(
-    (n) => normalized.includes(n.toLowerCase()) || n.toLowerCase().includes(normalized)
-  );
-  return contains ?? null;
+  // Fallback substring match only when unambiguous and format-compatible (Singles vs Doubles)
+  const contains = availableNames.filter((n) => {
+    const nl = n.toLowerCase();
+    const isIncompatibleFormat =
+      (normalized.includes('singles') && nl.includes('doubles')) ||
+      (normalized.includes('doubles') && nl.includes('singles'));
+    if (isIncompatibleFormat) return false;
+    return normalized.includes(nl) || nl.includes(normalized);
+  });
+  return contains.length === 1 ? contains[0] : null;
 }
 

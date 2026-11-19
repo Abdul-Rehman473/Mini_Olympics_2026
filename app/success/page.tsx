@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   ExternalLink,
   MessageCircle,
-  Trophy,
   Home,
   FileText,
   ShieldCheck,

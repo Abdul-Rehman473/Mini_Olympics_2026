@@ -194,21 +194,26 @@ export async function GET(request: NextRequest) {
     const regParams: any[] = [];
 
     if (isScopedCoordinator) {
+      const scopeClauses: string[] = [];
       if (hasExplicitPlayerAssignments) {
         regParams.push(explicitAssignedRegIds);
-        regConditions.push(`id = ANY($${regParams.length}::text[])`);
-      } else {
+        scopeClauses.push(`id = ANY($${regParams.length}::text[])`);
+      }
+      if (allowedGames.length > 0) {
+        const gameScopeParts: string[] = [];
         if (session.assignedGender !== 'both') {
           regParams.push(session.assignedGender);
-          regConditions.push(`gender = $${regParams.length}`);
+          gameScopeParts.push(`gender = $${regParams.length}`);
         }
         const gameLikes = allowedGames.map((g) => {
           regParams.push(`%"${g}"%`);
           return `selected_games::text ILIKE $${regParams.length}`;
         });
-        if (gameLikes.length > 0) {
-          regConditions.push(`(${gameLikes.join(' OR ')})`);
-        }
+        gameScopeParts.push(`(${gameLikes.join(' OR ')})`);
+        scopeClauses.push(`(${gameScopeParts.join(' AND ')})`);
+      }
+      if (scopeClauses.length > 0) {
+        regConditions.push(`(${scopeClauses.join(' OR ')})`);
       }
     }
 

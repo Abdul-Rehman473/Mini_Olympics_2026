@@ -15,7 +15,6 @@ import {
   User,
   Phone,
   Mail,
-  Trophy,
   Lock,
   ArrowLeft,
   ShieldCheck,
@@ -87,11 +86,19 @@ function VerifyCashContent() {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('/api/admin/verify');
+      const response = await fetch('/api/admin/verify', { cache: 'no-store' });
       const data = await response.json();
-      if (data.authenticated) {
+      const canVerifyCash =
+        data.authenticated &&
+        (data.role === 'super_admin' ||
+          data.role === 'admin' ||
+          Boolean(data.permissionDetails?.['/admin/registrations']?.canEdit));
+      if (canVerifyCash) {
         setAuthenticated(true);
       } else {
+        if (data.authenticated) {
+          setLoginError('Your current account does not have Registration Desk edit permission. Please sign in as a Registration Admin or Super Admin.');
+        }
         setShowLogin(true);
       }
     } catch {

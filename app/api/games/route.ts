@@ -44,9 +44,10 @@ export async function GET(request: NextRequest) {
       const active = Boolean(g.row_active) && Boolean(g.game_active);
       if (!includeInactive && !active) continue;
 
-      const name = String(g.game_name);
-      if (!gamesMap[name]) {
-        gamesMap[name] = {
+      const name = String(g.game_name).trim();
+      const mapKey = name.toLowerCase();
+      if (!gamesMap[mapKey]) {
+        gamesMap[mapKey] = {
           id: g.game_id || toGameSlug(name),
           name,
           boys: null,
@@ -57,15 +58,15 @@ export async function GET(request: NextRequest) {
           currency: g.currency || 'PKR',
         };
       }
-      if (!gamesMap[name].category && g.category) {
-        gamesMap[name].category = g.category;
+      if (!gamesMap[mapKey].category && g.category) {
+        gamesMap[mapKey].category = g.category;
       }
       if (g.gender === 'boys') {
-        gamesMap[name].boys = parseFloat(g.price);
-        if (g.players) gamesMap[name].boysPlayers = Number(g.players);
+        gamesMap[mapKey].boys = parseFloat(g.price);
+        if (g.players) gamesMap[mapKey].boysPlayers = Number(g.players);
       } else if (g.gender === 'girls') {
-        gamesMap[name].girls = parseFloat(g.price);
-        if (g.players) gamesMap[name].girlsPlayers = Number(g.players);
+        gamesMap[mapKey].girls = parseFloat(g.price);
+        if (g.players) gamesMap[mapKey].girlsPlayers = Number(g.players);
       }
     }
 

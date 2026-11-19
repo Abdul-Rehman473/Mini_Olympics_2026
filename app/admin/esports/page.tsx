@@ -4,12 +4,17 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save, Gamepad2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Save, Gamepad2, Loader2, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
+import { useAdminSession, canEditPage } from '@/lib/admin-session-context';
 
 export default function EsportsSettingsPage() {
+  const adminSession = useAdminSession();
+  const canEdit = canEditPage(adminSession, '/admin/esports');
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(true);
   const [announcement, setAnnouncement] = useState('');
+  const [openDate, setOpenDate] = useState<string | null>(null);
+  const [closeDate, setCloseDate] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -20,6 +25,8 @@ export default function EsportsSettingsPage() {
         if (data.success && data.data) {
           setIsOpen(Boolean(data.data.is_open));
           setAnnouncement(data.data.announcement || '');
+          setOpenDate(data.data.open_date || null);
+          setCloseDate(data.data.close_date || null);
         }
       })
       .catch((error) => {
@@ -30,6 +37,7 @@ export default function EsportsSettingsPage() {
   }, []);
 
   const handleSave = async () => {
+    if (!canEdit) return;
     setSaving(true);
     setFeedback(null);
     try {
@@ -39,6 +47,8 @@ export default function EsportsSettingsPage() {
         body: JSON.stringify({
           isOpen,
           announcement,
+          openDate,
+          closeDate,
         }),
       });
 
@@ -86,11 +96,17 @@ export default function EsportsSettingsPage() {
 
       <div className="p-6 sm:p-8 rounded-3xl bg-[#131B38] border border-white/[0.08] shadow-2xl space-y-6">
         <div className="p-4 rounded-2xl bg-[#080D1C] border border-white/[0.08]">
-          <Label htmlFor="esports-open" className="flex items-center gap-3 cursor-pointer">
+          {!canEdit && (
+            <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono uppercase">
+              <Lock className="w-3 h-3" /> Read-Only Access
+            </div>
+          )}
+          <Label htmlFor="esports-open" className={`flex items-center gap-3 ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'}`}>
             <input
               id="esports-open"
               type="checkbox"
               checked={isOpen}
+              disabled={!canEdit}
               onChange={(e) => setIsOpen(e.target.checked)}
               className="h-4 w-4 accent-[#12E2C4] rounded"
             />
@@ -110,6 +126,7 @@ export default function EsportsSettingsPage() {
           <Input
             id="announcement"
             value={announcement}
+            disabled={!canEdit}
             onChange={(e) => setAnnouncement(e.target.value)}
             placeholder="Optional announcement for esports"
             className="mt-2 bg-[#080D1C] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]"
@@ -137,14 +154,16 @@ export default function EsportsSettingsPage() {
           </div>
         )}
 
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full py-3.5 rounded-xl text-xs font-mono font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase shadow-lg shadow-[#12E2C4]/20"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'SAVING SETTINGS...' : 'SAVE ESPORTS SETTINGS'}
-        </Button>
+        {canEdit && (
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-3.5 rounded-xl text-xs font-mono font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase shadow-lg shadow-[#12E2C4]/20"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'SAVING SETTINGS...' : 'SAVE ESPORTS SETTINGS'}
+          </Button>
+        )}
       </div>
     </div>
   );

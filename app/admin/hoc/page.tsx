@@ -27,7 +27,6 @@ import { canEditPage, useAdminSession } from '@/lib/admin-session-context';
 import {
   Calendar,
   Users,
-  Trophy,
   Loader2,
   Download,
   Trash2,
@@ -39,8 +38,11 @@ import {
   UserPlus,
   ArrowRightLeft,
   ShieldAlert,
+  Radio,
+  MessageSquare,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 
 type GamePrice = {
   name: string;
@@ -377,21 +379,21 @@ export default function HOCPage() {
   }
 
   return (
-    <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-7xl mx-auto space-y-6 bg-[#080D1C] min-h-screen text-[#F8FAFC]">
+    <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-7xl mx-auto space-y-6 text-[#F8FAFC]">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/[0.08]">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#131B38] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
             <span>// HEAD OF COMPETITION</span>
           </div>
           <h1 className="text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight flex items-center gap-3">
-            <Trophy className="h-7 w-7 text-[#F59E0B]" />
+            <OlympicRingsIcon className="w-10 h-6" />
             HOC Tournament Control
           </h1>
           <p className="text-xs font-mono text-[#94A3B8] mt-1">
             DETERMINISTIC SEEDED FIXTURES • COORDINATOR OVERSIGHT • MATCH OVERRIDE
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={loadAll}
             variant="outline"
@@ -401,6 +403,16 @@ export default function HOCPage() {
             <RefreshCw className="h-4 w-4 mr-1.5" />
             Refresh
           </Button>
+          <Link href="/admin/super">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-white/15 bg-white/5 text-[#F8FAFC] hover:bg-white/10"
+            >
+              <MessageSquare className="h-4 w-4 mr-1.5 text-[#12E2C4]" />
+              Sport Groups
+            </Button>
+          </Link>
           <Link href="/admin/coordinator">
             <Button size="sm" className="bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#080D1C] font-bold">
               <Swords className="h-4 w-4 mr-1.5" />
@@ -558,7 +570,22 @@ export default function HOCPage() {
           <CardContent className="p-6">
             {existingSchedule ? (
               (() => {
-                const data = JSON.parse(existingSchedule.schedule_data);
+                let data: any = null;
+                try {
+                  data =
+                    typeof existingSchedule.schedule_data === 'string'
+                      ? JSON.parse(existingSchedule.schedule_data)
+                      : existingSchedule.schedule_data;
+                } catch {
+                  data = null;
+                }
+                if (!data) {
+                  return (
+                    <div className="py-12 text-center text-xs font-mono text-red-300">
+                      Unable to parse saved schedule data. Regenerate the bracket to fix it.
+                    </div>
+                  );
+                }
                 return (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between text-xs font-mono">
@@ -852,6 +879,30 @@ export default function HOCPage() {
                       </TableCell>
                       {canEdit && (
                         <TableCell className="text-right space-x-1 whitespace-nowrap">
+                          {m.status === 'scheduled' && m.player2_name !== 'BYE' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title="Mark Match Ongoing / Live"
+                              onClick={async () => {
+                                const res = await fetch('/api/admin/coordinator', {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ id: m.id, status: 'in_progress' }),
+                                });
+                                if (res.ok) {
+                                  toast.success(`Match #${m.match_number} marked Ongoing`);
+                                  await loadAll();
+                                } else {
+                                  toast.error('Failed to start match');
+                                }
+                              }}
+                              className="h-7 px-2 border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs"
+                            >
+                              <Radio className="w-3 h-3 mr-1" />
+                              Start Live
+                            </Button>
+                          )}
                           {(m.status === 'completed' || m.status === 'walkover') && (
                             <Button
                               size="sm"

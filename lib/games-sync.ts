@@ -16,6 +16,7 @@ export async function ensureGamesSchema(): Promise<void> {
     await sql`
       CREATE TABLE IF NOT EXISTS games (
         id VARCHAR(120) PRIMARY KEY,
+        slug VARCHAR(120) UNIQUE,
         name VARCHAR(150) NOT NULL UNIQUE,
         category VARCHAR(80),
         is_active BOOLEAN NOT NULL DEFAULT true,
@@ -24,6 +25,10 @@ export async function ensureGamesSchema(): Promise<void> {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `;
+    try {
+      await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS slug VARCHAR(120)`;
+      await sql`ALTER TABLE games ALTER COLUMN slug DROP NOT NULL`;
+    } catch {}
 
     await sql`ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS category VARCHAR(50)`;
     await sql`ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS game_id VARCHAR(120)`;
@@ -44,9 +49,10 @@ export async function ensureGamesSchema(): Promise<void> {
       if (!slug) continue;
       const couponEligible = String(row.game_name).toLowerCase() !== 'swimming sprint' && String(row.game_name).toLowerCase() !== 'swimming';
       await sql`
-        INSERT INTO games (id, name, category, is_active, coupon_eligible, created_at, updated_at)
-        VALUES (${slug}, ${row.game_name}, ${row.category || null}, true, ${couponEligible}, NOW(), NOW())
+        INSERT INTO games (id, slug, name, category, is_active, coupon_eligible, created_at, updated_at)
+        VALUES (${slug}, ${slug}, ${row.game_name}, ${row.category || null}, true, ${couponEligible}, NOW(), NOW())
         ON CONFLICT (name) DO UPDATE SET
+          slug = COALESCE(games.slug, EXCLUDED.slug),
           category = COALESCE(games.category, EXCLUDED.category)
       `;
       await sql`

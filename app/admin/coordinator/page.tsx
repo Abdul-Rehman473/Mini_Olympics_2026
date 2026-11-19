@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +23,6 @@ import {
 import {
   Users,
   Calendar,
-  Trophy,
   Plus,
   Loader2,
   Search,
@@ -33,6 +33,8 @@ import {
   Trash2,
   Edit,
   Sparkles,
+  RefreshCw,
+  Radio,
   Phone,
 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -173,15 +175,12 @@ export default function CoordinatorPortalPage() {
     loadData();
   }, []);
 
-  const filteredPlayers = useMemo(() => {
+  const baseFilteredPlayers = useMemo(() => {
     return players.filter((p) => {
       if (selectedGame !== 'all' && !p.selectedGames.some((g) => g.toLowerCase() === selectedGame.toLowerCase())) {
         return false;
       }
       if (selectedGender !== 'all' && p.gender !== selectedGender) {
-        return false;
-      }
-      if (paymentFilter === 'paid' && p.status !== 'paid') {
         return false;
       }
       if (searchQuery.trim()) {
@@ -193,7 +192,14 @@ export default function CoordinatorPortalPage() {
       }
       return true;
     });
-  }, [players, selectedGame, selectedGender, paymentFilter, searchQuery]);
+  }, [players, selectedGame, selectedGender, searchQuery]);
+
+  const filteredPlayers = useMemo(() => {
+    if (paymentFilter === 'paid') {
+      return baseFilteredPlayers.filter((p) => p.status === 'paid');
+    }
+    return baseFilteredPlayers;
+  }, [baseFilteredPlayers, paymentFilter]);
 
   const filteredMatches = useMemo(() => {
     return matches.filter((m) => {
@@ -400,6 +406,28 @@ export default function CoordinatorPortalPage() {
     }
   };
 
+  const handleQuickStart = async (match: MatchRecord) => {
+    try {
+      const res = await fetch('/api/admin/coordinator', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: match.id,
+          status: 'in_progress',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Match #${match.match_number} is now Ongoing / Live`);
+        await loadData();
+      } else {
+        toast.error(data.error || 'Failed to start match');
+      }
+    } catch {
+      toast.error('Failed to update match status');
+    }
+  };
+
   const handleDeleteMatch = (id: string) => {
     setConfirmState({
       open: true,
@@ -502,40 +530,50 @@ export default function CoordinatorPortalPage() {
           </p>
         </div>
 
-        {canEdit && games.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => {
-                setAutoPairForm({
-                  gameName: selectedGame !== 'all' ? selectedGame : games[0] || '',
-                  gender: assignedGender === 'girls' ? 'girls' : 'boys',
-                  roundName: 'Round 1',
-                  scheduledDate: '',
-                  venue: '',
-                  onlyPaid: true,
-                });
-                setAutoPairOpen(true);
-              }}
-              variant="outline"
-              className="rounded-xl text-xs font-mono font-bold border-[#F59E0B]/40 text-[#F59E0B] hover:bg-[#F59E0B]/10"
-            >
-              <Sparkles className="w-4 h-4 mr-1.5" />
-              Auto-Pair Round 1
-            </Button>
-            <Button
-              onClick={openNewMatchDialog}
-              className="rounded-xl text-xs font-mono font-black tracking-wider bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#0B1124] uppercase"
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Schedule Match
-            </Button>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={loadData}
+            variant="outline"
+            className="rounded-xl text-xs font-mono font-bold border-white/[0.12] bg-[#131B38] text-[#F8FAFC] hover:bg-white/[0.08]"
+          >
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+            Refresh
+          </Button>
+          {canEdit && games.length > 0 && (
+            <>
+              <Button
+                onClick={() => {
+                  setAutoPairForm({
+                    gameName: selectedGame !== 'all' ? selectedGame : games[0] || '',
+                    gender: assignedGender === 'girls' ? 'girls' : 'boys',
+                    roundName: 'Round 1',
+                    scheduledDate: '',
+                    venue: '',
+                    onlyPaid: true,
+                  });
+                  setAutoPairOpen(true);
+                }}
+                variant="outline"
+                className="rounded-xl text-xs font-mono font-bold border-[#F59E0B]/40 text-[#F59E0B] hover:bg-[#F59E0B]/10"
+              >
+                <Sparkles className="w-4 h-4 mr-1.5" />
+                Auto-Pair Round 1
+              </Button>
+              <Button
+                onClick={openNewMatchDialog}
+                className="rounded-xl text-xs font-mono font-black tracking-wider bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#0B1124] uppercase"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                Schedule Match
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {isScopedCoordinator && assignedGames.length === 0 ? (
         <div className="p-10 rounded-3xl bg-[#131B38] border border-[#F59E0B]/30 text-center space-y-2">
-          <Trophy className="w-10 h-10 text-[#F59E0B] mx-auto" />
+          <OlympicRingsIcon className="w-16 h-9 mx-auto" />
           <h2 className="text-xl font-bold font-['Space_Grotesk'] uppercase">No Games Assigned Yet</h2>
           <p className="text-xs font-mono text-[#94A3B8]">
             Ask your Super Admin or Sub-Admin to assign your sport/game in Permissions & Accounts.
@@ -748,6 +786,17 @@ export default function CoordinatorPortalPage() {
                       {canEdit && (
                         <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/[0.06]">
                           <div className="flex flex-wrap gap-1.5">
+                            {m.status === 'scheduled' && m.player2_name !== 'BYE' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleQuickStart(m)}
+                                className="h-7 px-2 text-[10px] font-mono bg-[#0B1124] border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                              >
+                                <Radio className="w-3 h-3 mr-1" />
+                                Start Live
+                              </Button>
+                            )}
                             {m.status !== 'completed' && m.player2_name !== 'BYE' && (
                               <>
                                 <Button
@@ -813,7 +862,7 @@ export default function CoordinatorPortalPage() {
                       : 'bg-[#131B38] text-[#94A3B8] border border-white/[0.08]'
                   }`}
                 >
-                  All Non-Rejected ({players.length})
+                  All Non-Rejected ({baseFilteredPlayers.length})
                 </button>
                 <button
                   type="button"
@@ -824,7 +873,7 @@ export default function CoordinatorPortalPage() {
                       : 'bg-[#131B38] text-[#94A3B8] border border-white/[0.08]'
                   }`}
                 >
-                  Paid / Verified Only ({players.filter((p) => p.status === 'paid').length})
+                  Paid / Verified Only ({baseFilteredPlayers.filter((p) => p.status === 'paid').length})
                 </button>
               </div>
 
@@ -1007,7 +1056,7 @@ export default function CoordinatorPortalPage() {
                     <SelectContent className="bg-[#131B38] border-white/[0.15] text-[#F8FAFC]">
                       {playersForMatchForm.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          #{p.registrationNumber} {p.teamName} ({p.name})
+                          #{p.registrationNumber} {p.teamName} ({p.name}) [{p.status === 'paid' ? 'Paid' : 'Pending'}]
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1031,7 +1080,7 @@ export default function CoordinatorPortalPage() {
                     <SelectContent className="bg-[#131B38] border-white/[0.15] text-[#F8FAFC]">
                       {playersForMatchForm.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          #{p.registrationNumber} {p.teamName} ({p.name})
+                          #{p.registrationNumber} {p.teamName} ({p.name}) [{p.status === 'paid' ? 'Paid' : 'Pending'}]
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1059,9 +1108,9 @@ export default function CoordinatorPortalPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs font-mono text-[#94A3B8]">Time</Label>
                 <Input
+                  type="time"
                   value={matchForm.scheduledTime}
                   onChange={(e) => setMatchForm({ ...matchForm, scheduledTime: e.target.value })}
-                  placeholder="e.g. 11:30 AM"
                   className="bg-[#0B1124] border-white/[0.1] text-xs font-mono"
                 />
               </div>
@@ -1114,6 +1163,7 @@ export default function CoordinatorPortalPage() {
                       {matchForm.player2Name && (
                         <SelectItem value={matchForm.player2Name}>{matchForm.player2Name}</SelectItem>
                       )}
+                      <SelectItem value="Draw">Draw / Tie</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

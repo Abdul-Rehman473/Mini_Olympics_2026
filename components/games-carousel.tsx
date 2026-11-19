@@ -210,7 +210,7 @@ export default function GamesCarousel() {
 
           <div className="relative z-10 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#182244] border border-white/[0.08] text-[11px] font-mono tracking-wider text-[#12E2C4] mb-4">
-              <span>{liveGames.length} Official Disciplines</span>
+              <span>{liveGames.length >= 50 ? `${liveGames.length}+` : '50+'} Official Disciplines</span>
               <span className="text-white/25">•</span>
               <span className="text-[#94A3B8]">{CATEGORIES.length} Categories</span>
             </div>
@@ -233,7 +233,7 @@ export default function GamesCarousel() {
               className="group inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl text-xs sm:text-sm font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-colors uppercase font-['Space_Grotesk'] shadow-lg shadow-[#12E2C4]/20"
             >
               <LayoutGrid className="w-4 h-4" />
-              <span>View All {liveGames.length} Games</span>
+              <span>View All {liveGames.length >= 50 ? `${liveGames.length}+` : '50+'} Games</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>

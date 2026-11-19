@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { QrCode, Users2, Trophy, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { QrCode, Users2, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 
 export default function WhyCompete() {
   const [inView, setInView] = useState(false);
@@ -39,7 +40,7 @@ export default function WhyCompete() {
       highlightColor: '#F59E0B',
       number: '01',
       badgeText: 'PODIUM AWARDS',
-      icon: <Trophy className="w-6 h-6 text-[#F59E0B]" />,
+      icon: <OlympicRingsIcon className="w-8 h-5" />,
     },
     {
       id: 'digital',

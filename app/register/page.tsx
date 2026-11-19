@@ -25,7 +25,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Shield,
-  Trophy,
   DollarSign,
   AlertCircle,
   Check,
@@ -155,7 +154,11 @@ function RegisterForm() {
         });
         const data = await res.json();
         if (data.success && data.data && data.data.length > 0) {
-          setAllGames(data.data);
+          const filtered = data.data.filter((g: GamePrice) => {
+            const lower = g.name.trim().toLowerCase();
+            return lower !== 'field hockey' && lower !== 'hockey' && lower !== 'swimming sprint' && lower !== 'swimming';
+          });
+          if (filtered.length > 0) setAllGames(filtered);
         }
       } catch (e) {
         console.error('Failed to load games, using defaults:', e);
@@ -946,7 +949,8 @@ function RegisterForm() {
                   const gameCat =
                     (game as any).category ||
                     GAMES_DATA.find((g) => g.name.toLowerCase() === game.name.toLowerCase())?.category;
-                  const isEsportsClosed = gameCat === 'Esports' && !esportsStatus.effectiveIsOpen;
+                  const isEsportsClosed =
+                    String(gameCat || '').toLowerCase() === 'esports' && !esportsStatus.effectiveIsOpen;
 
                   return (
                     <button
