@@ -76,8 +76,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPagePermission(session, '/admin/settings', 'view')) {
-      return NextResponse.json({ error: 'Forbidden - Settings permission required' }, { status: 403 });
+    if (!hasPagePermission(session, '/admin/settings', 'edit')) {
+      return NextResponse.json({ error: 'Forbidden - Settings edit permission required' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -109,6 +109,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const { logAudit, getClientIp } = await import('@/lib/audit');
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'coupon.create',
+      targetType: 'coupon',
+      targetId: id,
+      after: { code, discount_percent: discountPercent, is_active: true },
+      ip: getClientIp(request),
+    });
+
     return NextResponse.json({ success: true, data: { id, code, discount_percent: discountPercent, is_active: true } });
   } catch (error: any) {
     if (error?.code === '23505') {
@@ -119,7 +130,69 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE - Deactivate or delete coupon (query param: id)
+// PATCH - Toggle coupon active state or update discount
+export async function PATCH(request: NextRequest) {
+  try {
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get('admin_session')?.value;
+    const session = await getAdminSession(sessionId);
+
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!hasPagePermission(session, '/admin/settings', 'edit')) {
+      return NextResponse.json({ error: 'Forbidden - Settings edit permission required' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const id = String(body.id || '').trim();
+    if (!id) {
+      return NextResponse.json({ error: 'Coupon id is required' }, { status: 400 });
+    }
+
+    const existing = (await sql`SELECT id, code, discount_percent, is_active FROM coupons WHERE id = ${id}`) as any[];
+    if (!existing || existing.length === 0) {
+      return NextResponse.json({ error: 'Coupon not found' }, { status: 404 });
+    }
+
+    const nextActive = typeof body.is_active === 'boolean' ? body.is_active : existing[0].is_active;
+    const nextDiscount =
+      body.discount_percent !== undefined ? Number(body.discount_percent) : Number(existing[0].discount_percent);
+
+    if (isNaN(nextDiscount) || nextDiscount <= 0 || nextDiscount > 100) {
+      return NextResponse.json({ error: 'Discount percent must be between 1 and 100' }, { status: 400 });
+    }
+
+    await sql`
+      UPDATE coupons
+      SET is_active = ${nextActive}, discount_percent = ${nextDiscount}
+      WHERE id = ${id}
+    `;
+
+    const { logAudit, getClientIp } = await import('@/lib/audit');
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'coupon.update',
+      targetType: 'coupon',
+      targetId: id,
+      before: existing[0],
+      after: { is_active: nextActive, discount_percent: nextDiscount },
+      ip: getClientIp(request),
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: { ...existing[0], is_active: nextActive, discount_percent: nextDiscount },
+    });
+  } catch (error: any) {
+    console.error('Update coupon error:', error);
+    return NextResponse.json({ error: 'Failed to update coupon', details: error.message }, { status: 500 });
+  }
+}
+
+// DELETE - Delete coupon (query param: id)
 export async function DELETE(request: NextRequest) {
   try {
     const cookieStore = await cookies();
@@ -130,8 +203,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPagePermission(session, '/admin/settings', 'view')) {
-      return NextResponse.json({ error: 'Forbidden - Settings permission required' }, { status: 403 });
+    if (!hasPagePermission(session, '/admin/settings', 'edit')) {
+      return NextResponse.json({ error: 'Forbidden - Settings edit permission required' }, { status: 403 });
     }
 
     const id = request.nextUrl.searchParams.get('id');
@@ -139,7 +212,19 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Coupon id is required' }, { status: 400 });
     }
 
+    const existing = (await sql`SELECT id, code, discount_percent FROM coupons WHERE id = ${id}`) as any[];
     await sql`DELETE FROM coupons WHERE id = ${id}`;
+
+    const { logAudit, getClientIp } = await import('@/lib/audit');
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'coupon.delete',
+      targetType: 'coupon',
+      targetId: id,
+      before: existing[0] ?? null,
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

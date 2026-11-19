@@ -32,6 +32,8 @@ import {
   X,
   Plus,
 } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
+import { canEditPage, useAdminSession } from '@/lib/admin-session-context';
 
 type Recipient = {
   email: string;
@@ -105,6 +107,9 @@ const emailTemplates = [
 ];
 
 export default function EmailComposerPage() {
+  const adminSession = useAdminSession();
+  const canEdit = canEditPage(adminSession, '/admin/email');
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
@@ -209,17 +214,21 @@ export default function EmailComposerPage() {
   };
 
   const handleSendEmails = async () => {
+    if (!canEdit) {
+      toast.error('You only have view permission for Email Composer');
+      return;
+    }
     const toList = customTo 
       ? customTo.split(',').map(e => e.trim()).filter(e => e) 
       : recipients.map(r => r.email);
 
     if (toList.length === 0) {
-      alert('No recipients selected');
+      toast.error('No recipients selected');
       return;
     }
 
     if (!subject.trim()) {
-      alert('Please enter a subject');
+      toast.error('Please enter a subject');
       return;
     }
 
@@ -227,7 +236,6 @@ export default function EmailComposerPage() {
     setSendSuccess(false);
     
     try {
-      // Send emails (in batches for bulk)
       const batchSize = 50;
       let successCount = 0;
       let failCount = 0;
@@ -266,12 +274,12 @@ export default function EmailComposerPage() {
       if (failCount === 0) {
         setSendSuccess(true);
         setTimeout(() => setSendSuccess(false), 5000);
-        alert(`✅ Successfully sent ${successCount} email(s)!`);
+        toast.success(`Successfully sent ${successCount} email(s)!`);
       } else {
-        alert(`Sent ${successCount} email(s), ${failCount} failed.`);
+        toast.info(`Sent ${successCount} email(s), ${failCount} failed.`);
       }
     } catch (error: any) {
-      alert('Failed to send emails: ' + error.message);
+      toast.error('Failed to send emails: ' + error.message);
     } finally {
       setSending(false);
     }

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -19,12 +21,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import Link from 'next/link';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
+import { canEditPage, useAdminSession } from '@/lib/admin-session-context';
 import {
   Calendar,
   Users,
   Trophy,
-  Sparkles,
   Loader2,
   Download,
   Trash2,
@@ -33,6 +36,9 @@ import {
   Swords,
   Clock,
   MapPin,
+  UserPlus,
+  ArrowRightLeft,
+  ShieldAlert,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
@@ -40,11 +46,10 @@ type GamePrice = {
   name: string;
   boys: number | null;
   girls: number | null;
-  boysPlayers?: number;
-  girlsPlayers?: number;
 };
 
 type Team = {
+  id?: string;
   team_name: string;
   name: string;
   gender: string;
@@ -58,26 +63,6 @@ type MatchSchedule = {
   schedule_data: string;
   generated_by: string;
   created_at: string;
-};
-
-type ScheduleData = {
-  format: string;
-  groups?: {
-    name: string;
-    teams: string[];
-  }[];
-  rounds: {
-    round: number;
-    name: string;
-    matches: {
-      match: number;
-      team1: string;
-      team2: string;
-      time: string;
-      venue: string;
-    }[];
-  }[];
-  notes?: string;
 };
 
 type CoordinatorMatch = {
@@ -94,94 +79,134 @@ type CoordinatorMatch = {
   status: string;
   winner_name: string | null;
   score_summary: string | null;
+  pair_reason?: string | null;
+  coordinator_id?: string | null;
   coordinator_username: string | null;
 };
 
+type CoordinatorSummary = {
+  id: string;
+  username: string;
+  displayName: string;
+  assignedGames: string[];
+  assignedGender: string;
+  isActive: boolean;
+};
+
 export default function HOCPage() {
+  const adminSession = useAdminSession();
+  const canEdit = canEditPage(adminSession, '/admin/hoc');
+  const toast = useToast();
+
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
   const [schedules, setSchedules] = useState<MatchSchedule[]>([]);
   const [coordinatorMatches, setCoordinatorMatches] = useState<CoordinatorMatch[]>([]);
-  const [coordGameFilter, setCoordGameFilter] = useState('all');
-  const [coordStatusFilter, setCoordStatusFilter] = useState('all');
-  const [selectedGame, setSelectedGame] = useState('');
-  const [selectedGender, setSelectedGender] = useState<'boys' | 'girls'>('boys');
-  const [customPrompt, setCustomPrompt] = useState('');
-  const [generatedSchedule, setGeneratedSchedule] = useState<ScheduleData | null>(null);
+  const [coordinators, setCoordinators] = useState<CoordinatorSummary[]>([]);
+  const [playersPool, setPlayersPool] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [availableGames, setAvailableGames] = useState<GamePrice[]>([]);
 
+  // Filters on unified coordinator_matches view
+  const [coordGameFilter, setCoordGameFilter] = useState('all');
+  const [coordStatusFilter, setCoordStatusFilter] = useState('all');
+  const [coordUserFilter, setCoordUserFilter] = useState('all');
+  const [coordDateFilter, setCoordDateFilter] = useState('');
+
+  // Deterministic bracket builder state
+  const [selectedGame, setSelectedGame] = useState('');
+  const [selectedGender, setSelectedGender] = useState<'boys' | 'girls'>('boys');
+  const [format, setFormat] = useState<'knockout' | 'round_robin' | 'group_stage'>('knockout');
+  const [matchDate, setMatchDate] = useState('');
+  const [startTime, setStartTime] = useState('09:00');
+  const [venue, setVenue] = useState('Main Ground');
+  const [seedInput, setSeedInput] = useState('');
+  const [syncToMatches, setSyncToMatches] = useState(true);
+
+  // Coordinator assignment & reassignment state
+  const [assignCoordId, setAssignCoordId] = useState('');
+  const [assignPlayerId, setAssignPlayerId] = useState('');
+  const [assignGameName, setAssignGameName] = useState('');
+  const [assigning, setAssigning] = useState(false);
+
+  const [reassignFromId, setReassignFromId] = useState('');
+  const [reassignToId, setReassignToId] = useState('');
+  const [reassignGame, setReassignGame] = useState('all');
+  const [reassigning, setReassigning] = useState(false);
+
+  const [confirmAction, setConfirmAction] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
   useEffect(() => {
-    loadData();
-    loadGames();
-    loadCoordinatorMatches();
+    loadAll();
   }, []);
 
-  const loadCoordinatorMatches = async () => {
-    try {
-      const res = await fetch(`/api/admin/coordinator?t=${Date.now()}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (data.success) {
-        setCoordinatorMatches(data.matches || []);
-      }
-    } catch (error) {
-      console.error('Load coordinator matches error:', error);
-    }
-  };
-
-  const loadGames = async () => {
-    try {
-      const res = await fetch(`/api/games?t=${Date.now()}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (data.success && data.data) {
-        setAvailableGames(data.data);
-      }
-    } catch (error) {
-      console.error('Load games error:', error);
-    }
-  };
-
-  const loadData = async () => {
+  const loadAll = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/matches', { cache: 'no-store' });
-      const data = await res.json();
-      if (data.success) {
-        setTeams(data.teams || []);
-        setSchedules(data.schedules || []);
+      const [mRes, gRes, cRes, aRes] = await Promise.all([
+        fetch('/api/admin/matches', { cache: 'no-store' }),
+        fetch(`/api/games?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/admin/coordinator?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch('/api/admin/coordinators/assignments', { cache: 'no-store' }),
+      ]);
+      const [mData, gData, cData, aData] = await Promise.all([
+        mRes.json(),
+        gRes.json(),
+        cRes.json(),
+        aRes.json(),
+      ]);
+      if (mData.success) {
+        setTeams(mData.teams || []);
+        setSchedules(mData.schedules || []);
       }
-    } catch (error) {
-      console.error('Load error:', error);
+      if (gData.success) {
+        setAvailableGames(gData.data || []);
+      }
+      if (cData.success) {
+        setCoordinatorMatches(cData.matches || []);
+        setCoordinators(cData.coordinators || []);
+        setPlayersPool(cData.players || []);
+      }
+      if (aData.success) {
+        setAssignments(aData.playerAssignments || []);
+      }
+    } catch {
+      toast.error('Failed to load HOC portal data');
     } finally {
       setLoading(false);
     }
   };
 
-  // Get teams for selected game and gender
   const getTeamsForGame = () => {
     if (!selectedGame || !selectedGender) return [];
-    return teams.filter(t => {
-      const games = Array.isArray(t.selected_games) ? t.selected_games : 
-        (typeof t.selected_games === 'string' ? JSON.parse(t.selected_games || '[]') : []);
-      return t.gender === selectedGender && games.includes(selectedGame);
+    return teams.filter((t) => {
+      const games = Array.isArray(t.selected_games)
+        ? t.selected_games
+        : typeof t.selected_games === 'string'
+          ? JSON.parse(t.selected_games || '[]')
+          : [];
+      return (
+        t.gender === selectedGender &&
+        games.some((g: string) => g.toLowerCase() === selectedGame.toLowerCase())
+      );
     });
   };
 
   const handleGenerateMatches = async () => {
     const gameTeams = getTeamsForGame();
     if (gameTeams.length < 2) {
-      alert('Need at least 2 teams to generate matches');
-      return;
-    }
-
-    if (!customPrompt.trim()) {
-      alert('Please enter your scheduling instructions (e.g., "Make 3 groups, each team plays 2 matches")');
+      toast.error('Need at least 2 verified paid teams to generate fixtures');
       return;
     }
 
     setGenerating(true);
-    setGeneratedSchedule(null);
-    
     try {
       const res = await fetch('/api/admin/matches', {
         method: 'POST',
@@ -189,593 +214,541 @@ export default function HOCPage() {
         body: JSON.stringify({
           game: selectedGame,
           gender: selectedGender,
-          teams: gameTeams.map(t => t.team_name),
-          customPrompt: customPrompt,
+          format,
+          matchDate: matchDate || undefined,
+          startTime: startTime || undefined,
+          venue: venue || undefined,
+          seed: seedInput.trim() || undefined,
+          syncToMatches,
+          teams: gameTeams.map((t) => t.team_name),
         }),
       });
-
       const data = await res.json();
       if (data.success) {
-        setGeneratedSchedule(data.schedule);
-        loadData(); // Refresh to get new schedule
+        toast.success(
+          `Generated ${format.replace('_', ' ')} schedule` +
+            (data.syncedMatchesCount ? ` & synced ${data.syncedMatchesCount} live fixtures` : '')
+        );
+        await loadAll();
       } else {
-        alert('Generation failed: ' + data.error);
+        toast.error(data.error || 'Failed to generate fixtures');
       }
-    } catch (error) {
-      console.error('Generate error:', error);
-      alert('Failed to generate matches');
+    } catch {
+      toast.error('Failed to generate schedule');
     } finally {
       setGenerating(false);
     }
   };
 
-  const handleDeleteSchedule = async (id: string) => {
-    if (!confirm('Delete this schedule?')) return;
-    
+  const handleAssignPlayer = async () => {
+    if (!assignCoordId || !assignPlayerId) {
+      toast.error('Select both a coordinator and a player');
+      return;
+    }
+    setAssigning(true);
     try {
-      const res = await fetch(`/api/admin/matches?id=${id}`, { method: 'DELETE' });
+      const res = await fetch('/api/admin/coordinators/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coordinatorUserId: assignCoordId,
+          registrationId: assignPlayerId,
+          gameName: assignGameName || undefined,
+        }),
+      });
       const data = await res.json();
       if (data.success) {
-        loadData();
-        if (generatedSchedule) setGeneratedSchedule(null);
+        toast.success('Player assigned to coordinator roster');
+        setAssignPlayerId('');
+        await loadAll();
+      } else {
+        toast.error(data.error || 'Failed to assign player');
       }
-    } catch (error) {
-      alert('Failed to delete');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleReassignDuties = async () => {
+    if (!reassignFromId || !reassignToId) {
+      toast.error('Select source and target coordinators');
+      return;
+    }
+    setReassigning(true);
+    try {
+      const res = await fetch('/api/admin/coordinators/reassign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromCoordinatorId: reassignFromId,
+          toCoordinatorId: reassignToId,
+          gameName: reassignGame === 'all' ? undefined : reassignGame,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Transferred ${data.movedMatches} matches and ${data.movedPlayers} player assignments to @${data.targetUsername}`);
+        await loadAll();
+      } else {
+        toast.error(data.error || 'Failed to reassign');
+      }
+    } finally {
+      setReassigning(false);
     }
   };
 
   const handleDownloadPDF = (schedule: MatchSchedule) => {
     try {
-      const scheduleData: ScheduleData = JSON.parse(schedule.schedule_data);
+      const scheduleData: any = JSON.parse(schedule.schedule_data);
       const pdf = new jsPDF('portrait');
       const pageWidth = pdf.internal.pageSize.getWidth();
-      
-      // Header
-      pdf.setFillColor(139, 92, 246);
+
+      pdf.setFillColor(19, 27, 56);
       pdf.rect(0, 0, pageWidth, 35, 'F');
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
       pdf.text('MINI OLYMPICS 2026', pageWidth / 2, 15, { align: 'center' });
-      pdf.setFontSize(14);
-      pdf.text(`${schedule.game_name} - ${schedule.gender.toUpperCase()}`, pageWidth / 2, 25, { align: 'center' });
-      pdf.setFontSize(10);
+      pdf.setFontSize(13);
+      pdf.text(`${schedule.game_name} - ${schedule.gender.toUpperCase()}`, pageWidth / 2, 24, { align: 'center' });
+      pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Format: ${scheduleData.format}`, pageWidth / 2, 32, { align: 'center' });
-      
-      let y = 50;
-      
-      // Groups section
-      if (scheduleData.groups && scheduleData.groups.length > 0) {
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFontSize(12);
+      pdf.text(`Format: ${scheduleData.format} | Seed: ${scheduleData.seed || 'default'}`, pageWidth / 2, 31, { align: 'center' });
+
+      let y = 46;
+      const rounds: any[] = Array.isArray(scheduleData.rounds) ? scheduleData.rounds : [];
+      for (const round of rounds) {
+        if (y > 260) {
+          pdf.addPage();
+          y = 20;
+        }
+        pdf.setFillColor(18, 226, 196);
+        pdf.rect(10, y, pageWidth - 20, 8, 'F');
+        pdf.setTextColor(8, 13, 28);
+        pdf.setFontSize(11);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('GROUPS', 10, y);
-        y += 8;
-        
-        const groupsPerRow = 3;
-        const groupWidth = (pageWidth - 30) / groupsPerRow;
-        
-        scheduleData.groups.forEach((group, idx) => {
-          const col = idx % groupsPerRow;
-          const row = Math.floor(idx / groupsPerRow);
-          const x = 10 + col * groupWidth;
-          const groupY = y + row * 40;
-          
-          // Group box
-          pdf.setFillColor(248, 250, 252);
-          pdf.rect(x, groupY, groupWidth - 5, 35, 'F');
-          pdf.setDrawColor(139, 92, 246);
-          pdf.rect(x, groupY, groupWidth - 5, 35, 'S');
-          
-          // Group name
-          pdf.setFontSize(10);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(139, 92, 246);
-          pdf.text(group.name, x + 3, groupY + 7);
-          
-          // Teams
-          pdf.setFontSize(8);
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(0, 0, 0);
-          group.teams.forEach((team, tIdx) => {
-            pdf.text(`• ${team}`, x + 3, groupY + 14 + (tIdx * 5));
-          });
-        });
-        
-        const groupRows = Math.ceil(scheduleData.groups.length / groupsPerRow);
-        y += groupRows * 45;
-      }
-      
-      scheduleData.rounds.forEach((round, roundIdx) => {
-        // Round header
-        pdf.setFillColor(59, 130, 246);
-        pdf.rect(10, y, pageWidth - 20, 10, 'F');
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(round.name, 15, y + 7);
-        y += 15;
-        
-        // Matches
+        pdf.text(round.round || round.name || 'Round', 14, y + 5.5);
+        y += 12;
+
         pdf.setTextColor(0, 0, 0);
-        pdf.setFontSize(10);
+        pdf.setFontSize(9);
         pdf.setFont('helvetica', 'normal');
-        
-        round.matches.forEach((match, matchIdx) => {
-          if (y > 270) {
+
+        for (const match of round.matches || []) {
+          if (y > 275) {
             pdf.addPage();
             y = 20;
           }
-          
-          const isEven = matchIdx % 2 === 0;
-          if (isEven) {
-            pdf.setFillColor(248, 250, 252);
-            pdf.rect(10, y - 3, pageWidth - 20, 10, 'F');
-          }
-          
-          pdf.text(`Match ${match.match}:`, 15, y + 3);
+          pdf.text(`#${match.matchNumber || match.match}:`, 12, y);
           pdf.setFont('helvetica', 'bold');
-          pdf.text(`${match.team1}  vs  ${match.team2}`, 45, y + 3);
+          pdf.text(`${match.team1}  vs  ${match.team2}`, 28, y);
           pdf.setFont('helvetica', 'normal');
-          pdf.text(`Time: ${match.time} | Venue: ${match.venue}`, 140, y + 3);
-          
-          y += 12;
-        });
-        
-        y += 10;
-      });
-      
-      // Notes
-      if (scheduleData.notes) {
-        y += 5;
-        pdf.setFontSize(9);
-        pdf.setTextColor(100, 100, 100);
-        pdf.text(`Notes: ${scheduleData.notes}`, 10, y);
+          pdf.text(`${match.time || 'TBD'} | ${match.venue || 'Arena'}`, 132, y);
+          y += 8;
+        }
+        y += 4;
       }
-      
-      // Footer
-      pdf.setFontSize(8);
-      pdf.setTextColor(150, 150, 150);
-      pdf.text(`Generated on ${new Date(schedule.created_at).toLocaleString()} by ${schedule.generated_by}`, pageWidth / 2, 285, { align: 'center' });
-      
+
       pdf.save(`Match_Schedule_${schedule.game_name}_${schedule.gender}.pdf`);
-    } catch (error) {
-      console.error('PDF error:', error);
-      alert('Failed to generate PDF');
+    } catch {
+      toast.error('Failed to generate PDF');
     }
   };
 
   const gameTeams = getTeamsForGame();
-  const existingSchedule = schedules.find(s => s.game_name === selectedGame && s.gender === selectedGender);
+  const existingSchedule = schedules.find(
+    (s) => s.game_name.toLowerCase() === selectedGame.toLowerCase() && s.gender === selectedGender
+  );
+
+  const filteredMatches = coordinatorMatches.filter((m) => {
+    if (coordGameFilter !== 'all' && m.game_name !== coordGameFilter) return false;
+    if (coordStatusFilter !== 'all' && m.status !== coordStatusFilter) return false;
+    if (coordUserFilter !== 'all' && m.coordinator_id !== coordUserFilter) return false;
+    if (coordDateFilter && m.scheduled_date !== coordDateFilter) return false;
+    return true;
+  });
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+      <div className="min-h-screen flex items-center justify-center bg-[#080D1C]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#12E2C4]" />
       </div>
     );
   }
 
   return (
-    <div className="p-4 lg:p-6 pt-16 lg:pt-6 bg-slate-50 min-h-screen">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg">
-            <Trophy className="h-5 w-5 text-white" />
+    <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-7xl mx-auto space-y-6 bg-[#080D1C] min-h-screen text-[#F8FAFC]">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/[0.08]">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#131B38] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
+            <span>// HEAD OF COMPETITION</span>
           </div>
-          HOC - Match Scheduling
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">Generate and manage match schedules using AI</p>
+          <h1 className="text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight flex items-center gap-3">
+            <Trophy className="h-7 w-7 text-[#F59E0B]" />
+            HOC Tournament Control
+          </h1>
+          <p className="text-xs font-mono text-[#94A3B8] mt-1">
+            DETERMINISTIC SEEDED FIXTURES • COORDINATOR OVERSIGHT • MATCH OVERRIDE
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={loadAll}
+            variant="outline"
+            size="sm"
+            className="border-white/15 bg-white/5 text-[#F8FAFC]"
+          >
+            <RefreshCw className="h-4 w-4 mr-1.5" />
+            Refresh
+          </Button>
+          <Link href="/admin/coordinator">
+            <Button size="sm" className="bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#080D1C] font-bold">
+              <Swords className="h-4 w-4 mr-1.5" />
+              Coordinator Board
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Card className="border-0 shadow-sm bg-purple-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Total Teams</span>
-            </div>
-            <p className="text-xl font-bold mt-1">{teams.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm bg-blue-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Male Teams</span>
-            </div>
-            <p className="text-xl font-bold mt-1">{teams.filter(t => t.gender === 'boys').length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm bg-pink-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Female Teams</span>
-            </div>
-            <p className="text-xl font-bold mt-1">{teams.filter(t => t.gender === 'girls').length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm bg-emerald-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Schedules</span>
-            </div>
-            <p className="text-xl font-bold mt-1">{schedules.length}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Generate Schedule */}
-        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
-              AI Match Generator
+      {/* Deterministic Bracket Generator & Preview */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08]">
+          <CardHeader className="border-b border-white/[0.08]">
+            <CardTitle className="flex items-center gap-2 text-[#F8FAFC]">
+              <Calendar className="h-5 w-5 text-[#12E2C4]" />
+              Deterministic Bracket Generator
             </CardTitle>
-            <CardDescription className="text-purple-100">
-              Select a game and gender to generate match schedule
+            <CardDescription className="text-[#94A3B8]">
+              Reproducible seeded fixtures strictly from verified paid registrations (no external AI dependency).
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Select Game</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#94A3B8]">Game</Label>
                 <Select value={selectedGame} onValueChange={setSelectedGame}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose game" />
+                  <SelectTrigger className="bg-[#0B1124] border-white/15 text-[#F8FAFC]">
+                    <SelectValue placeholder="Choose a game" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableGames.map((game) => (
-                      <SelectItem key={game.name} value={game.name}>{game.name}</SelectItem>
+                    {availableGames.map((g) => (
+                      <SelectItem key={g.name} value={g.name}>
+                        {g.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Gender</label>
-                <Select value={selectedGender} onValueChange={(v) => setSelectedGender(v as 'boys' | 'girls')}>
-                  <SelectTrigger>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#94A3B8]">Division</Label>
+                <Select value={selectedGender} onValueChange={(v: 'boys' | 'girls') => setSelectedGender(v)}>
+                  <SelectTrigger className="bg-[#0B1124] border-white/15 text-[#F8FAFC]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="boys">Male</SelectItem>
-                    <SelectItem value="girls">Female</SelectItem>
+                    <SelectItem value="boys">Boys</SelectItem>
+                    <SelectItem value="girls">Girls</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             {selectedGame && (
-              <div className="bg-slate-50 rounded-lg p-4">
-                <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                  <Users className="h-4 w-4 text-purple-500" />
-                  Teams for {selectedGame} ({selectedGender}) - {gameTeams.length} teams
-                </h4>
-                {gameTeams.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {gameTeams.map((team, idx) => (
-                      <span key={idx} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                        {team.team_name}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-slate-400 text-sm">No verified teams found for this game</p>
-                )}
+              <div className="p-3 rounded-xl bg-[#0B1124] border border-white/[0.08] flex items-center justify-between text-xs font-mono">
+                <span className="text-[#94A3B8]">Verified Paid Teams ({selectedGender})</span>
+                <span className="text-[#12E2C4] font-bold">{gameTeams.length}</span>
               </div>
             )}
 
-            {/* Custom Prompt Input */}
-            {selectedGame && gameTeams.length >= 2 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-purple-500" />
-                  Scheduling Instructions *
-                </label>
-                <textarea
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  placeholder="Write how you want matches organized, for example:
-• Make 3 groups, each team plays 2 matches
-• Round robin format, every team plays each other once
-• Knockout tournament with quarter finals
-• 4 groups of 3 teams, top 2 from each group go to knockout"
-                  className="w-full h-28 px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#94A3B8]">Tournament Format</Label>
+                <Select value={format} onValueChange={(v: any) => setFormat(v)}>
+                  <SelectTrigger className="bg-[#0B1124] border-white/15 text-[#F8FAFC]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="knockout">Single Elimination Knockout</SelectItem>
+                    <SelectItem value="round_robin">Round Robin (Circle Method)</SelectItem>
+                    <SelectItem value="group_stage">Group Stage (Groups of 4)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#94A3B8]">Venue</Label>
+                <Input
+                  value={venue}
+                  onChange={(e) => setVenue(e.target.value)}
+                  className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
                 />
-                <p className="text-xs text-slate-500">
-                  Be specific about: number of groups, matches per team, tournament format, etc.
-                </p>
               </div>
-            )}
-
-            <div className="flex gap-3">
-              <Button
-                onClick={handleGenerateMatches}
-                disabled={generating || !selectedGame || gameTeams.length < 2 || !customPrompt.trim()}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
-              >
-                {generating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4 mr-2" />
-                )}
-                {generating ? 'Generating...' : 'AI Generate Matches'}
-              </Button>
-              {existingSchedule && (
-                <Button variant="outline" onClick={() => handleDownloadPDF(existingSchedule)}>
-                  <Download className="h-4 w-4 mr-1" />
-                  PDF
-                </Button>
-              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#94A3B8]">Match Date</Label>
+                <Input
+                  type="date"
+                  value={matchDate}
+                  onChange={(e) => setMatchDate(e.target.value)}
+                  className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#94A3B8]">Start Time</Label>
+                <Input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
+                />
+              </div>
             </div>
 
-            {gameTeams.length < 2 && selectedGame && (
-              <p className="text-amber-600 text-sm flex items-center gap-1">
-                <Swords className="h-4 w-4" />
-                Need at least 2 verified teams to generate matches
-              </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#94A3B8]">Draw Seed (Optional)</Label>
+                <Input
+                  value={seedInput}
+                  onChange={(e) => setSeedInput(e.target.value)}
+                  placeholder="Auto daily seed if empty"
+                  className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-xs text-[#E2E8F0] pt-5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={syncToMatches}
+                  onChange={(e) => setSyncToMatches(e.target.checked)}
+                />
+                <span>Publish fixtures directly to Coordinator Matches</span>
+              </label>
+            </div>
+
+            {canEdit && (
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={handleGenerateMatches}
+                  disabled={generating || !selectedGame || gameTeams.length < 2}
+                  className="flex-1 bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#080D1C] font-bold"
+                >
+                  {generating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Generate Seeded Schedule
+                </Button>
+                {existingSchedule && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDownloadPDF(existingSchedule)}
+                    className="border-white/15 bg-white/5 text-[#F8FAFC]"
+                  >
+                    <Download className="h-4 w-4 mr-1.5" />
+                    PDF
+                  </Button>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Generated Schedule Preview */}
-        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-indigo-500" />
+        {/* Preview Card */}
+        <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08]">
+          <CardHeader className="border-b border-white/[0.08]">
+            <CardTitle className="flex items-center gap-2 text-[#F8FAFC]">
+              <FileText className="h-5 w-5 text-[#F59E0B]" />
               Schedule Preview
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             {existingSchedule ? (
-              <div className="space-y-4">
-                {(() => {
-                  const data: ScheduleData = JSON.parse(existingSchedule.schedule_data);
-                  return (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                          {data.format}
-                        </span>
-                        <span className="text-xs text-slate-400">
-                          Generated {new Date(existingSchedule.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      
-                      {/* Groups Section */}
-                      {data.groups && data.groups.length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {data.groups.map((group, idx) => (
-                            <div key={idx} className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-3">
-                              <h4 className="font-semibold text-purple-700 text-sm mb-2">{group.name}</h4>
-                              <div className="space-y-1">
-                                {group.teams.map((team, tIdx) => (
-                                  <p key={tIdx} className="text-xs text-slate-600">• {team}</p>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      
-                      <div className="max-h-80 overflow-y-auto space-y-4">
-                        {data.rounds.map((round, idx) => (
-                          <div key={idx} className="border rounded-lg overflow-hidden">
-                            <div className="bg-indigo-500 text-white px-3 py-2 text-sm font-medium">
-                              {round.name}
-                            </div>
-                            <div className="divide-y">
-                              {round.matches.map((match, mIdx) => (
-                                <div key={mIdx} className="p-3 flex items-center justify-between text-sm">
-                                  <span className="font-medium">{match.team1}</span>
-                                  <span className="text-slate-400 px-2">vs</span>
-                                  <span className="font-medium">{match.team2}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {data.notes && (
-                        <p className="text-xs text-slate-500 italic mt-2">📝 {data.notes}</p>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            ) : generatedSchedule ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                    {generatedSchedule.format} - Just Generated!
-                  </span>
-                </div>
-                
-                {/* Groups Section */}
-                {generatedSchedule.groups && generatedSchedule.groups.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {generatedSchedule.groups.map((group, idx) => (
-                      <div key={idx} className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg p-3">
-                        <h4 className="font-semibold text-emerald-700 text-sm mb-2">{group.name}</h4>
-                        <div className="space-y-1">
-                          {group.teams.map((team, tIdx) => (
-                            <p key={tIdx} className="text-xs text-slate-600">• {team}</p>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                <div className="max-h-80 overflow-y-auto space-y-4">
-                  {generatedSchedule.rounds.map((round, idx) => (
-                    <div key={idx} className="border rounded-lg overflow-hidden">
-                      <div className="bg-emerald-500 text-white px-3 py-2 text-sm font-medium">
-                        {round.name}
-                      </div>
-                      <div className="divide-y">
-                        {round.matches.map((match, mIdx) => (
-                          <div key={mIdx} className="p-3 flex items-center justify-between text-sm">
-                            <span className="font-medium">{match.team1}</span>
-                            <span className="text-slate-400 px-2">vs</span>
-                            <span className="font-medium">{match.team2}</span>
-                          </div>
-                        ))}
-                      </div>
+              (() => {
+                const data = JSON.parse(existingSchedule.schedule_data);
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="px-2.5 py-1 rounded-full bg-[#12E2C4]/15 text-[#12E2C4] uppercase">
+                        {data.format}
+                      </span>
+                      <span className="text-[#94A3B8]">Seed: {data.seed || 'default'}</span>
                     </div>
-                  ))}
-                </div>
-                {generatedSchedule.notes && (
-                  <p className="text-xs text-slate-500 italic mt-2">📝 {generatedSchedule.notes}</p>
-                )}
-              </div>
+                    <div className="max-h-72 overflow-y-auto space-y-3 pr-1">
+                      {(data.rounds || []).map((round: any, idx: number) => (
+                        <div key={idx} className="border border-white/10 rounded-xl overflow-hidden bg-[#0B1124]">
+                          <div className="bg-[#182244] px-3 py-2 text-xs font-mono font-bold text-[#12E2C4]">
+                            {round.round || round.name}
+                          </div>
+                          <div className="divide-y divide-white/[0.06]">
+                            {(round.matches || []).map((m: any, mIdx: number) => (
+                              <div key={mIdx} className="p-2.5 flex items-center justify-between text-xs">
+                                <span className="font-semibold text-[#F8FAFC]">{m.team1}</span>
+                                <span className="text-[#94A3B8] font-mono">vs</span>
+                                <span className="font-semibold text-[#F8FAFC]">{m.team2}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()
             ) : (
-              <div className="text-center py-12 text-slate-400">
-                <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Select a game and generate matches</p>
+              <div className="py-16 text-center text-xs font-mono text-[#94A3B8]">
+                Select a game &amp; division and click Generate Seeded Schedule to preview rounds.
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Saved Schedules */}
-      <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-purple-500" />
-            Saved Schedules
-          </CardTitle>
-          <CardDescription>All generated match schedules</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {schedules.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">
-              No schedules generated yet
-            </div>
-          ) : (
-            <>
-              {/* Desktop Table */}
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Game</TableHead>
-                      <TableHead>Gender</TableHead>
-                      <TableHead>Format</TableHead>
-                      <TableHead>Generated By</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {schedules.map((schedule) => {
-                      const data: ScheduleData = JSON.parse(schedule.schedule_data);
-                      return (
-                        <TableRow key={schedule.id}>
-                          <TableCell className="font-medium">{schedule.game_name}</TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              schedule.gender === 'boys' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
-                            }`}>
-                              {schedule.gender}
-                            </span>
-                          </TableCell>
-                          <TableCell className="capitalize">{data.format}</TableCell>
-                          <TableCell>{schedule.generated_by}</TableCell>
-                          <TableCell>{new Date(schedule.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button size="sm" variant="outline" onClick={() => handleDownloadPDF(schedule)}>
-                                <Download className="h-3 w-3" />
-                              </Button>
-                              <Button size="sm" variant="ghost" className="text-red-500" onClick={() => handleDeleteSchedule(schedule.id)}>
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              {/* Mobile Cards */}
-              <div className="md:hidden space-y-3">
-                {schedules.map((schedule) => {
-                  const data: ScheduleData = JSON.parse(schedule.schedule_data);
-                  return (
-                    <div key={schedule.id} className={`p-4 rounded-lg border-l-4 bg-white shadow-sm ${
-                      schedule.gender === 'boys' ? 'border-l-blue-500' : 'border-l-pink-500'
-                    }`}>
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-semibold text-slate-800">{schedule.game_name}</p>
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            schedule.gender === 'boys' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
-                          }`}>
-                            {schedule.gender === 'boys' ? 'Male' : 'Female'}
-                          </span>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={() => handleDownloadPDF(schedule)} className="h-8 w-8 p-0">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500" onClick={() => handleDeleteSchedule(schedule.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-xs text-slate-500">
-                        <span className="capitalize">{data.format}</span>
-                        <span>{new Date(schedule.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Coordinator Match Records (Live Visibility for Admin / HOC) */}
-      <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg mt-6">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Swords className="h-5 w-5 text-indigo-600" />
-                Coordinator Match Records ({coordinatorMatches.length})
+      {/* Coordinator Player Assignment & Bulk Duty Reassignment */}
+      {canEdit && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08]">
+            <CardHeader className="border-b border-white/[0.08]">
+              <CardTitle className="flex items-center gap-2 text-base text-[#F8FAFC]">
+                <UserPlus className="h-4 w-4 text-[#12E2C4]" />
+                Assign Player to Coordinator Roster
               </CardTitle>
-              <CardDescription>
-                Live matches, timings, venues, scores & winners arranged by game coordinators
+              <CardDescription className="text-[#94A3B8] text-xs">
+                Optionally scope a coordinator to specific players/teams ({assignments.length} explicit assignments active).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <Select value={assignCoordId} onValueChange={setAssignCoordId}>
+                  <SelectTrigger className="bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
+                    <SelectValue placeholder="Coordinator" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {coordinators.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        @{c.username}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={assignPlayerId} onValueChange={setAssignPlayerId}>
+                  <SelectTrigger className="bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
+                    <SelectValue placeholder="Verified Player" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {playersPool.slice(0, 100).map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        #{p.registrationNumber} {p.teamName} ({p.gender})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={assignGameName}
+                  onChange={(e) => setAssignGameName(e.target.value)}
+                  placeholder="Game (optional)"
+                  className="bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]"
+                />
+              </div>
+              <Button
+                onClick={handleAssignPlayer}
+                disabled={assigning || !assignCoordId || !assignPlayerId}
+                size="sm"
+                className="bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#080D1C] font-bold"
+              >
+                {assigning && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                Assign Player
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08]">
+            <CardHeader className="border-b border-white/[0.08]">
+              <CardTitle className="flex items-center gap-2 text-base text-[#F8FAFC]">
+                <ArrowRightLeft className="h-4 w-4 text-[#F59E0B]" />
+                Bulk Reassign Coordinator Duties
+              </CardTitle>
+              <CardDescription className="text-[#94A3B8] text-xs">
+                Transfer scheduled fixtures &amp; assigned players cleanly if a coordinator steps away.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <Select value={reassignFromId} onValueChange={setReassignFromId}>
+                  <SelectTrigger className="bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
+                    <SelectValue placeholder="From Coordinator" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {coordinators.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        @{c.username}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={reassignToId} onValueChange={setReassignToId}>
+                  <SelectTrigger className="bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
+                    <SelectValue placeholder="To Coordinator" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {coordinators.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        @{c.username}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={reassignGame} onValueChange={setReassignGame}>
+                  <SelectTrigger className="bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
+                    <SelectValue placeholder="Game scope" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Games</SelectItem>
+                    {availableGames.map((g) => (
+                      <SelectItem key={g.name} value={g.name}>
+                        {g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={handleReassignDuties}
+                disabled={reassigning || !reassignFromId || !reassignToId}
+                size="sm"
+                className="bg-[#F59E0B] hover:bg-amber-600 text-[#080D1C] font-bold"
+              >
+                {reassigning && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                Transfer Scheduled Matches
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Unified Live Match Oversight (Single source: coordinator_matches) */}
+      <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08]">
+        <CardHeader className="border-b border-white/[0.08]">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-[#F8FAFC]">
+                <Swords className="h-5 w-5 text-[#12E2C4]" />
+                Live Match Feed ({filteredMatches.length})
+              </CardTitle>
+              <CardDescription className="text-[#94A3B8]">
+                Synced directly from Coordinator Portal &amp; Bracket Generator (single source of truth).
               </CardDescription>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap gap-2">
               <Select value={coordGameFilter} onValueChange={setCoordGameFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-36 bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
                   <SelectValue placeholder="All Games" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Games</SelectItem>
-                  {Array.from(new Set(coordinatorMatches.map((m) => m.game_name))).map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {g}
+                  {availableGames.map((g) => (
+                    <SelectItem key={g.name} value={g.name}>
+                      {g.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select value={coordStatusFilter} onValueChange={setCoordStatusFilter}>
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="All Status" />
+                <SelectTrigger className="w-32 bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
@@ -783,115 +756,196 @@ export default function HOCPage() {
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="walkover">Walkover</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
-              <Link href="/admin/coordinator">
-                <Button size="sm" variant="outline">
-                  Manage in Coordinator Portal
-                </Button>
-              </Link>
+              <Select value={coordUserFilter} onValueChange={setCoordUserFilter}>
+                <SelectTrigger className="w-36 bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
+                  <SelectValue placeholder="Coordinator" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Coordinators</SelectItem>
+                  {coordinators.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      @{c.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                type="date"
+                value={coordDateFilter}
+                onChange={(e) => setCoordDateFilter(e.target.value)}
+                className="w-36 bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]"
+              />
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {(() => {
-            const filtered = coordinatorMatches.filter((m) => {
-              if (coordGameFilter !== 'all' && m.game_name !== coordGameFilter) return false;
-              if (coordStatusFilter !== 'all' && m.status !== coordStatusFilter) return false;
-              return true;
-            });
-
-            if (filtered.length === 0) {
-              return (
-                <div className="text-center py-8 text-slate-400">
-                  No coordinator match records found yet.
-                </div>
-              );
-            }
-
-            return (
-              <div className="overflow-x-auto">
-                <Table className="w-full text-sm">
-                  <TableHeader>
-                    <TableRow className="bg-slate-50 border-b border-slate-200">
-                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Game & Round</TableHead>
-                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Division</TableHead>
-                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Matchup</TableHead>
-                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Time & Venue</TableHead>
-                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Status & Result</TableHead>
-                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Coordinator</TableHead>
+        <CardContent className="p-0">
+          {filteredMatches.length === 0 ? (
+            <div className="text-center py-12 text-xs font-mono text-[#94A3B8]">
+              No matches match the current filters.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table className="w-full text-sm">
+                <TableHeader>
+                  <TableRow className="bg-[#0B1124] border-b border-white/10">
+                    <TableHead className="text-[#94A3B8] text-xs font-mono">Game &amp; Round</TableHead>
+                    <TableHead className="text-[#94A3B8] text-xs font-mono">Matchup &amp; Pair Reason</TableHead>
+                    <TableHead className="text-[#94A3B8] text-xs font-mono">Time &amp; Venue</TableHead>
+                    <TableHead className="text-[#94A3B8] text-xs font-mono">Status &amp; Result</TableHead>
+                    <TableHead className="text-[#94A3B8] text-xs font-mono">Coordinator</TableHead>
+                    {canEdit && <TableHead className="text-[#94A3B8] text-xs font-mono text-right">Override</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMatches.map((m) => (
+                    <TableRow key={m.id} className="border-b border-white/[0.06]">
+                      <TableCell>
+                        <p className="font-semibold text-[#F8FAFC]">{m.game_name}</p>
+                        <p className="text-xs text-[#94A3B8] font-mono">
+                          {m.gender.toUpperCase()} • {m.round_name} #{m.match_number}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-medium text-[#F8FAFC]">
+                          {m.player1_name} <span className="text-[#94A3B8]">vs</span> {m.player2_name}
+                        </p>
+                        {m.pair_reason && (
+                          <p className="text-[11px] text-[#94A3B8] font-mono mt-0.5">{m.pair_reason}</p>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-[#E2E8F0]">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-[#12E2C4]" />
+                          <span>
+                            {m.scheduled_date || 'Date TBD'} {m.scheduled_time || ''}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[#94A3B8] mt-0.5">
+                          <MapPin className="w-3 h-3" />
+                          <span>{m.venue || 'Venue TBD'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[11px] font-mono uppercase ${
+                            m.status === 'completed' || m.status === 'walkover'
+                              ? 'bg-emerald-500/20 text-emerald-300'
+                              : m.status === 'in_progress'
+                                ? 'bg-amber-500/20 text-amber-300'
+                                : m.status === 'cancelled'
+                                  ? 'bg-red-500/20 text-red-300'
+                                  : 'bg-blue-500/20 text-blue-300'
+                          }`}
+                        >
+                          {m.status.replace('_', ' ')}
+                        </span>
+                        {m.winner_name && (
+                          <p className="text-xs font-semibold text-emerald-300 mt-1">Winner: {m.winner_name}</p>
+                        )}
+                        {m.score_summary && <p className="text-xs text-[#94A3B8]">{m.score_summary}</p>}
+                      </TableCell>
+                      <TableCell className="text-xs font-mono text-[#94A3B8]">
+                        {m.coordinator_username ? `@${m.coordinator_username}` : '—'}
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell className="text-right space-x-1 whitespace-nowrap">
+                          {(m.status === 'completed' || m.status === 'walkover') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title="HOC Force Reopen"
+                              onClick={() =>
+                                setConfirmAction({
+                                  open: true,
+                                  title: 'Force reopen finalized match?',
+                                  description: `Reset ${m.player1_name} vs ${m.player2_name} back to scheduled? This override is recorded in audit logs.`,
+                                  onConfirm: async () => {
+                                    const res = await fetch('/api/admin/coordinator', {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        id: m.id,
+                                        status: 'scheduled',
+                                        winnerName: null,
+                                        forceOverride: true,
+                                        overrideReason: 'HOC reopen override',
+                                      }),
+                                    });
+                                    if (res.ok) {
+                                      toast.success('Match reopened');
+                                      await loadAll();
+                                    } else {
+                                      toast.error('Override failed');
+                                    }
+                                  },
+                                })
+                              }
+                              className="h-7 px-2 border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs"
+                            >
+                              <ShieldAlert className="w-3 h-3 mr-1" />
+                              Reopen
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Force Unmatch / Delete"
+                            onClick={() =>
+                              setConfirmAction({
+                                open: true,
+                                title: 'Force unmatch & delete fixture?',
+                                description: `Remove ${m.player1_name} vs ${m.player2_name} from ${m.game_name}?`,
+                                onConfirm: async () => {
+                                  const res = await fetch(`/api/admin/coordinator?id=${encodeURIComponent(m.id)}`, {
+                                    method: 'DELETE',
+                                  });
+                                  if (res.ok) {
+                                    toast.success('Match deleted');
+                                    await loadAll();
+                                  } else {
+                                    const d = await res.json();
+                                    toast.error(d.error || 'Delete failed');
+                                  }
+                                },
+                              })
+                            }
+                            className="h-7 w-7 p-0 text-red-400 hover:bg-red-500/15"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell>
-                          <p className="font-semibold text-slate-800">{m.game_name}</p>
-                          <p className="text-xs text-slate-500">
-                            {m.round_name} • Match #{m.match_number}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              m.gender === 'boys'
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-pink-100 text-pink-700'
-                            }`}
-                          >
-                            {m.gender}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium">{m.player1_name}</span>
-                          <span className="text-slate-400 mx-1.5">vs</span>
-                          <span className="font-medium">{m.player2_name}</span>
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            <span>
-                              {m.scheduled_date || 'Date TBD'} {m.scheduled_time || ''}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3 text-slate-400" />
-                            <span>{m.venue || 'Venue TBD'}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs font-medium uppercase ${
-                              m.status === 'completed' || m.status === 'walkover'
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : m.status === 'in_progress'
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-slate-100 text-slate-700'
-                            }`}
-                          >
-                            {m.status.replace('_', ' ')}
-                          </span>
-                          {m.winner_name && (
-                            <p className="text-xs font-semibold text-emerald-700 mt-1">
-                              Winner: {m.winner_name}
-                            </p>
-                          )}
-                          {m.score_summary && (
-                            <p className="text-xs text-slate-500">{m.score_summary}</p>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">
-                          {m.coordinator_username || '—'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            );
-          })()}
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {confirmAction && (
+        <ConfirmDialog
+          open={confirmAction.open}
+          title={confirmAction.title}
+          description={confirmAction.description}
+          destructive
+          loading={confirmBusy}
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={async () => {
+            setConfirmBusy(true);
+            try {
+              await confirmAction.onConfirm();
+              setConfirmAction(null);
+            } finally {
+              setConfirmBusy(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

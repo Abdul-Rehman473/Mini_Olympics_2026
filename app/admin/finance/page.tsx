@@ -57,6 +57,8 @@ import {
   Hash,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 type FinanceRecord = {
   id: string;
@@ -114,6 +116,16 @@ const PAYMENT_METHODS = [
 ];
 
 export default function FinancePage() {
+  const toast = useToast();
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [records, setRecords] = useState<FinanceRecord[]>([]);
   const [summary, setSummary] = useState<Summary>({ totalIncome: 0, totalExpense: 0, balance: 0 });
   const [registrationStats, setRegistrationStats] = useState<RegistrationStats>({
@@ -215,7 +227,7 @@ export default function FinancePage() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
+        toast.error('File size must be less than 5MB');
         return;
       }
       const reader = new FileReader();
@@ -438,7 +450,7 @@ export default function FinancePage() {
       
     } catch (error) {
       console.error('PDF generation error:', error);
-      alert('Failed to generate PDF');
+      toast.error('Failed to generate PDF');
     } finally {
       setDownloading(false);
     }
@@ -449,7 +461,7 @@ export default function FinancePage() {
     const recordsWithReceipts = filteredRecords.filter(r => r.attachments?.length > 0 && r.attachments[0].file_url);
     
     if (recordsWithReceipts.length === 0) {
-      alert('No receipts to export');
+      toast.error('No receipts to export');
       return;
     }
 
@@ -598,7 +610,7 @@ export default function FinancePage() {
       
     } catch (error) {
       console.error('Receipt PDF generation error:', error);
-      alert('Failed to generate receipts PDF');
+      toast.error('Failed to generate receipts PDF');
     } finally {
       setDownloadingReceipts(false);
     }
@@ -606,7 +618,7 @@ export default function FinancePage() {
 
   const handleSave = async () => {
     if (!form.category || !form.amount) {
-      alert('Category and amount are required');
+      toast.error('Category and amount are required');
       return;
     }
 
@@ -632,50 +644,59 @@ export default function FinancePage() {
 
       const data = await res.json();
       if (data.success) {
+        toast.success(editingRecord ? 'Record updated' : 'Record saved');
         setDialogOpen(false);
         loadData();
       } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
+        toast.error(data.error || 'Failed to save finance record');
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (record: FinanceRecord) => {
-    if (!confirm(`Delete this ${record.record_type} record?`)) return;
-
-    try {
-      const res = await fetch(`/api/admin/finance?id=${record.id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        loadData();
-      } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      alert('Failed to delete');
-    }
+  const handleDelete = (record: FinanceRecord) => {
+    setConfirmState({
+      open: true,
+      title: `Delete this ${record.record_type} record?`,
+      description: 'This financial ledger entry will be permanently removed.',
+      confirmLabel: 'Delete Record',
+      destructive: true,
+      onConfirm: async () => {
+        const res = await fetch(`/api/admin/finance?id=${record.id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          toast.success('Record deleted');
+          loadData();
+        } else {
+          toast.error(data.error || 'Failed to delete record');
+        }
+      },
+    });
   };
 
-  const handleSync = async () => {
-    if (!confirm('This will import all paid registrations as income records. Continue?')) return;
-    
-    setSyncing(true);
-    try {
-      const res = await fetch('/api/admin/finance/sync', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        alert(`Synced ${data.synced} registrations to finance records.`);
-        loadData();
-      } else {
-        alert('Sync failed: ' + (data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      alert('Sync failed');
-    } finally {
-      setSyncing(false);
-    }
+  const handleSync = () => {
+    setConfirmState({
+      open: true,
+      title: 'Sync paid registrations to Finance?',
+      description: 'This will idempotently import any paid registrations missing from the finance ledger.',
+      confirmLabel: 'Sync Registrations',
+      onConfirm: async () => {
+        setSyncing(true);
+        try {
+          const res = await fetch('/api/admin/finance/sync', { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Synced ${data.synced} registrations to finance records.`);
+            loadData();
+          } else {
+            toast.error(data.error || 'Sync failed');
+          }
+        } finally {
+          setSyncing(false);
+        }
+      },
+    });
   };
 
   const filteredRecords = records.filter((r) => {
@@ -1231,6 +1252,27 @@ export default function FinancePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {confirmState && (
+        <ConfirmDialog
+          open={confirmState.open}
+          title={confirmState.title}
+          description={confirmState.description}
+          confirmLabel={confirmState.confirmLabel}
+          destructive={confirmState.destructive}
+          loading={confirmBusy}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={async () => {
+            setConfirmBusy(true);
+            try {
+              await confirmState.onConfirm();
+              setConfirmState(null);
+            } finally {
+              setConfirmBusy(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Footer from "@/components/footer";
+import { ToastProvider } from "@/components/ui/toast";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -32,9 +33,6 @@ export const metadata: Metadata = {
     template: "%s | Mini Olympics",
   },
   description: "Registration portal for FCIT Sports Society Mini Olympics 2026",
-  icons: {
-    icon: "/icon.svg",
-  },
 };
 
 export default function RootLayout({
@@ -48,8 +46,10 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
       <body className="flex flex-col min-h-screen font-sans">
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <ToastProvider>
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </ToastProvider>
       </body>
     </html>
   );

@@ -48,6 +48,8 @@ import {
   X,
   FileSpreadsheet,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 type InventoryItem = {
   id: string;
@@ -118,6 +120,16 @@ export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState<'items' | 'add' | 'loans'>('items');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const toast = useToast();
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   // Sheet view for adding items
   const [newItems, setNewItems] = useState<NewItemRow[]>([createEmptyRow(), createEmptyRow(), createEmptyRow()]);
@@ -194,7 +206,7 @@ export default function InventoryPage() {
   const handleSaveAllItems = async () => {
     const validItems = newItems.filter(item => item.name.trim() !== '');
     if (validItems.length === 0) {
-      alert('Please add at least one item with a name');
+      toast.error('Please add at least one item with a name');
       return;
     }
 
@@ -231,12 +243,12 @@ export default function InventoryPage() {
     setSavingItems(false);
     
     if (successCount > 0) {
-      alert(`Added ${successCount} item(s) successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
+      toast.success(`Added ${successCount} item(s) successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
       setNewItems([createEmptyRow(), createEmptyRow(), createEmptyRow()]);
       setActiveTab('items');
       loadData();
     } else {
-      alert('Failed to add items');
+      toast.error('Failed to add items');
     }
   };
 
@@ -256,7 +268,7 @@ export default function InventoryPage() {
 
   const handleUpdateItem = async () => {
     if (!editingItem || !editForm.name) {
-      alert('Name is required');
+      toast.error('Name is required');
       return;
     }
 
@@ -279,30 +291,35 @@ export default function InventoryPage() {
 
       const data = await res.json();
       if (data.success) {
+        toast.success('Item updated');
         setEditDialogOpen(false);
         loadData();
       } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
+        toast.error(data.error || 'Failed to update item');
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteItem = async (item: InventoryItem) => {
-    if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
-
-    try {
-      const res = await fetch(`/api/admin/inventory?id=${item.id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        loadData();
-      } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      alert('Failed to delete');
-    }
+  const handleDeleteItem = (item: InventoryItem) => {
+    setConfirmState({
+      open: true,
+      title: `Delete "${item.name}"?`,
+      description: 'This equipment record will be permanently removed if it has no active loans.',
+      confirmLabel: 'Delete Item',
+      destructive: true,
+      onConfirm: async () => {
+        const res = await fetch(`/api/admin/inventory?id=${item.id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          toast.success(`Deleted ${item.name}`);
+          loadData();
+        } else {
+          toast.error(data.error || 'Failed to delete item');
+        }
+      },
+    });
   };
 
   const openLoanDialog = (item?: InventoryItem) => {
@@ -319,7 +336,7 @@ export default function InventoryPage() {
 
   const handleCreateLoan = async () => {
     if (!loanForm.itemId || !loanForm.borrowerName || !loanForm.borrowerPhone) {
-      alert('Item, borrower name, and phone are required');
+      toast.error('Item, borrower name, and phone are required');
       return;
     }
 
@@ -327,7 +344,7 @@ export default function InventoryPage() {
     const available = selectedItem ? selectedItem.quantity - selectedItem.loanedQty : 0;
     
     if (loanForm.quantity > available) {
-      alert(`Only ${available} available for loan`);
+      toast.error(`Only ${available} available for loan`);
       return;
     }
 
@@ -341,35 +358,39 @@ export default function InventoryPage() {
 
       const data = await res.json();
       if (data.success) {
+        toast.success('Equipment loan issued');
         setLoanDialogOpen(false);
         loadData();
       } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
+        toast.error(data.error || 'Failed to issue loan');
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const handleReturnLoan = async (loan: Loan) => {
-    if (!confirm(`Mark "${loan.item_name}" returned from ${loan.borrower_name}?`)) return;
+  const handleReturnLoan = (loan: Loan) => {
+    setConfirmState({
+      open: true,
+      title: `Mark "${loan.item_name}" returned?`,
+      description: `Confirm ${loan.quantity} unit(s) returned from ${loan.borrower_name}.`,
+      confirmLabel: 'Mark Returned',
+      onConfirm: async () => {
+        const res = await fetch('/api/admin/inventory/loans', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: loan.id, status: 'returned' }),
+        });
 
-    try {
-      const res = await fetch('/api/admin/inventory/loans', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: loan.id, status: 'returned' }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        loadData();
-      } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      alert('Failed to return');
-    }
+        const data = await res.json();
+        if (data.success) {
+          toast.success('Loan marked returned');
+          loadData();
+        } else {
+          toast.error(data.error || 'Failed to update loan');
+        }
+      },
+    });
   };
 
   // Filtered items
@@ -1143,6 +1164,27 @@ export default function InventoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {confirmState && (
+        <ConfirmDialog
+          open={confirmState.open}
+          title={confirmState.title}
+          description={confirmState.description}
+          confirmLabel={confirmState.confirmLabel}
+          destructive={confirmState.destructive}
+          loading={confirmBusy}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={async () => {
+            setConfirmBusy(true);
+            try {
+              await confirmState.onConfirm();
+              setConfirmState(null);
+            } finally {
+              setConfirmBusy(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

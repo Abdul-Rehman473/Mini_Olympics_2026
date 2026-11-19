@@ -1,79 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { gamesPricing } from '@/lib/games-pricing';
+import { ensureGamesSchema, toGameSlug } from '@/lib/games-sync';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-let categoryColumnEnsured = false;
-
-async function ensureCategoryColumn() {
-  if (categoryColumnEnsured) return;
-  try {
-    await sql`ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS category VARCHAR(50)`;
-    categoryColumnEnsured = true;
-  } catch {
-    // Non-fatal
-  }
-}
-
-// GET - Fetch all games pricing (public - no auth needed)
+// GET - Fetch active games pricing from database (single source of truth; never auto-reseeds deleted games)
 export async function GET(request: NextRequest) {
   try {
-    await ensureCategoryColumn();
+    await ensureGamesSchema();
 
-    let games = (await sql`
-      SELECT id, game_name, gender, price, players, category
-      FROM games_pricing
-      ORDER BY id ASC
+    const includeInactive = request.nextUrl.searchParams.get('includeInactive') === 'true';
+
+    const games = (await sql`
+      SELECT gp.id, gp.game_id, gp.game_name, gp.gender, gp.price, gp.players, gp.category,
+             COALESCE(gp.is_active, true) AS row_active,
+             COALESCE(gp.coupon_eligible, true) AS row_coupon_eligible,
+             COALESCE(gp.currency, 'PKR') AS currency,
+             COALESCE(g.is_active, true) AS game_active,
+             COALESCE(g.coupon_eligible, gp.coupon_eligible, true) AS coupon_eligible
+      FROM games_pricing gp
+      LEFT JOIN games g ON g.id = gp.game_id OR LOWER(g.name) = LOWER(gp.game_name)
+      ORDER BY gp.id ASC
     `) as any[];
 
-    // Auto-seed official 45 PDF games if table is completely empty
-    if (games.length === 0) {
-      for (const item of gamesPricing) {
-        if (item.boys !== null) {
-          await sql`
-            INSERT INTO games_pricing (game_name, gender, price, players, category)
-            VALUES (${item.name}, 'boys', ${item.boys}, ${item.boysPlayers ?? 1}, ${item.category ?? null})
-            ON CONFLICT (game_name, gender) DO NOTHING
-          `;
-        }
-        if (item.girls !== null) {
-          await sql`
-            INSERT INTO games_pricing (game_name, gender, price, players, category)
-            VALUES (${item.name}, 'girls', ${item.girls}, ${item.girlsPlayers ?? 1}, ${item.category ?? null})
-            ON CONFLICT (game_name, gender) DO NOTHING
-          `;
-        }
-      }
-      games = (await sql`
-        SELECT id, game_name, gender, price, players, category
-        FROM games_pricing
-        ORDER BY id ASC
-      `) as any[];
-    }
-
-    // Transform to match the frontend format
     const gamesMap: Record<
       string,
       {
+        id: string;
         name: string;
         boys: number | null;
         girls: number | null;
         boysPlayers?: number;
         girlsPlayers?: number;
         category?: string;
+        isActive: boolean;
+        couponEligible: boolean;
+        currency: string;
       }
     > = {};
 
-    games.forEach((g: any) => {
-      const name = g.game_name;
+    for (const g of games) {
+      const active = Boolean(g.row_active) && Boolean(g.game_active);
+      if (!includeInactive && !active) continue;
+
+      const name = String(g.game_name);
       if (!gamesMap[name]) {
         gamesMap[name] = {
+          id: g.game_id || toGameSlug(name),
           name,
           boys: null,
           girls: null,
           category: g.category || undefined,
+          isActive: active,
+          couponEligible: Boolean(g.coupon_eligible),
+          currency: g.currency || 'PKR',
         };
       }
       if (!gamesMap[name].category && g.category) {
@@ -86,7 +67,7 @@ export async function GET(request: NextRequest) {
         gamesMap[name].girls = parseFloat(g.price);
         if (g.players) gamesMap[name].girlsPlayers = Number(g.players);
       }
-    });
+    }
 
     const formattedGames = Object.values(gamesMap);
 

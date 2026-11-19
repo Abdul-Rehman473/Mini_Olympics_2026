@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPagePermission(session, '/admin/email', 'view')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!hasPagePermission(session, '/admin/email', 'edit')) {
+      return NextResponse.json({ error: 'Forbidden - Email edit permission required' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -80,6 +80,20 @@ export async function POST(request: NextRequest) {
     }
 
     const info = await transporter.sendMail(mailOptions);
+
+    const { logAudit, getClientIp } = await import('@/lib/audit');
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'email.send',
+      targetType: 'email',
+      after: {
+        recipientCount: Array.isArray(to) ? to.length : 1,
+        subject,
+        accepted: Array.isArray(info.accepted) ? info.accepted.length : 0,
+      },
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ 
       success: true, 
@@ -116,40 +130,30 @@ export async function GET(request: NextRequest) {
     const game = searchParams.get('game');
     const gender = searchParams.get('gender');
 
-    let query = 'SELECT DISTINCT email, name, gender FROM registrations WHERE 1=1';
+    const conditions: string[] = [];
     const params: any[] = [];
 
     if (filter === 'paid') {
-      query += ' AND status = $1';
-      params.push('paid');
+      conditions.push(`status = 'paid'`);
     } else if (filter === 'pending') {
-      query += ' AND status IN ($1, $2)';
-      params.push('pending_cash', 'pending_online');
+      conditions.push(`status IN ('pending_cash', 'pending_online')`);
     }
 
     if (gender && gender !== 'all') {
-      query += ` AND gender = $${params.length + 1}`;
       params.push(gender);
+      conditions.push(`LOWER(gender) = LOWER($${params.length})`);
     }
 
     if (game && game !== 'all') {
-      query += ` AND selected_games LIKE $${params.length + 1}`;
       params.push(`%${game}%`);
+      conditions.push(`selected_games::text ILIKE $${params.length}`);
     }
 
-    // Use raw SQL for dynamic query
-    let recipients;
-    if (params.length === 0) {
-      recipients = await sql`SELECT DISTINCT email, name, gender FROM registrations`;
-    } else if (params.length === 1) {
-      recipients = await sql`SELECT DISTINCT email, name, gender FROM registrations WHERE status = ${params[0]}`;
-    } else if (filter === 'paid' && gender && gender !== 'all') {
-      recipients = await sql`SELECT DISTINCT email, name, gender FROM registrations WHERE status = 'paid' AND gender = ${gender}`;
-    } else if (filter === 'paid') {
-      recipients = await sql`SELECT DISTINCT email, name, gender FROM registrations WHERE status = 'paid'`;
-    } else {
-      recipients = await sql`SELECT DISTINCT email, name, gender FROM registrations`;
-    }
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const recipients = await sql(
+      `SELECT DISTINCT email, name, gender, status FROM registrations ${whereClause} ORDER BY name ASC`,
+      params
+    );
 
     return NextResponse.json({ success: true, data: recipients });
   } catch (error: any) {

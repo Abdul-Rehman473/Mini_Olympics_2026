@@ -35,6 +35,8 @@ import {
   User,
   UserCircle2,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 type GamePrice = {
   name: string;
@@ -57,6 +59,9 @@ type SportGroup = {
 
 export default function SuperAdminPage() {
   const router = useRouter();
+  const toast = useToast();
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<SportGroup | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
   const [canManageGroups, setCanManageGroups] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -166,7 +171,7 @@ export default function SuperAdminPage() {
   };
 
   const handleSave = async () => {
-    if (!formData.gameName) { alert('Game name is required'); return; }
+    if (!formData.gameName) { toast.error('Game name is required'); return; }
 
     setSaving(true);
     try {
@@ -175,7 +180,7 @@ export default function SuperAdminPage() {
           id: editingGroup.id,
           gameName: formData.gameName,
           gender: formData.gender,
-          groupTitle: formData.groupTitle || `${formData.gameName} (${formData.gender === 'boys' ? 'Male' : 'Female'})`,
+          groupTitle: formData.groupTitle || `${formData.gameName} (${formData.gender === 'boys' ? 'Boys' : 'Girls'})`,
           groupUrl: formData.groupUrl || null,
           coordinatorName: formData.coordinatorName || null,
           coordinatorPhone: formData.coordinatorPhone || null,
@@ -190,28 +195,28 @@ export default function SuperAdminPage() {
         let data: { success?: boolean; error?: string };
         try {
           data = await res.json();
-        } catch (_) {
-          const text = await res.text().catch(() => '');
-          alert('Server returned invalid response. Status: ' + res.status + (text ? '. Check console.' : ''));
+        } catch {
+          toast.error(`Server returned invalid response (Status ${res.status})`);
           return;
         }
         if (data.success) {
+          toast.success('Sport group updated');
           setDialogOpen(false);
           await loadGroups();
         } else {
-          alert('Failed: ' + (data.error || 'Unknown error'));
+          toast.error(data.error || 'Failed to update sport group');
         }
         return;
       }
 
       const gendersToCreate: ('boys' | 'girls')[] = formData.applyToBoth ? ['boys', 'girls'] : [formData.gender];
-      const groupTitle = formData.groupTitle || (formData.applyToBoth ? formData.gameName : `${formData.gameName} (${formData.gender === 'boys' ? 'Male' : 'Female'})`);
+      const groupTitle = formData.groupTitle || (formData.applyToBoth ? formData.gameName : `${formData.gameName} (${formData.gender === 'boys' ? 'Boys' : 'Girls'})`);
 
       for (const gender of gendersToCreate) {
         const body = {
           gameName: formData.gameName,
           gender,
-          groupTitle: formData.applyToBoth ? `${formData.gameName} (${gender === 'boys' ? 'Male' : 'Female'})` : groupTitle,
+          groupTitle: formData.applyToBoth ? `${formData.gameName} (${gender === 'boys' ? 'Boys' : 'Girls'})` : groupTitle,
           groupUrl: formData.groupUrl || null,
           coordinatorName: formData.coordinatorName || null,
           coordinatorPhone: formData.coordinatorPhone || null,
@@ -226,16 +231,16 @@ export default function SuperAdminPage() {
         let data: { success?: boolean; error?: string };
         try {
           data = await res.json();
-        } catch (_) {
-          const text = await res.text().catch(() => '');
-          alert('Server returned invalid response (not JSON). Status: ' + res.status + '. If you see a syntax error, the server may have returned an error page.');
+        } catch {
+          toast.error(`Server returned invalid response (Status ${res.status})`);
           return;
         }
         if (!data.success) {
-          alert('Failed: ' + (data.error || 'Unknown error'));
+          toast.error(data.error || 'Failed to create group');
           return;
         }
       }
+      toast.success('Sport group created');
       setDialogOpen(false);
       await loadGroups();
     } finally {
@@ -243,16 +248,27 @@ export default function SuperAdminPage() {
     }
   };
 
-  const handleDelete = async (group: SportGroup) => {
-    if (!confirm(`Delete the ${group.gender} group for "${group.game_name}"?`)) return;
+  const handleDelete = (group: SportGroup) => {
+    setConfirmDeleteGroup(group);
+  };
 
+  const executeDeleteGroup = async () => {
+    if (!confirmDeleteGroup) return;
+    setDeletingGroup(true);
     try {
-      const res = await fetch(`/api/admin/sport-groups?id=${group.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/sport-groups?id=${confirmDeleteGroup.id}`, { method: 'DELETE' });
       const data = await res.json();
-      if (data.success) await loadGroups();
-      else alert('Failed: ' + (data.error || 'Unknown error'));
+      if (data.success) {
+        toast.success('Sport group deleted');
+        setConfirmDeleteGroup(null);
+        await loadGroups();
+      } else {
+        toast.error(data.error || 'Failed to delete group');
+      }
     } catch {
-      alert('Failed to delete');
+      toast.error('Failed to delete group');
+    } finally {
+      setDeletingGroup(false);
     }
   };
 
@@ -596,6 +612,17 @@ export default function SuperAdminPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(confirmDeleteGroup)}
+        title={`Delete "${confirmDeleteGroup?.game_name}" (${confirmDeleteGroup?.gender}) group?`}
+        description="Participants will no longer see this WhatsApp group link on the registration success page."
+        confirmLabel="Delete Group"
+        destructive
+        loading={deletingGroup}
+        onCancel={() => setConfirmDeleteGroup(null)}
+        onConfirm={executeDeleteGroup}
+      />
     </div>
   );
 }
