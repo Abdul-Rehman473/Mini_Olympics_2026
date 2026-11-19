@@ -1,39 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAdminSession, hasPagePermission } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
-import { cookies } from 'next/headers';
 import { sendPaymentReceivedEmail, sendPaymentNotReceivedEmail } from '@/lib/email';
+import { logAudit, getClientIp } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
-// GET - Get single registration
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  pending_cash: ['paid', 'rejected'],
+  pending_online: ['paid', 'rejected'],
+  rejected: ['paid', 'pending_cash', 'pending_online'],
+  paid: ['refunded'],
+  refunded: [],
+};
+
+// GET - Get single registration (includes full screenshot_url + registration_items snapshot)
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('admin_session')?.value;
-    const session = await getAdminSession(sessionToken);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (!hasPagePermission(session, '/admin/registrations', 'view')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const auth = await requireAdminPermission('/admin/registrations', 'view');
+    if (auth.error) return auth.error;
 
-    const result = await sql`SELECT * FROM registrations WHERE id = ${params.id}` as any[];
+    const result = (await sql`SELECT * FROM registrations WHERE id = ${params.id}`) as any[];
     const registration = result[0] || null;
 
     if (!registration) {
-      return NextResponse.json(
-        { error: 'Registration not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: registration });
+    let items: any[] = [];
+    try {
+      items = (await sql`
+        SELECT id, game_id, game_name, gender, unit_price, currency, players_count, created_at
+        FROM registration_items
+        WHERE registration_id = ${params.id}
+        ORDER BY created_at ASC
+      `) as any[];
+    } catch {
+      items = [];
+    }
+
+    return NextResponse.json({ success: true, data: { ...registration, items } });
   } catch (error: any) {
     console.error('Get registration error:', error);
     return NextResponse.json(
@@ -43,34 +53,19 @@ export async function GET(
   }
 }
 
-// PATCH - Update registration status (Admin only)
+// PATCH - Update registration status / discount with strict state machine & finance sync
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Verify admin authentication
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('admin_session')?.value;
-    const session = await getAdminSession(sessionToken);
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Admin authentication required' },
-        { status: 401 }
-      );
-    }
-
-    if (!hasPagePermission(session, '/admin/registrations', 'edit')) {
-      return NextResponse.json(
-        { error: 'Forbidden - Registration edit permission required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireAdminPermission('/admin/registrations', 'edit');
+    if (auth.error) return auth.error;
+    const { session } = auth;
 
     const body = await request.json();
     const { status, discount } = body;
 
-    // At least one field must be provided
     if (status === undefined && discount === undefined) {
       return NextResponse.json(
         { error: 'At least one field (status or discount) is required' },
@@ -78,136 +73,132 @@ export async function PATCH(
       );
     }
 
-    // First, fetch the current registration to preserve existing data
-    const currentResult = await sql`SELECT * FROM registrations WHERE id = ${params.id}` as any[];
+    const currentResult = (await sql`SELECT * FROM registrations WHERE id = ${params.id}`) as any[];
     if (!currentResult || currentResult.length === 0) {
-      return NextResponse.json(
-        { error: 'Registration not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
-    const currentRegistration = currentResult[0];
+    const currentReg = currentResult[0];
 
-    // Validate status value if provided
     if (status !== undefined) {
-      const validStatuses = ['pending_cash', 'pending_online', 'paid', 'rejected'];
+      const validStatuses = ['pending_cash', 'pending_online', 'paid', 'rejected', 'refunded'];
       if (!validStatuses.includes(status)) {
+        return NextResponse.json({ error: 'Invalid status value' }, { status: 400 });
+      }
+      if (status !== currentReg.status && !ALLOWED_TRANSITIONS[currentReg.status]?.includes(status)) {
         return NextResponse.json(
-          { error: 'Invalid status value' },
-          { status: 400 }
+          { error: `Illegal status transition from '${currentReg.status}' to '${status}'` },
+          { status: 409 }
         );
       }
     }
 
-    // Validate discount if provided
     let discountValue: number | null = null;
     if (discount !== undefined && discount !== null) {
-      discountValue = Number(discount);
-      if (isNaN(discountValue) || discountValue < 0) {
+      if (currentReg.status === 'paid' || currentReg.status === 'refunded') {
         return NextResponse.json(
-          { error: 'Invalid discount value. Must be a non-negative number.' },
+          { error: 'Cannot change discount after registration has been paid or refunded' },
+          { status: 409 }
+        );
+      }
+      discountValue = Number(discount);
+      if (isNaN(discountValue) || discountValue < 0 || discountValue > Number(currentReg.total_amount || 0)) {
+        return NextResponse.json(
+          { error: 'Discount must be between 0 and the total registration amount.' },
           { status: 400 }
         );
       }
     }
 
-    // Build dynamic UPDATE query based on what fields are provided
-    // CRITICAL: Only update fields that are explicitly provided - preserve all other data
-    if (status !== undefined && discount !== undefined) {
-      // Update both status and discount
-      await sql`
-        UPDATE registrations
-        SET status = ${status}, 
-            discount = ${discountValue},
-            updated_at = NOW()
-        WHERE id = ${params.id}
-      `;
-    } else if (status !== undefined) {
-      // Update only status - DO NOT touch discount or any other fields
-      await sql`
-        UPDATE registrations
-        SET status = ${status}, 
-            updated_at = NOW()
-        WHERE id = ${params.id}
-      `;
-    } else if (discount !== undefined) {
-      // Update only discount - DO NOT touch status or any other fields
-      await sql`
-        UPDATE registrations
-        SET discount = ${discountValue},
-            updated_at = NOW()
-        WHERE id = ${params.id}
-      `;
-    }
+    const nextStatus = status !== undefined ? status : currentReg.status;
+    const nextDiscount = discountValue !== null ? discountValue : currentReg.discount;
 
-    // Fetch updated registration to verify the update
-    const result = await sql`SELECT * FROM registrations WHERE id = ${params.id}` as any[];
-    const updated = result[0] || null;
+    const updatedRows = (await sql`
+      UPDATE registrations
+      SET status = ${nextStatus},
+          discount = ${nextDiscount},
+          updated_at = NOW()
+      WHERE id = ${params.id} AND status = ${currentReg.status}
+      RETURNING *
+    `) as any[];
 
-    if (!updated) {
+    if (!updatedRows || updatedRows.length === 0) {
       return NextResponse.json(
-        { error: 'Registration not found after update' },
-        { status: 404 }
+        { error: 'Registration was modified concurrently; please refresh and retry.' },
+        { status: 409 }
       );
     }
+    const updated = updatedRows[0];
 
-    // If status changed to 'paid' and it wasn't already paid, create a finance record
-    if (status === 'paid' && currentRegistration.status !== 'paid') {
-      try {
-        const financeId = uuidv4();
-        const finalAmount = Number(updated.total_amount) - (Number(updated.discount) || 0);
-        const paymentMethod = updated.payment_method === 'cash' ? 'cash' : 'bank_transfer';
-        
-        // Check if finance record already exists for this registration
-        const existingFinance = await sql`
-          SELECT id FROM finance_records 
-          WHERE reference_id = ${params.id} AND reference_type = 'registration'
-        ` as any[];
-        
-        if (!existingFinance || existingFinance.length === 0) {
-          await sql`
-            INSERT INTO finance_records (
-              id, record_type, category, amount, description, 
-              reference_id, reference_type, payment_method, recorded_by, 
-              record_date, created_at, updated_at
-            ) VALUES (
-              ${financeId}, 'income', 'registration', ${finalAmount}, 
-              ${'Registration #' + updated.registration_number + ' - ' + updated.name},
-              ${params.id}, 'registration', ${paymentMethod}, 'system',
-              ${new Date().toISOString().split('T')[0]}, NOW(), NOW()
-            )
-          `;
-          console.log(`Finance record created for registration ${params.id}, amount: ${finalAmount}`);
-        }
-      } catch (financeError: any) {
-        // Log but don't fail the update if finance record creation fails
-        console.error('Failed to create finance record:', financeError.message);
-      }
+    // Idempotent finance record creation when moving into 'paid'
+    if (nextStatus === 'paid' && currentReg.status !== 'paid') {
+      const finalAmount = Math.max(0, Number(updated.total_amount) - (Number(updated.discount) || 0));
+      const paymentMethod = updated.payment_method === 'cash' ? 'cash' : 'bank_transfer';
+      await sql`
+        INSERT INTO finance_records (
+          id, record_type, category, amount, description,
+          reference_id, reference_type, payment_method, recorded_by,
+          record_date, created_at, updated_at
+        ) VALUES (
+          ${uuidv4()}, 'income', 'registration', ${finalAmount},
+          ${'Registration #' + updated.registration_number + ' - ' + updated.name},
+          ${params.id}, 'registration', ${paymentMethod}, ${session.username},
+          ${new Date().toISOString().split('T')[0]}, NOW(), NOW()
+        )
+        ON CONFLICT (reference_id, reference_type) WHERE reference_id IS NOT NULL DO NOTHING
+      `;
     }
 
-    // Send payment status email when admin confirms or rejects (do not fail response if email fails)
-    if (status === 'paid' || status === 'rejected') {
-      const email = updated.email;
-      const regNum = updated.registration_number;
-      const name = updated.name || 'Participant';
-      const slipId = updated.slip_id || '';
+    // Compensating expense entry when transitioning paid -> refunded
+    if (nextStatus === 'refunded' && currentReg.status === 'paid') {
+      const refundAmount = Math.max(0, Number(updated.total_amount) - (Number(updated.discount) || 0));
+      const paymentMethod = updated.payment_method === 'cash' ? 'cash' : 'bank_transfer';
+      await sql`
+        INSERT INTO finance_records (
+          id, record_type, category, amount, description,
+          reference_id, reference_type, payment_method, recorded_by,
+          record_date, created_at, updated_at
+        ) VALUES (
+          ${uuidv4()}, 'expense', 'refund', ${refundAmount},
+          ${'Refund for Registration #' + updated.registration_number + ' - ' + updated.name},
+          ${params.id}, 'registration_refund', ${paymentMethod}, ${session.username},
+          ${new Date().toISOString().split('T')[0]}, NOW(), NOW()
+        )
+        ON CONFLICT (reference_id, reference_type) WHERE reference_id IS NOT NULL DO NOTHING
+      `;
+    }
+
+    if ((status === 'paid' || status === 'rejected') && status !== currentReg.status) {
       try {
         if (status === 'paid') {
-          await sendPaymentReceivedEmail({ to: email, name, regNum, slipId });
+          await sendPaymentReceivedEmail({
+            to: updated.email,
+            name: updated.name || 'Participant',
+            regNum: updated.registration_number,
+            slipId: updated.slip_id || '',
+          });
         } else {
-          const paymentMethod = (updated.payment_method === 'online') ? 'online' : 'cash';
-          await sendPaymentNotReceivedEmail({ to: email, name, regNum, slipId, paymentMethod });
+          await sendPaymentNotReceivedEmail({
+            to: updated.email,
+            name: updated.name || 'Participant',
+            regNum: updated.registration_number,
+            slipId: updated.slip_id || '',
+            paymentMethod: updated.payment_method === 'online' ? 'online' : 'cash',
+          });
         }
       } catch (emailErr: any) {
         console.error('Payment status email failed:', emailErr?.message || emailErr);
       }
     }
 
-    // Log the update for audit purposes
-    console.log(`Registration ${params.id} updated:`, {
-      status: status !== undefined ? status : 'unchanged',
-      discount: discount !== undefined ? discountValue : 'unchanged',
-      timestamp: new Date().toISOString()
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'registration.update',
+      targetType: 'registration',
+      targetId: params.id,
+      before: { status: currentReg.status, discount: currentReg.discount },
+      after: { status: updated.status, discount: updated.discount },
+      ip: getClientIp(request),
     });
 
     return NextResponse.json({ success: true, data: updated });
@@ -220,23 +211,41 @@ export async function PATCH(
   }
 }
 
-// DELETE - Delete registration
+// DELETE - Delete unpaid/rejected registration
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('admin_session')?.value;
-    const session = await getAdminSession(sessionToken);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAdminPermission('/admin/registrations', 'edit');
+    if (auth.error) return auth.error;
+    const { session } = auth;
+
+    const currentRows = (await sql`
+      SELECT id, registration_number, name, status FROM registrations WHERE id = ${params.id} LIMIT 1
+    `) as any[];
+    if (currentRows.length === 0) {
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
-    if (!hasPagePermission(session, '/admin/registrations', 'edit')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const reg = currentRows[0];
+    if (reg.status === 'paid') {
+      return NextResponse.json(
+        { error: 'Paid registrations cannot be deleted directly; mark as refunded instead.' },
+        { status: 409 }
+      );
     }
 
     await sql`DELETE FROM registrations WHERE id = ${params.id}`;
+
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'registration.delete',
+      targetType: 'registration',
+      targetId: params.id,
+      before: { registrationNumber: reg.registration_number, name: reg.name, status: reg.status },
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ success: true, message: 'Registration deleted' });
   } catch (error: any) {

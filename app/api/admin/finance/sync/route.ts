@@ -47,15 +47,26 @@ export async function POST(request: NextRequest) {
           ) VALUES (
             ${financeId}, 'income', 'registration', ${finalAmount}, 
             ${'Registration #' + reg.registration_number + ' - ' + reg.name},
-            ${reg.id}, 'registration', ${paymentMethod}, 'sync',
+            ${reg.id}, 'registration', ${paymentMethod}, ${session.username},
             ${recordDate}, NOW(), NOW()
           )
+          ON CONFLICT (reference_id, reference_type) WHERE reference_id IS NOT NULL DO NOTHING
         `;
         syncedCount++;
       } catch (err: any) {
         errors.push(`Registration ${reg.registration_number}: ${err.message}`);
       }
     }
+
+    const { logAudit, getClientIp } = await import('@/lib/audit');
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'finance.sync',
+      targetType: 'finance_records',
+      after: { synced: syncedCount, total: paidRegistrations.length },
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ 
       success: true, 

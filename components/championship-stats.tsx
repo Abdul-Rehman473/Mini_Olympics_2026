@@ -15,6 +15,7 @@ interface StatItem {
 
 export default function ChampionshipStats() {
   const [inView, setInView] = useState(false);
+  const [liveGameCount, setLiveGameCount] = useState(49);
   const [counts, setCounts] = useState<Record<string, number>>({
     games: 0,
     athletes: 0,
@@ -22,6 +23,17 @@ export default function ChampionshipStats() {
     status: 0,
   });
   const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch('/api/games', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.data) && data.data.length > 0) {
+          setLiveGameCount(data.data.length);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -44,7 +56,7 @@ export default function ChampionshipStats() {
     if (!inView) return;
 
     const targets: Record<string, number> = {
-      games: 50,
+      games: liveGameCount,
       athletes: 500,
       teams: 100,
       status: 24,
@@ -77,12 +89,12 @@ export default function ChampionshipStats() {
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [inView]);
+  }, [inView, liveGameCount]);
 
   const stats: StatItem[] = [
     {
       id: 'games',
-      value: 50,
+      value: liveGameCount,
       suffix: '+',
       label: 'OFFICIAL DISCIPLINES',
       subtitle: 'Across team sports, racket, board, track sprint & esports divisions',

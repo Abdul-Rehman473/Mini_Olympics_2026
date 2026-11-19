@@ -35,6 +35,9 @@ import {
   Sparkles,
   Phone,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
+import { canEditPage, useAdminSession } from '@/lib/admin-session-context';
 
 type PlayerRecord = {
   id: string;
@@ -69,12 +72,18 @@ type MatchRecord = {
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'walkover';
   winner_name: string | null;
   score_summary: string | null;
+  pair_reason?: string | null;
   notes: string | null;
   coordinator_username: string | null;
   updated_at: string;
 };
 
 export default function CoordinatorPortalPage() {
+  const adminSession = useAdminSession();
+  const canEdit =
+    canEditPage(adminSession, '/admin/coordinator') || canEditPage(adminSession, '/admin/hoc');
+  const toast = useToast();
+
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'matches' | 'players'>('matches');
   const [isScopedCoordinator, setIsScopedCoordinator] = useState(true);
@@ -109,7 +118,17 @@ export default function CoordinatorPortalPage() {
     winnerName: '',
     scoreSummary: '',
     notes: '',
+    notifyPlayers: false,
   });
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   // Auto-pair dialog
   const [autoPairOpen, setAutoPairOpen] = useState(false);
@@ -229,6 +248,7 @@ export default function CoordinatorPortalPage() {
       winnerName: '',
       scoreSummary: '',
       notes: '',
+      notifyPlayers: false,
     });
     setMatchDialogOpen(true);
   };
@@ -251,6 +271,7 @@ export default function CoordinatorPortalPage() {
       winnerName: m.winner_name || '',
       scoreSummary: m.score_summary || '',
       notes: m.notes || '',
+      notifyPlayers: false,
     });
     setMatchDialogOpen(true);
   };
@@ -273,78 +294,88 @@ export default function CoordinatorPortalPage() {
     }));
   };
 
-  const handleSaveMatch = async () => {
+  const submitMatchRequest = async (forceOverride = false) => {
     if (!matchForm.gameName || !matchForm.player1Name.trim() || !matchForm.player2Name.trim()) {
-      alert('Game, Player/Team 1, and Player/Team 2 are required.');
+      toast.error('Game, Player/Team 1, and Player/Team 2 are required.');
       return;
     }
 
     setSavingMatch(true);
     try {
-      if (editingMatch) {
-        const res = await fetch('/api/admin/coordinator', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: editingMatch.id,
-            roundName: matchForm.roundName,
-            matchNumber: Number(matchForm.matchNumber) || 1,
-            player1Name: matchForm.player1Name.trim(),
-            player2Name: matchForm.player2Name.trim(),
-            scheduledDate: matchForm.scheduledDate,
-            scheduledTime: matchForm.scheduledTime,
-            venue: matchForm.venue,
-            status: matchForm.status,
-            winnerName: matchForm.winnerName || null,
-            scoreSummary: matchForm.scoreSummary || null,
-            notes: matchForm.notes || null,
-          }),
-        });
-        const data = await res.json();
-        if (!data.success) {
-          alert(data.error || 'Failed to update match');
+      const p1 = players.find((x) => x.id === matchForm.player1Id);
+      const p2 = players.find((x) => x.id === matchForm.player2Id);
+      const res = await fetch('/api/admin/coordinator', {
+        method: editingMatch ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          editingMatch
+            ? {
+                id: editingMatch.id,
+                roundName: matchForm.roundName,
+                matchNumber: Number(matchForm.matchNumber) || 1,
+                player1Name: matchForm.player1Name.trim(),
+                player2Name: matchForm.player2Name.trim(),
+                scheduledDate: matchForm.scheduledDate,
+                scheduledTime: matchForm.scheduledTime,
+                venue: matchForm.venue,
+                status: matchForm.status,
+                winnerName: matchForm.winnerName || null,
+                scoreSummary: matchForm.scoreSummary || null,
+                notes: matchForm.notes || null,
+                notifyPlayers: matchForm.notifyPlayers,
+                forceOverride,
+                overrideReason: forceOverride ? 'HOC schedule/state override' : undefined,
+              }
+            : {
+                gameName: matchForm.gameName,
+                gender: matchForm.gender,
+                roundName: matchForm.roundName,
+                matchNumber: Number(matchForm.matchNumber) || 1,
+                player1Name: matchForm.player1Name.trim(),
+                player1RegId: p1?.id || null,
+                player1Roll: p1?.rollNumber || null,
+                player1Contact: p1?.contactNumber || null,
+                player2Name: matchForm.player2Name.trim(),
+                player2RegId: p2?.id || null,
+                player2Roll: p2?.rollNumber || null,
+                player2Contact: p2?.contactNumber || null,
+                scheduledDate: matchForm.scheduledDate,
+                scheduledTime: matchForm.scheduledTime,
+                venue: matchForm.venue,
+                notes: matchForm.notes,
+                notifyPlayers: matchForm.notifyPlayers,
+                forceOverride,
+              }
+        ),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        if (res.status === 409 && data.canOverride && !forceOverride) {
+          setConfirmState({
+            open: true,
+            title: 'Schedule Conflict / Override Required',
+            description: `${data.error} Do you want to force override using HOC permissions?`,
+            confirmLabel: 'Force Override',
+            destructive: true,
+            onConfirm: () => submitMatchRequest(true),
+          });
           return;
         }
-      } else {
-        const p1 = players.find((x) => x.id === matchForm.player1Id);
-        const p2 = players.find((x) => x.id === matchForm.player2Id);
-        const res = await fetch('/api/admin/coordinator', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            gameName: matchForm.gameName,
-            gender: matchForm.gender,
-            roundName: matchForm.roundName,
-            matchNumber: Number(matchForm.matchNumber) || 1,
-            player1Name: matchForm.player1Name.trim(),
-            player1RegId: p1?.id || null,
-            player1Roll: p1?.rollNumber || null,
-            player1Contact: p1?.contactNumber || null,
-            player2Name: matchForm.player2Name.trim(),
-            player2RegId: p2?.id || null,
-            player2Roll: p2?.rollNumber || null,
-            player2Contact: p2?.contactNumber || null,
-            scheduledDate: matchForm.scheduledDate,
-            scheduledTime: matchForm.scheduledTime,
-            venue: matchForm.venue,
-            notes: matchForm.notes,
-          }),
-        });
-        const data = await res.json();
-        if (!data.success) {
-          alert(data.error || 'Failed to create match');
-          return;
-        }
+        toast.error(data.error || 'Failed to save match');
+        return;
       }
 
+      toast.success(editingMatch ? 'Match updated' : 'Match scheduled');
       setMatchDialogOpen(false);
       await loadData();
     } catch {
-      alert('Failed to save match');
+      toast.error('Failed to save match');
     } finally {
       setSavingMatch(false);
     }
   };
+
+  const handleSaveMatch = () => submitMatchRequest(false);
 
   const handleQuickWinner = async (match: MatchRecord, winnerName: string) => {
     try {
@@ -357,27 +388,43 @@ export default function CoordinatorPortalPage() {
           winnerName,
         }),
       });
-      if ((await res.json()).success) {
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Recorded winner: ${winnerName}`);
         await loadData();
+      } else {
+        toast.error(data.error || 'Failed to record winner');
       }
-    } catch {}
+    } catch {
+      toast.error('Failed to update match');
+    }
   };
 
-  const handleDeleteMatch = async (id: string) => {
-    if (!confirm('Delete this match record?')) return;
-    try {
-      const res = await fetch(`/api/admin/coordinator?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
-      if ((await res.json()).success) {
-        await loadData();
-      }
-    } catch {}
+  const handleDeleteMatch = (id: string) => {
+    setConfirmState({
+      open: true,
+      title: 'Delete this match record?',
+      description: 'Scheduled fixtures can be removed; completed matches require HOC override.',
+      confirmLabel: 'Delete Match',
+      destructive: true,
+      onConfirm: async () => {
+        const res = await fetch(`/api/admin/coordinator?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          toast.success('Match deleted');
+          await loadData();
+        } else {
+          toast.error(data.error || 'Failed to delete match');
+        }
+      },
+    });
   };
 
   const handleAutoPair = async () => {
     if (!autoPairForm.gameName) {
-      alert('Please select a game');
+      toast.error('Please select a game');
       return;
     }
 
@@ -385,11 +432,11 @@ export default function CoordinatorPortalPage() {
       (p) =>
         p.gender === autoPairForm.gender &&
         p.selectedGames.some((g) => g.toLowerCase() === autoPairForm.gameName.toLowerCase()) &&
-        (!autoPairForm.onlyPaid || p.status === 'paid')
+        p.status === 'paid'
     );
 
     if (eligible.length < 2) {
-      alert('Need at least 2 matching players/teams to auto-pair.');
+      toast.error('Need at least 2 verified Paid players/teams to auto-pair.');
       return;
     }
 
@@ -405,18 +452,19 @@ export default function CoordinatorPortalPage() {
           roundName: autoPairForm.roundName,
           scheduledDate: autoPairForm.scheduledDate,
           venue: autoPairForm.venue,
-          players: eligible,
+          playerIds: eligible.map((p) => p.id),
         }),
       });
       const data = await res.json();
-      if (!data.success) {
-        alert(data.error || 'Failed to auto-pair matches');
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to auto-pair matches');
         return;
       }
+      toast.success(`Paired ${data.count} Round fixtures`);
       setAutoPairOpen(false);
       await loadData();
     } catch {
-      alert('Failed to auto-pair matches');
+      toast.error('Failed to auto-pair matches');
     } finally {
       setAutoPairing(false);
     }
@@ -454,7 +502,7 @@ export default function CoordinatorPortalPage() {
           </p>
         </div>
 
-        {games.length > 0 && (
+        {canEdit && games.length > 0 && (
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => {
@@ -692,54 +740,59 @@ export default function CoordinatorPortalPage() {
                           <span className="text-[#F8FAFC] font-bold">Score: {m.score_summary}</span>
                         )}
                       </div>
+                      {m.pair_reason && (
+                        <p className="text-[11px] font-mono text-[#94A3B8]">{m.pair_reason}</p>
+                      )}
 
                       {/* Quick Actions */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/[0.06]">
-                        <div className="flex flex-wrap gap-1.5">
-                          {m.status !== 'completed' && m.player2_name !== 'BYE' && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleQuickWinner(m, m.player1_name)}
-                                className="h-7 px-2 text-[10px] font-mono bg-[#0B1124] border-[#12E2C4]/30 text-[#12E2C4] hover:bg-[#12E2C4]/10"
-                              >
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                {m.player1_name.slice(0, 14)} Won
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleQuickWinner(m, m.player2_name)}
-                                className="h-7 px-2 text-[10px] font-mono bg-[#0B1124] border-[#12E2C4]/30 text-[#12E2C4] hover:bg-[#12E2C4]/10"
-                              >
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                {m.player2_name.slice(0, 14)} Won
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                      {canEdit && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/[0.06]">
+                          <div className="flex flex-wrap gap-1.5">
+                            {m.status !== 'completed' && m.player2_name !== 'BYE' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleQuickWinner(m, m.player1_name)}
+                                  className="h-7 px-2 text-[10px] font-mono bg-[#0B1124] border-[#12E2C4]/30 text-[#12E2C4] hover:bg-[#12E2C4]/10"
+                                >
+                                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                                  {m.player1_name.slice(0, 14)} Won
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleQuickWinner(m, m.player2_name)}
+                                  className="h-7 px-2 text-[10px] font-mono bg-[#0B1124] border-[#12E2C4]/30 text-[#12E2C4] hover:bg-[#12E2C4]/10"
+                                >
+                                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                                  {m.player2_name.slice(0, 14)} Won
+                                </Button>
+                              </>
+                            )}
+                          </div>
 
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditMatchDialog(m)}
-                            className="h-7 px-2.5 text-[11px] font-mono bg-[#0B1124] border-white/[0.1] text-[#F8FAFC]"
-                          >
-                            <Edit className="w-3 h-3 mr-1" />
-                            Edit / Score
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteMatch(m.id)}
-                            className="h-7 w-7 p-0 bg-[#0B1124] border-white/[0.1] text-red-400 hover:bg-red-500/10"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEditMatchDialog(m)}
+                              className="h-7 px-2.5 text-[11px] font-mono bg-[#0B1124] border-white/[0.1] text-[#F8FAFC]"
+                            >
+                              <Edit className="w-3 h-3 mr-1" />
+                              Edit / Score
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteMatch(m.id)}
+                              className="h-7 w-7 p-0 bg-[#0B1124] border-white/[0.1] text-red-400 hover:bg-red-500/10"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1086,6 +1139,16 @@ export default function CoordinatorPortalPage() {
                 className="bg-[#0B1124] border-white/[0.1] text-xs font-mono"
               />
             </div>
+
+            <label className="flex items-center gap-2 text-xs font-mono text-[#94A3B8] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={matchForm.notifyPlayers}
+                onChange={(e) => setMatchForm({ ...matchForm, notifyPlayers: e.target.checked })}
+                className="w-4 h-4 accent-[#12E2C4]"
+              />
+              <span>Send schedule / result update email to players</span>
+            </label>
           </div>
 
           <DialogFooter>
@@ -1219,6 +1282,27 @@ export default function CoordinatorPortalPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {confirmState && (
+        <ConfirmDialog
+          open={confirmState.open}
+          title={confirmState.title}
+          description={confirmState.description}
+          confirmLabel={confirmState.confirmLabel}
+          destructive={confirmState.destructive}
+          loading={confirmBusy}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={async () => {
+            setConfirmBusy(true);
+            try {
+              await confirmState.onConfirm();
+              setConfirmState(null);
+            } finally {
+              setConfirmBusy(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

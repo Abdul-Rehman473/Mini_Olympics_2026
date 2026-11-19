@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPagePermission(session, '/admin/inventory', 'view') && !hasPagePermission(session, '/admin/dashboard', 'view')) {
+    if (!hasPagePermission(session, '/admin/inventory', 'view')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -81,37 +81,63 @@ export async function POST(request: NextRequest) {
     }
 
     const loanQty = Number(quantity) || 1;
+    if (!Number.isInteger(loanQty) || loanQty <= 0) {
+      return NextResponse.json({ error: 'Quantity must be a positive integer' }, { status: 400 });
+    }
 
-    // Check available stock
     const item = await sql`SELECT quantity FROM inventory_items WHERE id = ${itemId}`;
     if ((item as any[]).length === 0) {
       return NextResponse.json({ error: 'Item not found' }, { status: 404 });
     }
 
-    const totalQty = (item as any[])[0].quantity;
-    
-    // Get current loaned quantity
-    const loanedResult = await sql`SELECT COALESCE(SUM(quantity), 0) as loaned FROM inventory_loans WHERE item_id = ${itemId} AND status = 'active'`;
-    const currentLoaned = Number((loanedResult as any[])[0]?.loaned) || 0;
-    const availableQty = totalQty - currentLoaned;
-    
-    if (availableQty < loanQty) {
-      return NextResponse.json({ error: `Insufficient stock. Available: ${availableQty}` }, { status: 400 });
-    }
-
     const id = uuidv4();
 
-    // Create loan record (don't reduce inventory quantity - just track the loan)
-    await sql`
-      INSERT INTO inventory_loans (id, item_id, borrower_name, borrower_roll, borrower_phone, quantity, expected_return_date, notes, loaned_by, created_at, updated_at)
-      VALUES (${id}, ${itemId}, ${borrowerName}, ${borrowerRoll || null}, ${borrowerPhone}, ${loanQty}, ${expectedReturnDate || null}, ${notes || null}, ${session.username}, NOW(), NOW())
-    `;
+    // Atomically check stock (counting active + overdue unreturned loans) and insert
+    const inserted = (await sql`
+      WITH stock AS (
+        SELECT
+          i.quantity AS total_qty,
+          COALESCE(SUM(l.quantity) FILTER (WHERE l.status IN ('active', 'overdue')), 0) AS loaned_qty
+        FROM inventory_items i
+        LEFT JOIN inventory_loans l ON l.item_id = i.id
+        WHERE i.id = ${itemId}
+        GROUP BY i.id, i.quantity
+      )
+      INSERT INTO inventory_loans (
+        id, item_id, borrower_name, borrower_roll, borrower_phone,
+        quantity, expected_return_date, notes, loaned_by, created_at, updated_at
+      )
+      SELECT
+        ${id}, ${itemId}, ${borrowerName}, ${borrowerRoll || null}, ${borrowerPhone},
+        ${loanQty}, ${expectedReturnDate || null}, ${notes || null}, ${session.username}, NOW(), NOW()
+      FROM stock
+      WHERE (stock.total_qty - stock.loaned_qty) >= ${loanQty}
+      RETURNING id, (SELECT total_qty - loaned_qty FROM stock) AS available_before
+    `) as any[];
 
-    // Log movement (for tracking purposes only)
+    if (!inserted || inserted.length === 0) {
+      const loanedResult = await sql`SELECT COALESCE(SUM(quantity), 0) as loaned FROM inventory_loans WHERE item_id = ${itemId} AND status IN ('active', 'overdue')`;
+      const availableQty = Number((item as any[])[0].quantity) - (Number((loanedResult as any[])[0]?.loaned) || 0);
+      return NextResponse.json({ error: `Insufficient stock. Available: ${Math.max(0, availableQty)}` }, { status: 400 });
+    }
+
+    const availableBefore = Number(inserted[0].available_before);
+
     await sql`
       INSERT INTO inventory_movements (id, item_id, movement_type, quantity, previous_quantity, new_quantity, reason, performed_by, created_at)
-      VALUES (${uuidv4()}, ${itemId}, 'loan', ${loanQty}, ${availableQty}, ${availableQty - loanQty}, ${'Loaned to ' + borrowerName}, ${session.username}, NOW())
+      VALUES (${uuidv4()}, ${itemId}, 'loan', ${loanQty}, ${availableBefore}, ${availableBefore - loanQty}, ${'Loaned to ' + borrowerName}, ${session.username}, NOW())
     `;
+
+    const { logAudit, getClientIp } = await import('@/lib/audit');
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'inventory.loan.create',
+      targetType: 'inventory_loan',
+      targetId: id,
+      after: { itemId, borrowerName, quantity: loanQty },
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ success: true, id });
   } catch (error: any) {
@@ -120,7 +146,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Return a loan
+// PUT - Return, mark overdue, or mark lost on a loan
 export async function PUT(request: NextRequest) {
   try {
     const cookieStore = await cookies();
@@ -142,7 +168,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Loan ID is required' }, { status: 400 });
     }
 
-    // Get loan details
+    const targetStatus = (newStatus || 'returned') as string;
+    const allowedTargets = new Set(['returned', 'lost', 'overdue']);
+    if (!allowedTargets.has(targetStatus)) {
+      return NextResponse.json({ error: 'Invalid loan status transition target' }, { status: 400 });
+    }
+
     const loan = await sql`SELECT * FROM inventory_loans WHERE id = ${id}`;
     if ((loan as any[]).length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
@@ -150,29 +181,77 @@ export async function PUT(request: NextRequest) {
 
     const loanData = (loan as any[])[0];
 
-    if (loanData.status !== 'active') {
-      return NextResponse.json({ error: 'Loan is not active' }, { status: 400 });
+    // Enforce loan state machine: active -> returned | lost | overdue; overdue -> returned | lost
+    const allowedFrom: Record<string, string[]> = {
+      active: ['returned', 'lost', 'overdue'],
+      overdue: ['returned', 'lost'],
+    };
+    if (!allowedFrom[loanData.status]?.includes(targetStatus)) {
+      return NextResponse.json(
+        { error: `Cannot transition loan from '${loanData.status}' to '${targetStatus}'` },
+        { status: 409 }
+      );
     }
 
-    // Update loan status
-    await sql`
-      UPDATE inventory_loans
-      SET status = ${newStatus || 'returned'}, 
-          actual_return_date = ${newStatus === 'returned' ? 'NOW()' : null}::timestamp,
-          returned_to = ${newStatus === 'returned' ? session.username : null},
-          notes = COALESCE(${notes}, notes),
-          updated_at = NOW()
-      WHERE id = ${id}
-    `;
+    const returnAtIso = targetStatus === 'returned' ? new Date().toISOString() : null;
+    const returnedTo = targetStatus === 'returned' ? session.username : null;
 
-    // If returned, just log the movement (quantity tracking is automatic via loan status)
-    if (newStatus === 'returned') {
-      // Log movement for tracking
+    // Atomically update loan and decrement item stock if marked lost
+    const result = (await sql`
+      WITH updated AS (
+        UPDATE inventory_loans
+        SET status = ${targetStatus},
+            actual_return_date = ${returnAtIso}::timestamp,
+            returned_to = ${returnedTo},
+            notes = COALESCE(${notes ?? null}, notes),
+            updated_at = NOW()
+        WHERE id = ${id} AND status = ${loanData.status}
+        RETURNING *
+      ),
+      lost_item AS (
+        UPDATE inventory_items
+        SET quantity = GREATEST(0, quantity - (SELECT quantity FROM updated)),
+            updated_at = NOW()
+        WHERE id = (SELECT item_id FROM updated) AND ${targetStatus} = 'lost'
+        RETURNING id, quantity
+      )
+      SELECT updated.*, lost_item.quantity AS remaining_quantity
+      FROM updated
+      LEFT JOIN lost_item ON true
+    `) as any[];
+
+    if (!result || result.length === 0) {
+      return NextResponse.json({ error: 'Loan state changed concurrently; please refresh' }, { status: 409 });
+    }
+
+    if (targetStatus === 'returned' || targetStatus === 'lost') {
       await sql`
         INSERT INTO inventory_movements (id, item_id, movement_type, quantity, previous_quantity, new_quantity, reason, performed_by, created_at)
-        VALUES (${uuidv4()}, ${loanData.item_id}, 'return', ${loanData.quantity}, 0, 0, ${'Returned by ' + loanData.borrower_name}, ${session.username}, NOW())
+        VALUES (
+          ${uuidv4()},
+          ${loanData.item_id},
+          ${targetStatus === 'returned' ? 'return' : 'adjust'},
+          ${loanData.quantity},
+          0,
+          ${result[0].remaining_quantity ?? 0},
+          ${targetStatus === 'returned' ? 'Returned by ' + loanData.borrower_name : 'Marked lost (borrower: ' + loanData.borrower_name + ')'},
+          ${session.username},
+          NOW()
+        )
       `;
     }
+
+    const { logAudit, getClientIp } = await import('@/lib/audit');
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: `inventory.loan.${targetStatus}`,
+      targetType: 'inventory_loan',
+      targetId: id,
+      before: { status: loanData.status },
+      after: { status: targetStatus, notes },
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

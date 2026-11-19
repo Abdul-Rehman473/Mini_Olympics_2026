@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPagePermission(session, '/admin/inventory', 'view') && !hasPagePermission(session, '/admin/dashboard', 'view')) {
+    if (!hasPagePermission(session, '/admin/inventory', 'view')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

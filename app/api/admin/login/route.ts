@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { ensureAuthAndPermissionsSchema, normalizeRole, resolveUserPermissions } from '@/lib/auth';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { getClientIp, logAudit } from '@/lib/audit';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 
@@ -16,9 +18,8 @@ function verifyPassword(password: string, stored: string | null | undefined): bo
   if (password === '' || stored === null || stored === undefined || typeof stored !== 'string') {
     return false;
   }
-  // Legacy/plaintext compatibility (in case someone manually inserted a row)
   if (!stored.startsWith('scrypt:')) {
-    return password === stored;
+    return false;
   }
 
   const parts = stored.split(':');
@@ -26,16 +27,29 @@ function verifyPassword(password: string, stored: string | null | undefined): bo
   const salt = Buffer.from(parts[1], 'base64');
   const expected = Buffer.from(parts[2], 'base64');
   const actual = crypto.scryptSync(password, salt, expected.length);
-  return crypto.timingSafeEqual(expected, actual);
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`admin_login:${ip}`, 15, 15 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Too many login attempts. Retry in ${rl.retryAfterSec}s.` },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+      );
+    }
+
     const body = await request.json();
     const rawUsername = body?.username;
     const rawPassword = body?.password;
     const username = typeof rawUsername === 'string' ? rawUsername.trim() : '';
     const password = typeof rawPassword === 'string' ? rawPassword.trim() : '';
+
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
+    }
 
     const sessionsTableCheck = await sql`
       SELECT EXISTS (
@@ -74,8 +88,8 @@ export async function POST(request: NextRequest) {
         const envMatch = hasEnv && username === adminUsername && password === adminPassword;
         if (envMatch) {
           await sql`
-            INSERT INTO admin_users (id, username, password_hash)
-            VALUES (${uuidv4()}, ${adminUsername}, ${hashPassword(adminPassword)})
+            INSERT INTO admin_users (id, username, display_name, password_hash, role, is_active)
+            VALUES (${uuidv4()}, ${adminUsername}, 'Super Admin', ${hashPassword(adminPassword)}, 'super_admin', true)
           `;
         } else {
           return NextResponse.json(
@@ -89,7 +103,6 @@ export async function POST(request: NextRequest) {
       const user = (userRes as any)[0] || null;
       const storedPassword = user?.password_hash ?? user?.password;
 
-      // When table has any users: only DB verification. Env is never used and never overwrites the DB.
       const accepted = user && verifyPassword(password, storedPassword);
       if (!accepted) {
         return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
@@ -111,20 +124,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Prune expired sessions opportunistically
+    try {
+      await sql`DELETE FROM admin_sessions WHERE expires_at <= NOW()`;
+    } catch {}
+
     // Create session token
     const sessionToken = uuidv4();
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour session
+    expiresAt.setHours(expiresAt.getHours() + 24);
 
-    // Store session in database
-    // Newer schema supports admin_user_id + role. Older schema will ignore missing columns by failing,
-    // so we fall back to the legacy insert.
+    let userRole = adminUsersTableExists ? 'sub_admin' : 'super_admin';
+    let userId: string | null = null;
     try {
-      const userRow = await sql`SELECT id, role FROM admin_users WHERE username = ${username} LIMIT 1`;
-      const u = (userRow as any)[0] || null;
+      if (adminUsersTableExists) {
+        const userRow = await sql`SELECT id, role FROM admin_users WHERE username = ${username} LIMIT 1`;
+        userId = (userRow as any)[0]?.id || null;
+        userRole = (userRow as any)[0]?.role || 'sub_admin';
+      }
       await sql`
         INSERT INTO admin_sessions (id, session_token, expires_at, admin_user_id, role)
-        VALUES (${uuidv4()}, ${sessionToken}, ${expiresAt.toISOString()}, ${u?.id || null}, ${u?.role || null})
+        VALUES (${uuidv4()}, ${sessionToken}, ${expiresAt.toISOString()}, ${userId}, ${userRole})
       `;
     } catch {
       await sql`
@@ -137,41 +157,41 @@ export async function POST(request: NextRequest) {
       await ensureAuthAndPermissionsSchema();
     } catch {}
 
-    // Get user role and id for session + redirect
-    let userRole = 'super_admin';
-    let userId: string | null = null;
-    try {
-      const userRow = await sql`SELECT id, role FROM admin_users WHERE username = ${username} LIMIT 1`;
-      userId = (userRow as any)[0]?.id || null;
-      userRole = (userRow as any)[0]?.role || 'super_admin';
-    } catch {}
-
     const normalizedRole = normalizeRole(userRole);
     const { defaultPage } = await resolveUserPermissions(userId, normalizedRole);
     const redirectTo = defaultPage || '/admin/dashboard';
 
-    // Set cookie in response
+    await logAudit({
+      actorUserId: userId,
+      actorUsername: username,
+      action: 'auth.login',
+      targetType: 'admin_session',
+      targetId: userId,
+      after: { role: normalizedRole },
+      ip,
+    });
+
     const response = NextResponse.json({
       success: true,
       message: 'Login successful',
-      sessionToken,
       role: normalizedRole,
       redirectTo,
     });
-    
+
     response.cookies.set('admin_session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/',
       expires: expiresAt,
     });
-    
+
     return response;
 
   } catch (error: any) {
     console.error('Admin login error:', error);
     return NextResponse.json(
-      { error: 'Login failed', details: error.message },
+      { error: 'Login failed' },
       { status: 500 }
     );
   }

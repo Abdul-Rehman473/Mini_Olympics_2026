@@ -24,8 +24,10 @@ export async function GET(request: NextRequest) {
       permissions: session.permissions,
       permissionDetails: session.permissionDetails,
       assignedGames: session.assignedGames,
+      assignedGameIds: session.assignedGameIds,
       assignedGender: session.assignedGender,
       defaultPage: session.defaultPage,
+      impersonatedBy: session.impersonatedBy,
     });
   } catch (error: any) {
     console.error('Session verification error:', error);

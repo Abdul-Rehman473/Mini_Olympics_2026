@@ -40,7 +40,8 @@ import {
   isTeamGame as defaultIsTeamGame,
   getRequiredPlayers as defaultGetRequiredPlayers,
 } from '@/lib/games-pricing';
-import { resolvePricingName } from '@/lib/games-data';
+import { resolvePricingName, GAMES_DATA } from '@/lib/games-data';
+import { useToast } from '@/components/ui/toast';
 
 type TeamMember = {
   name: string;
@@ -106,19 +107,34 @@ function RegisterForm() {
   const [couponError, setCouponError] = useState('');
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null);
+  const [cashPaymentEnabled, setCashPaymentEnabled] = useState<boolean>(
+    process.env.NEXT_PUBLIC_CASH_PAYMENT_ENABLED === 'true'
+  );
+  const [esportsStatus, setEsportsStatus] = useState<{
+    effectiveIsOpen: boolean;
+    announcement: string | null;
+  }>({ effectiveIsOpen: true, announcement: null });
   const [screenshotError, setScreenshotError] = useState('');
   const [screenshotInfo, setScreenshotInfo] = useState('');
   const [compressingScreenshot, setCompressingScreenshot] = useState(false);
+  const toast = useToast();
 
-  const cashPaymentEnabled = process.env.NEXT_PUBLIC_CASH_PAYMENT_ENABLED === 'true';
-
-  // Fetch whether registrations are open
+  // Fetch whether registrations, cash payments, and esports are open
   useEffect(() => {
     const fetchStatus = async () => {
       try {
         const res = await fetch('/api/public/registration-status', { cache: 'no-store' });
         const data = await res.json();
         setRegistrationOpen(data.success && data.open === true);
+        if (typeof data.cashPaymentEnabled === 'boolean') {
+          setCashPaymentEnabled(data.cashPaymentEnabled);
+        }
+        if (data.esports) {
+          setEsportsStatus({
+            effectiveIsOpen: data.esports.effectiveIsOpen !== false,
+            announcement: data.esports.announcement || null,
+          });
+        }
       } catch {
         setRegistrationOpen(true);
       }
@@ -458,15 +474,22 @@ function RegisterForm() {
       ? calculateTotal(formData.selectedGames, formData.gender)
       : 0;
 
-  const GAME_EXCLUDED_FROM_COUPON = 'Swimming';
-  const swimmingPrice =
-    formData.gender && formData.selectedGames.includes(GAME_EXCLUDED_FROM_COUPON)
-      ? getGamePrice(GAME_EXCLUDED_FROM_COUPON, formData.gender) ?? 0
+  const isGameCouponEligible = (gameName: string) => {
+    const matched = allGames.find((g) => g.name.toLowerCase() === gameName.toLowerCase()) as any;
+    if (matched && matched.couponEligible === false) return false;
+    const lower = gameName.trim().toLowerCase();
+    return lower !== 'swimming' && lower !== 'swimming sprint';
+  };
+
+  const amountEligibleForDiscount =
+    formData.gender && formData.selectedGames.length > 0
+      ? formData.selectedGames
+          .filter((name) => isGameCouponEligible(name))
+          .reduce((sum, name) => sum + (getGamePrice(name, formData.gender!) ?? 0), 0)
       : 0;
-  const amountEligibleForDiscount = Math.max(0, totalAmount - swimmingPrice);
   const discountAmount =
     appliedCoupon && amountEligibleForDiscount > 0
-      ? Math.round((amountEligibleForDiscount * appliedCoupon.discountPercent) / 100 * 100) / 100
+      ? Math.round(((amountEligibleForDiscount * appliedCoupon.discountPercent) / 100) * 100) / 100
       : 0;
   const finalAmount = totalAmount - discountAmount;
 
@@ -518,14 +541,14 @@ function RegisterForm() {
           setAppliedCoupon(null);
           setCouponInput('');
           setCouponError(data.error || 'This coupon is no longer valid.');
-          alert(data.error || 'This coupon is no longer valid. Please remove it and try again.');
+          toast.error(data.error || 'This coupon is no longer valid. Please remove it and try again.');
           return;
         }
       } catch {
         setAppliedCoupon(null);
         setCouponInput('');
         setCouponError('Could not validate coupon. Please remove it and try again.');
-        alert('Could not validate coupon. Please remove it and try again.');
+        toast.error('Could not validate coupon. Please remove it and try again.');
         return;
       }
     }
@@ -574,19 +597,19 @@ function RegisterForm() {
           setTeamNameStatus('taken');
           setTeamNameError(data.error);
           setStep(1);
-          alert('Team name already exists! Please go back and choose a different team name.');
+          toast.error('Team name already exists! Please choose a different team name.');
         } else if (data.field === 'couponCode') {
           setAppliedCoupon(null);
           setCouponInput('');
           setCouponError(data.error || 'This coupon is no longer valid. Please remove it or use a different code.');
-          alert(data.error || 'This coupon is no longer valid. Please remove it and try again.');
+          toast.error(data.error || 'This coupon is no longer valid. Please remove it and try again.');
         } else {
-          alert('Registration failed: ' + data.error);
+          toast.error(data.error || 'Registration failed');
         }
       }
     } catch (error) {
       console.error('Registration error:', error);
-      alert('Registration failed. Please try again.');
+      toast.error('Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -904,6 +927,15 @@ function RegisterForm() {
                 </div>
               </div>
 
+              {!esportsStatus.effectiveIsOpen && (
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    {esportsStatus.announcement || 'Esports registrations are currently closed or outside their registration window.'}
+                  </span>
+                </div>
+              )}
+
               {/* Games Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 max-h-[380px] overflow-y-auto pr-1">
                 {availableGames.map((game) => {
@@ -911,17 +943,35 @@ function RegisterForm() {
                   const isSelected = formData.selectedGames.includes(game.name);
                   if (price === null) return null;
 
+                  const gameCat =
+                    (game as any).category ||
+                    GAMES_DATA.find((g) => g.name.toLowerCase() === game.name.toLowerCase())?.category;
+                  const isEsportsClosed = gameCat === 'Esports' && !esportsStatus.effectiveIsOpen;
+
                   return (
-                    <div
+                    <button
                       key={game.name}
-                      onClick={() => handleGameToggle(game.name)}
-                      className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${isSelected
-                          ? 'bg-[#182244] border-[#12E2C4] shadow-md shadow-[#12E2C4]/15'
-                          : 'bg-[#0B1124] border-white/[0.07] hover:border-white/[0.2]'
-                        }`}
+                      type="button"
+                      disabled={isEsportsClosed}
+                      aria-pressed={isSelected}
+                      onClick={() => !isEsportsClosed && handleGameToggle(game.name)}
+                      className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#12E2C4] ${
+                        isEsportsClosed
+                          ? 'bg-[#0B1124]/60 border-white/[0.05] opacity-55 cursor-not-allowed'
+                          : isSelected
+                            ? 'bg-[#182244] border-[#12E2C4] shadow-md shadow-[#12E2C4]/15 cursor-pointer'
+                            : 'bg-[#0B1124] border-white/[0.07] hover:border-white/[0.2] cursor-pointer'
+                      }`}
                     >
                       <div>
-                        <div className="font-bold text-sm text-[#F8FAFC] font-['Space_Grotesk']">{game.name}</div>
+                        <div className="font-bold text-sm text-[#F8FAFC] font-['Space_Grotesk'] flex items-center gap-2">
+                          <span>{game.name}</span>
+                          {isEsportsClosed && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                              CLOSED
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs font-mono text-[#94A3B8] mt-0.5">
                           Rs. {price.toLocaleString()}
                           {formData.gender === 'boys' && game.boysPlayers && ` • ${game.boysPlayers} Players`}
@@ -937,7 +987,7 @@ function RegisterForm() {
                       >
                         <Check className="w-4 h-4 font-black" />
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

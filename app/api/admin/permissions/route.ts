@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { sql, runTransaction } from '@/lib/db';
 import {
   ADMIN_PAGES,
   ALL_ADMIN_PAGE_KEYS,
@@ -10,6 +10,7 @@ import {
   parseAssignedGames,
   rolePermissions,
 } from '@/lib/auth';
+import { logAudit, getClientIp } from '@/lib/audit';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
@@ -28,6 +29,11 @@ type IncomingPermission = {
   canEdit?: boolean;
   canDelegate?: boolean;
 };
+
+function canDelegatePermissions(session: NonNullable<Awaited<ReturnType<typeof getAdminSession>>>): boolean {
+  if (session.role === 'super_admin') return true;
+  return Boolean(session.permissionDetails?.['/admin/permissions']?.canDelegate);
+}
 
 function sanitizeIncomingPermissions(
   rawList: unknown,
@@ -48,7 +54,8 @@ function sanitizeIncomingPermissions(
 
     if (!isSuper) {
       const actorDetail = actorSession.permissionDetails?.[pageKey];
-      if (!actorDetail?.canView) {
+      // Non-super-admin can only grant permissions on pages where they hold canDelegate
+      if (!actorDetail?.canView || !actorDetail?.canDelegate) {
         canView = false;
         canEdit = false;
         canDelegate = false;
@@ -62,6 +69,36 @@ function sanitizeIncomingPermissions(
   }
 
   return result;
+}
+
+async function syncCoordinatorGameAssignments(userId: string, gameNames: string[]) {
+  await sql`DELETE FROM coordinator_game_assignments WHERE user_id = ${userId}`;
+  if (gameNames.length === 0) return;
+
+  const gameRows = (await sql`
+    SELECT DISTINCT ON (LOWER(game_name))
+      COALESCE(game_id, LOWER(REGEXP_REPLACE(game_name, '[^a-zA-Z0-9]+', '-', 'g'))) AS resolved_game_id,
+      game_name
+    FROM games_pricing
+  `) as any[];
+
+  const idByName = new Map<string, string>();
+  for (const g of gameRows) {
+    idByName.set(String(g.game_name).toLowerCase(), String(g.resolved_game_id));
+  }
+
+  for (const rawName of gameNames) {
+    const name = rawName.trim();
+    if (!name) continue;
+    const gameId =
+      idByName.get(name.toLowerCase()) ||
+      name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    await sql`
+      INSERT INTO coordinator_game_assignments (id, user_id, game_id, game_name, created_at)
+      VALUES (${uuidv4()}, ${userId}, ${gameId}, ${name}, NOW())
+      ON CONFLICT (user_id, game_name) DO UPDATE SET game_id = EXCLUDED.game_id
+    `;
+  }
 }
 
 // GET - List users, their permissions, available pages, and games
@@ -108,17 +145,27 @@ export async function GET() {
     const users = usersRows.map((u) => {
       const role = normalizeRole(u.role);
       const explicitPerms = permsByUser.get(u.id) || [];
-      // Show effective permissions if no explicit rows exist yet for legacy roles
+      // Only super_admin gets implicit all-page permissions; sub_admin uses explicit rows only
       const effectivePerms =
-        explicitPerms.length > 0
-          ? explicitPerms
-          : (rolePermissions[role] || []).map((key) => ({
+        role === 'super_admin'
+          ? (rolePermissions.super_admin || []).map((key) => ({
               pageKey: key,
               canView: true,
               canEdit: true,
-              canDelegate: role === 'super_admin',
+              canDelegate: true,
               grantedBy: 'role_default',
-            }));
+            }))
+          : explicitPerms.length > 0
+            ? explicitPerms
+            : role === 'sub_admin'
+              ? []
+              : (rolePermissions[role] || []).map((key) => ({
+                  pageKey: key,
+                  canView: true,
+                  canEdit: true,
+                  canDelegate: false,
+                  grantedBy: 'role_default',
+                }));
 
       return {
         id: u.id,
@@ -136,7 +183,7 @@ export async function GET() {
     });
 
     const gamesRows = (await sql`
-      SELECT DISTINCT game_name FROM games_pricing ORDER BY game_name ASC
+      SELECT DISTINCT game_name FROM games_pricing WHERE COALESCE(is_active, true) = true ORDER BY game_name ASC
     `) as any[];
 
     return NextResponse.json({
@@ -169,8 +216,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPagePermission(session, '/admin/permissions', 'edit')) {
-      return NextResponse.json({ error: 'Forbidden - Edit permission required' }, { status: 403 });
+    if (!hasPagePermission(session, '/admin/permissions', 'edit') || !canDelegatePermissions(session)) {
+      return NextResponse.json({ error: 'Forbidden - Delegation permission required' }, { status: 403 });
     }
 
     await ensureAuthAndPermissionsSchema();
@@ -191,12 +238,26 @@ export async function POST(request: NextRequest) {
     if (!username || username.length < 2) {
       return NextResponse.json({ error: 'Username must be at least 2 characters' }, { status: 400 });
     }
-    if (!password || password.length < 4) {
-      return NextResponse.json({ error: 'Password must be at least 4 characters' }, { status: 400 });
+    if (!password || password.length < 8) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
     }
 
-    if (requestedRole === 'super_admin' && session.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Only Super Admin can create Super Admin accounts' }, { status: 403 });
+    if (session.role !== 'super_admin' && !['coordinator', 'sub_admin'].includes(requestedRole)) {
+      return NextResponse.json(
+        { error: 'Sub-admins may only create coordinator or sub_admin accounts' },
+        { status: 403 }
+      );
+    }
+
+    if (
+      session.role !== 'super_admin' &&
+      requestedRole === 'coordinator' &&
+      !session.permissionDetails?.['/admin/coordinator']?.canDelegate
+    ) {
+      return NextResponse.json(
+        { error: 'You must hold delegate permission for Coordinator Portal to create coordinator accounts' },
+        { status: 403 }
+      );
     }
 
     const existing = (await sql`SELECT id FROM admin_users WHERE LOWER(username) = LOWER(${username}) LIMIT 1`) as any[];
@@ -221,9 +282,17 @@ export async function POST(request: NextRequest) {
     let sanitizedPerms = sanitizeIncomingPermissions(body?.permissions, session);
     if (sanitizedPerms.length === 0 && requestedRole === 'coordinator') {
       sanitizedPerms = [{ pageKey: '/admin/coordinator', canView: true, canEdit: true, canDelegate: false }];
+    } else if (sanitizedPerms.length === 0 && requestedRole !== 'super_admin' && requestedRole !== 'sub_admin') {
+      sanitizedPerms = (rolePermissions[requestedRole] || []).map((pageKey) => ({
+        pageKey,
+        canView: true,
+        canEdit: true,
+        canDelegate: false,
+      }));
     }
 
     for (const perm of sanitizedPerms) {
+      if (!perm.canView) continue;
       await sql`
         INSERT INTO permissions (id, user_id, page_key, can_view, can_edit, can_delegate, granted_by, created_at, updated_at)
         VALUES (${uuidv4()}, ${userId}, ${perm.pageKey}, ${perm.canView}, ${perm.canEdit}, ${perm.canDelegate}, ${session.username || 'system'}, NOW(), NOW())
@@ -235,6 +304,26 @@ export async function POST(request: NextRequest) {
           updated_at = NOW()
       `;
     }
+
+    await syncCoordinatorGameAssignments(userId, assignedGames);
+
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'user.create',
+      targetType: 'admin_user',
+      targetId: userId,
+      after: {
+        username,
+        displayName,
+        role: requestedRole,
+        assignedGames,
+        assignedGender,
+        isActive,
+        permissions: sanitizedPerms.filter((p) => p.canView),
+      },
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ success: true, userId });
   } catch (error: any) {
@@ -254,8 +343,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPagePermission(session, '/admin/permissions', 'edit')) {
-      return NextResponse.json({ error: 'Forbidden - Edit permission required' }, { status: 403 });
+    if (!hasPagePermission(session, '/admin/permissions', 'edit') || !canDelegatePermissions(session)) {
+      return NextResponse.json({ error: 'Forbidden - Delegation permission required' }, { status: 403 });
     }
 
     await ensureAuthAndPermissionsSchema();
@@ -264,6 +353,13 @@ export async function PUT(request: NextRequest) {
     const userId = String(body?.userId || '').trim();
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    }
+
+    if (session.adminUserId && session.adminUserId === userId) {
+      return NextResponse.json(
+        { error: 'You cannot modify your own role or permissions' },
+        { status: 403 }
+      );
     }
 
     const existingRows = (await sql`SELECT * FROM admin_users WHERE id = ${userId} LIMIT 1`) as any[];
@@ -278,80 +374,129 @@ export async function PUT(request: NextRequest) {
     }
 
     const nextRole = body?.role ? normalizeRole(body.role) : targetCurrentRole;
-    if (nextRole === 'super_admin' && session.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Only Super Admin can assign the Super Admin role' }, { status: 403 });
+    if (session.role !== 'super_admin') {
+      if (nextRole !== targetCurrentRole && !['coordinator', 'sub_admin'].includes(nextRole)) {
+        return NextResponse.json(
+          { error: 'Sub-admins cannot assign privileged legacy roles' },
+          { status: 403 }
+        );
+      }
+      if (!['coordinator', 'sub_admin'].includes(targetCurrentRole)) {
+        return NextResponse.json(
+          { error: 'Only Super Admin can modify legacy privileged role accounts' },
+          { status: 403 }
+        );
+      }
+    }
+
+    const rawPassword = body?.password !== undefined ? String(body.password).trim() : '';
+    if (rawPassword.length > 0 && rawPassword.length < 8) {
+      return NextResponse.json({ error: 'New password must be at least 8 characters' }, { status: 400 });
     }
 
     const displayName =
       body?.displayName !== undefined ? String(body.displayName).trim() : targetUser.display_name || targetUser.username;
-    const assignedGames =
-      body?.assignedGames !== undefined
-        ? JSON.stringify(
-            Array.isArray(body.assignedGames)
-              ? body.assignedGames.map((g: any) => String(g).trim()).filter(Boolean)
-              : []
-          )
-        : targetUser.assigned_games;
+    const assignedGamesArray =
+      body?.assignedGames !== undefined && Array.isArray(body.assignedGames)
+        ? body.assignedGames.map((g: any) => String(g).trim()).filter(Boolean)
+        : parseAssignedGames(targetUser.assigned_games);
+    const assignedGamesJson = JSON.stringify(assignedGamesArray);
     const assignedGender =
       body?.assignedGender && ['boys', 'girls', 'both'].includes(body.assignedGender)
         ? body.assignedGender
         : targetUser.assigned_gender || 'both';
     const isActive = body?.isActive !== undefined ? Boolean(body.isActive) : targetUser.is_active !== false;
 
-    if (body?.password && String(body.password).trim().length >= 4) {
-      const passwordHash = hashPassword(String(body.password).trim());
-      await sql`
-        UPDATE admin_users
-        SET display_name = ${displayName},
-            role = ${nextRole},
-            password_hash = ${passwordHash},
-            assigned_games = ${assignedGames},
-            assigned_gender = ${assignedGender},
-            is_active = ${isActive},
-            updated_at = NOW()
-        WHERE id = ${userId}
-      `;
-    } else {
-      await sql`
-        UPDATE admin_users
-        SET display_name = ${displayName},
-            role = ${nextRole},
-            assigned_games = ${assignedGames},
-            assigned_gender = ${assignedGender},
-            is_active = ${isActive},
-            updated_at = NOW()
-        WHERE id = ${userId}
-      `;
-    }
+    const sanitizedPerms = Array.isArray(body?.permissions)
+      ? sanitizeIncomingPermissions(body.permissions, session)
+      : null;
 
-    // Update permissions table if provided
-    if (Array.isArray(body?.permissions) && nextRole !== 'super_admin') {
-      const sanitized = sanitizeIncomingPermissions(body.permissions, session);
-
-      if (session.role === 'super_admin') {
-        await sql`DELETE FROM permissions WHERE user_id = ${userId}`;
+    await runTransaction((txn) => {
+      const queries: any[] = [];
+      if (rawPassword.length >= 8) {
+        const passwordHash = hashPassword(rawPassword);
+        queries.push(txn`
+          UPDATE admin_users
+          SET display_name = ${displayName},
+              role = ${nextRole},
+              password_hash = ${passwordHash},
+              assigned_games = ${assignedGamesJson},
+              assigned_gender = ${assignedGender},
+              is_active = ${isActive},
+              updated_at = NOW()
+          WHERE id = ${userId}
+        `);
       } else {
-        // Sub-admin can only overwrite permissions for pages the sub-admin holds
-        for (const p of sanitized) {
-          if (session.permissionDetails?.[p.pageKey]?.canView) {
-            await sql`DELETE FROM permissions WHERE user_id = ${userId} AND page_key = ${p.pageKey}`;
+        queries.push(txn`
+          UPDATE admin_users
+          SET display_name = ${displayName},
+              role = ${nextRole},
+              assigned_games = ${assignedGamesJson},
+              assigned_gender = ${assignedGender},
+              is_active = ${isActive},
+              updated_at = NOW()
+          WHERE id = ${userId}
+        `);
+      }
+
+      if (sanitizedPerms && nextRole !== 'super_admin') {
+        if (session.role === 'super_admin') {
+          queries.push(txn`DELETE FROM permissions WHERE user_id = ${userId}`);
+        } else {
+          for (const p of sanitizedPerms) {
+            if (session.permissionDetails?.[p.pageKey]?.canView && session.permissionDetails?.[p.pageKey]?.canDelegate) {
+              queries.push(txn`DELETE FROM permissions WHERE user_id = ${userId} AND page_key = ${p.pageKey}`);
+            }
           }
+        }
+
+        for (const perm of sanitizedPerms) {
+          if (!perm.canView) continue;
+          queries.push(txn`
+            INSERT INTO permissions (id, user_id, page_key, can_view, can_edit, can_delegate, granted_by, created_at, updated_at)
+            VALUES (${uuidv4()}, ${userId}, ${perm.pageKey}, ${perm.canView}, ${perm.canEdit}, ${perm.canDelegate}, ${session.username || 'system'}, NOW(), NOW())
+            ON CONFLICT (user_id, page_key) DO UPDATE SET
+              can_view = EXCLUDED.can_view,
+              can_edit = EXCLUDED.can_edit,
+              can_delegate = EXCLUDED.can_delegate,
+              granted_by = EXCLUDED.granted_by,
+              updated_at = NOW()
+          `);
         }
       }
 
-      for (const perm of sanitized) {
-        await sql`
-          INSERT INTO permissions (id, user_id, page_key, can_view, can_edit, can_delegate, granted_by, created_at, updated_at)
-          VALUES (${uuidv4()}, ${userId}, ${perm.pageKey}, ${perm.canView}, ${perm.canEdit}, ${perm.canDelegate}, ${session.username || 'system'}, NOW(), NOW())
-          ON CONFLICT (user_id, page_key) DO UPDATE SET
-            can_view = EXCLUDED.can_view,
-            can_edit = EXCLUDED.can_edit,
-            can_delegate = EXCLUDED.can_delegate,
-            granted_by = EXCLUDED.granted_by,
-            updated_at = NOW()
-        `;
+      if (!isActive || rawPassword.length >= 8 || nextRole !== targetCurrentRole) {
+        queries.push(txn`DELETE FROM admin_sessions WHERE admin_user_id = ${userId}`);
       }
+      return queries;
+    });
+
+    if (body?.assignedGames !== undefined) {
+      await syncCoordinatorGameAssignments(userId, assignedGamesArray);
     }
+
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'user.update',
+      targetType: 'admin_user',
+      targetId: userId,
+      before: {
+        role: targetCurrentRole,
+        isActive: targetUser.is_active !== false,
+        assignedGender: targetUser.assigned_gender,
+      },
+      after: {
+        displayName,
+        role: nextRole,
+        isActive,
+        assignedGender,
+        assignedGames: assignedGamesArray,
+        passwordChanged: rawPassword.length >= 8,
+        permissionsUpdated: sanitizedPerms ? sanitizedPerms.filter((p) => p.canView).length : 0,
+      },
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -371,8 +516,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPagePermission(session, '/admin/permissions', 'edit')) {
-      return NextResponse.json({ error: 'Forbidden - Edit permission required' }, { status: 403 });
+    if (!hasPagePermission(session, '/admin/permissions', 'edit') || !canDelegatePermissions(session)) {
+      return NextResponse.json({ error: 'Forbidden - Delegation permission required' }, { status: 403 });
     }
 
     const userId = request.nextUrl.searchParams.get('userId');
@@ -384,7 +529,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 });
     }
 
-    const targetRows = (await sql`SELECT id, role FROM admin_users WHERE id = ${userId} LIMIT 1`) as any[];
+    const targetRows = (await sql`SELECT id, username, role FROM admin_users WHERE id = ${userId} LIMIT 1`) as any[];
     if (targetRows.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -400,9 +545,24 @@ export async function DELETE(request: NextRequest) {
       if ((Number(countRes[0]?.cnt) || 0) <= 1) {
         return NextResponse.json({ error: 'Cannot delete the last Super Admin account' }, { status: 400 });
       }
+    } else if (session.role !== 'super_admin' && !['coordinator', 'sub_admin'].includes(targetRole)) {
+      return NextResponse.json({ error: 'Only Super Admin can delete legacy role accounts' }, { status: 403 });
     }
 
-    await sql`DELETE FROM admin_users WHERE id = ${userId}`;
+    await runTransaction((txn) => [
+      txn`DELETE FROM admin_sessions WHERE admin_user_id = ${userId}`,
+      txn`DELETE FROM admin_users WHERE id = ${userId}`,
+    ]);
+
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'user.delete',
+      targetType: 'admin_user',
+      targetId: userId,
+      before: { username: targetRows[0].username, role: targetRole },
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

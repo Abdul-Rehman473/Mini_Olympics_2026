@@ -1,79 +1,126 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { QrCode, CreditCard, Users2, Trophy, ArrowUpRight, CheckCircle2, ShieldCheck, Flame } from 'lucide-react';
+import { QrCode, Users2, Trophy, ArrowUpRight, ShieldCheck } from 'lucide-react';
 
 export default function WhyCompete() {
+  const [inView, setInView] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+
+    if (gridRef.current) {
+      observer.observe(gridRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   const pillars = [
     {
       id: 'glory',
       title: 'CHAMPIONSHIP GLORY & HONORS',
       tagline: 'OFFICIAL TROPHIES, PODIUM FINISHES & MEDALS',
-      description:
-        'Cement your legacy in FCIT sports history. Gold, silver, and bronze medals along with department championship shields and cash prizes for top bracket performers.',
       highlightColor: '#F59E0B',
       number: '01',
       badgeText: 'PODIUM AWARDS',
       icon: <Trophy className="w-6 h-6 text-[#F59E0B]" />,
-      points: [
-        'Custom engraved Mini Olympics 2026 trophies',
-        'Official certificates of excellence & medal recognition',
-        'Campus-wide society social media showcase',
-      ],
     },
     {
       id: 'digital',
       title: 'INSTANT QR VERIFICATION PASS',
       tagline: 'SEAMLESS REGISTRATION & LIVE STATUS LOOKUP',
-      description:
-        'No paper delays. Register online, receive an encrypted digital pass with a QR code, and verify instantly via our cash desk kiosk or online receipt validation.',
       highlightColor: '#12E2C4',
       number: '02',
       badgeText: 'PAPERLESS TECH',
       icon: <QrCode className="w-6 h-6 text-[#12E2C4]" />,
-      points: [
-        'Instant Slip ID generation (e.g. MO26-CASH-XXXX)',
-        'Scannable QR codes for seamless entrance',
-        'Direct automated email confirmation upon review',
-      ],
     },
     {
       id: 'fixtures',
       title: 'HEAD OF COMPETITION (HOC) ENGINE',
       tagline: 'OFFICIAL KNOCKOUTS & ROUND-ROBIN BRACKETS',
-      description:
-        'Every game is scheduled through the HOC management system. Official venues, standardized rule sets, qualified student referees, and transparent bracket progressions.',
       highlightColor: '#3B82F6',
       number: '03',
       badgeText: 'FAIR PLAY SYSTEM',
       icon: <ShieldCheck className="w-6 h-6 text-[#3B82F6]" />,
-      points: [
-        'Dedicated WhatsApp coordinators for every sport',
-        'Live match timing updates & scheduled venues',
-        'Transparent tiebreakers and dispute resolutions',
-      ],
     },
     {
       id: 'culture',
       title: 'UNRIVALED CAMPUS SPIRIT',
       tagline: 'ACROSS CS, SE, IT & DATA SCIENCE BATCHES',
-      description:
-        'The ultimate bonding experience at Old Campus. Rally your batchmates, chant from the sidelines, and battle alongside friends in one electric week of collegiate sports.',
       highlightColor: '#FFD700',
       number: '04',
       badgeText: 'COLLEGIATE ENERGY',
       icon: <Users2 className="w-6 h-6 text-[#FFD700]" />,
-      points: [
-        'Inter-batch and inter-department sports rivalries',
-        'Floodlit evening games & electric stadium atmosphere',
-        'Full photographic and video coverage throughout',
-      ],
     },
   ];
 
   return (
     <section id="why" className="relative w-full py-24 sm:py-32 px-4 sm:px-6 lg:px-8 bg-[#0B1124] overflow-hidden">
+      {/* FCIT Sports Society Ambient Backdrop */}
+      <div aria-hidden="true" className="pointer-events-none select-none absolute inset-0 overflow-hidden">
+        <div
+          className="absolute -top-24 left-1/4 w-[34rem] h-[34rem] rounded-full blur-3xl opacity-20"
+          style={{ background: 'radial-gradient(circle, rgba(18,226,196,0.28) 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute bottom-0 right-1/4 w-[32rem] h-[32rem] rounded-full blur-3xl opacity-15"
+          style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.28) 0%, transparent 70%)' }}
+        />
+
+        {/* Subtle Sports Society Crest & Watermark */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center opacity-[0.04]">
+          <svg
+            viewBox="0 0 240 240"
+            className="w-[26rem] h-[26rem] sm:w-[36rem] sm:h-[36rem] text-[#12E2C4]"
+            fill="none"
+          >
+            <path
+              d="M120 18L202 50V116C202 167 166 205 120 222C74 205 38 167 38 116V50L120 18Z"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            />
+            <path
+              d="M120 36L184 61V115C184 156 155 187 120 202C85 187 56 156 56 115V61L120 36Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeDasharray="6 6"
+            />
+            <circle cx="120" cy="116" r="42" stroke="#F59E0B" strokeWidth="2" />
+            <path
+              d="M102 98H138V114C138 124 130 132 120 132C110 132 102 124 102 114V98Z"
+              stroke="#F59E0B"
+              strokeWidth="2"
+            />
+            <path d="M120 132V146M108 146H132" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
+
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-center whitespace-nowrap">
+          <span className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-[0.22em] uppercase text-white/[0.03] font-['Space_Grotesk']">
+            FCIT SPORTS SOCIETY
+          </span>
+          <span className="mt-3 text-xs sm:text-sm font-mono tracking-[0.45em] uppercase text-[#12E2C4]/[0.08]">
+            PUCIT • OLD CAMPUS • MINI OLYMPICS 2026
+          </span>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Headline */}
         <div className="max-w-3xl mb-16 sm:mb-20">
@@ -91,19 +138,40 @@ export default function WhyCompete() {
           </p>
         </div>
 
-        {/* 4 Distinct Asymmetric Visual Pillars */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {pillars.map((pillar) => (
-            <div
-              key={pillar.id}
-              className="group relative flex flex-col justify-between p-8 sm:p-10 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-white/[0.2] transition-all duration-300 hover:-translate-y-1 shadow-2xl"
-            >
-              {/* Header Info */}
-              <div>
-                <div className="flex items-center justify-between gap-4 mb-6">
+        {/* 4 Connected Visual Pillars: 2 Above, 2 Below, In Contact */}
+        <div
+          ref={gridRef}
+          className="grid grid-cols-1 md:grid-cols-2 gap-0 rounded-3xl overflow-hidden border border-white/[0.1] bg-[#131B38]/75 backdrop-blur-md shadow-2xl"
+        >
+          {pillars.map((pillar, index) => {
+            const borderClasses = [
+              index < 3 ? 'border-b border-white/[0.08]' : '',
+              index < 2 ? 'md:border-b md:border-white/[0.08]' : 'md:border-b-0',
+              index % 2 === 0 ? 'md:border-r md:border-white/[0.08]' : '',
+            ].join(' ');
+
+            return (
+              <div
+                key={pillar.id}
+                style={{ transitionDelay: inView ? `${index * 160}ms` : '0ms' }}
+                className={`group relative flex flex-col justify-between p-8 sm:p-10 transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${borderClasses} ${
+                  inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                }`}
+              >
+                {/* Instant Hover Surface Tint */}
+                <div className="pointer-events-none absolute inset-0 bg-transparent group-hover:bg-white/[0.03] transition-colors duration-300" />
+
+                {/* Top Accent Bar */}
+                <div
+                  className="absolute top-0 right-10 w-20 h-1 rounded-b-full transition-all duration-300 opacity-60 group-hover:w-32 group-hover:opacity-100"
+                  style={{ backgroundColor: pillar.highlightColor }}
+                />
+
+                {/* Header Info */}
+                <div className="relative z-10 flex items-center justify-between gap-4 mb-8">
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-105"
                       style={{
                         backgroundColor: `${pillar.highlightColor}15`,
                         border: `1.5px solid ${pillar.highlightColor}35`,
@@ -121,38 +189,18 @@ export default function WhyCompete() {
                   </span>
                 </div>
 
-                <h3 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] leading-tight mb-2">
-                  {pillar.title}
-                </h3>
-                <span className="text-xs font-mono font-bold tracking-wider text-[#12E2C4] uppercase block mb-4">
-                  {pillar.tagline}
-                </span>
-
-                <p className="text-sm text-[#94A3B8] leading-relaxed mb-6 font-normal">
-                  {pillar.description}
-                </p>
-
-                {/* Key Points Bullet List */}
-                <div className="space-y-2.5 pt-4 border-t border-white/[0.06]">
-                  {pillar.points.map((pt, i) => (
-                    <div key={i} className="flex items-start gap-2.5 text-xs text-[#F8FAFC] font-mono">
-                      <CheckCircle2
-                        className="w-4 h-4 shrink-0 mt-0.5"
-                        style={{ color: pillar.highlightColor }}
-                      />
-                      <span>{pt}</span>
-                    </div>
-                  ))}
+                {/* Title & Tagline */}
+                <div className="relative z-10">
+                  <h3 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] leading-tight mb-2">
+                    {pillar.title}
+                  </h3>
+                  <span className="text-xs font-mono font-bold tracking-wider text-[#12E2C4] uppercase block">
+                    {pillar.tagline}
+                  </span>
                 </div>
               </div>
-
-              {/* Bottom Decorative Accent */}
-              <div
-                className="absolute top-0 right-10 w-24 h-1 rounded-b-full transition-all duration-300 opacity-60 group-hover:w-36 group-hover:opacity-100"
-                style={{ backgroundColor: pillar.highlightColor }}
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Banner CTA */}

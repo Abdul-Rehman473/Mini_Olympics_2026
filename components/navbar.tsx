@@ -62,37 +62,37 @@ export default function Navbar() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4 xl:gap-6">
             {/* Brand Logo & Identity */}
-            <Link href="/" className="group flex items-center gap-3.5 text-left">
-              <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#F59E0B] via-[#12E2C4] to-[#0B1124] p-[1.5px] transition-transform duration-300 group-hover:scale-105">
+            <Link href="/" className="group flex items-center gap-2.5 xl:gap-3.5 text-left shrink-0">
+              <div className="relative w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-[#F59E0B] via-[#12E2C4] to-[#0B1124] p-[1.5px] transition-transform duration-300 group-hover:scale-105">
                 <div className="w-full h-full bg-[#0B1124] rounded-[10px] flex items-center justify-center">
                   <Trophy className="w-5 h-5 text-[#12E2C4] transition-colors group-hover:text-white" />
                 </div>
               </div>
 
-              <div className="flex flex-col">
+              <div className="flex flex-col whitespace-nowrap">
                 <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-lg tracking-wider text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
+                  <span className="font-extrabold text-base xl:text-lg tracking-wide xl:tracking-wider text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
                     MINI OLYMPICS
                   </span>
-                  <span className="px-1.5 py-0.5 text-[10px] font-black tracking-widest text-[#0B1124] bg-[#12E2C4] rounded-sm">
+                  <span className="px-1.5 py-0.5 text-[10px] font-black tracking-widest text-[#0B1124] bg-[#12E2C4] rounded-sm shrink-0">
                     2026
                   </span>
                 </div>
-                <span className="text-[11px] font-medium tracking-widest text-[#94A3B8] uppercase">
+                <span className="text-[10px] xl:text-[11px] font-medium tracking-wider xl:tracking-widest text-[#94A3B8] uppercase">
                   FCIT SPORTS SOCIETY • PUCIT
                 </span>
               </div>
             </Link>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-8">
+            <nav className="hidden lg:flex items-center gap-4 xl:gap-8">
               {navLinks.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group relative flex items-baseline gap-1.5 text-xs font-semibold tracking-wider text-[#94A3B8] hover:text-[#F8FAFC] transition-colors uppercase font-mono py-1"
+                  className="group relative flex items-baseline gap-1.5 whitespace-nowrap shrink-0 text-[11px] xl:text-xs font-semibold tracking-normal xl:tracking-wider text-[#94A3B8] hover:text-[#F8FAFC] transition-colors uppercase font-mono py-1"
                 >
                   <span className="text-[10px] text-[#F59E0B] opacity-70 group-hover:opacity-100 transition-opacity">
                     {item.number}
@@ -103,44 +103,46 @@ export default function Navbar() {
               ))}
             </nav>
 
-            {/* Right Side CTAs */}
-            <div className="hidden sm:flex items-center gap-4">
-              <Link
-                href="/admin/login"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium tracking-wider text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-white/[0.04] rounded-lg border border-transparent hover:border-white/[0.08] transition-all uppercase font-mono"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#F59E0B]" />
-                <span>Admin</span>
-              </Link>
+            {/* Right Side CTAs & Mobile Toggle */}
+            <div className="flex items-center gap-2 sm:gap-3 xl:gap-4 shrink-0">
+              <div className="hidden sm:flex items-center gap-2.5 xl:gap-4">
+                <Link
+                  href="/admin/login"
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 px-2.5 xl:px-3 py-1.5 text-xs font-medium tracking-wider text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-white/[0.04] rounded-lg border border-transparent hover:border-white/[0.08] transition-all uppercase font-mono"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#F59E0B] shrink-0" />
+                  <span>Admin</span>
+                </Link>
 
-              <Link
-                href="/register"
-                className="relative group inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-all duration-300 uppercase shadow-lg shadow-[#12E2C4]/20 hover:shadow-[#12E2C4]/35 hover:-translate-y-0.5 font-['Space_Grotesk']"
-              >
-                <span>REGISTER NOW</span>
-                <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </Link>
-            </div>
+                <Link
+                  href="/register"
+                  className="relative group inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 px-4 xl:px-5 py-2.5 rounded-lg text-xs font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-all duration-300 uppercase shadow-lg shadow-[#12E2C4]/20 hover:shadow-[#12E2C4]/35 hover:-translate-y-0.5 font-['Space_Grotesk']"
+                >
+                  <span>REGISTER NOW</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+              </div>
 
-            {/* Mobile Hamburger Button */}
-            <div className="flex sm:hidden items-center gap-2">
-              <Link
-                href="/register"
-                className="px-3 py-1.5 rounded-md text-[11px] font-bold tracking-wider text-[#0B1124] bg-[#12E2C4]"
-              >
-                REGISTER
-              </Link>
-              <button
-                ref={menuButtonRef}
-                type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-[#F8FAFC] hover:text-[#12E2C4] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#12E2C4] rounded-lg"
-                aria-label="Toggle Navigation"
-                aria-expanded={mobileMenuOpen}
-                aria-controls="mobile-nav-drawer"
-              >
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
+              {/* Mobile / Tablet Hamburger Button */}
+              <div className="flex lg:hidden items-center gap-2">
+                <Link
+                  href="/register"
+                  className="sm:hidden px-3 py-1.5 rounded-md text-[11px] font-bold tracking-wider text-[#0B1124] bg-[#12E2C4] whitespace-nowrap"
+                >
+                  REGISTER
+                </Link>
+                <button
+                  ref={menuButtonRef}
+                  type="button"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="p-2 text-[#F8FAFC] hover:text-[#12E2C4] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#12E2C4] rounded-lg"
+                  aria-label="Toggle Navigation"
+                  aria-expanded={mobileMenuOpen}
+                  aria-controls="mobile-nav-drawer"
+                >
+                  {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>

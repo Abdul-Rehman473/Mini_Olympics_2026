@@ -4,22 +4,18 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Users,
-  DollarSign,
   Package,
   Wallet,
-  TrendingUp,
   Trophy,
   ArrowRight,
   Loader2,
   Medal,
-  Target,
   ShieldCheck,
-  CheckCircle2,
   Clock,
-  XCircle,
-  Sparkles,
+  Activity,
+  BarChart3,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useAdminSession } from '@/lib/admin-session-context';
 
 type Stats = {
   total: number;
@@ -27,91 +23,59 @@ type Stats = {
   pendingOnline: number;
   pendingCash: number;
   rejected: number;
+  boys: number;
+  girls: number;
 };
 
 export default function AdminDashboard() {
+  const adminSession = useAdminSession();
   const [stats, setStats] = useState<Stats>({
     total: 0,
     paid: 0,
     pendingOnline: 0,
     pendingCash: 0,
     rejected: 0,
+    boys: 0,
+    girls: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [financeStats, setFinanceStats] = useState({ income: 0, expense: 0, balance: 0 });
-  const [inventoryStats, setInventoryStats] = useState({ totalItems: 0, activeLoans: 0 });
-  const [allowedPages, setAllowedPages] = useState<string[] | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [financeStats, setFinanceStats] = useState<{ income: number; expense: number; balance: number } | null>(null);
+  const [inventoryStats, setInventoryStats] = useState<{ totalItems: number; activeLoans: number } | null>(null);
+  const [topGames, setTopGames] = useState<Array<{ name: string; count: number }>>([]);
+  const [systemHealth, setSystemHealth] = useState<{ status: string; activeUsers: number; totalMatches: number } | null>(null);
 
   useEffect(() => {
     loadDashboardData();
   }, []);
 
   const hasAccess = (pageKey: string) =>
-    allowedPages === null || allowedPages.includes(pageKey);
+    adminSession.role === 'super_admin' || adminSession.permissions.includes(pageKey);
 
   const loadDashboardData = async () => {
     setLoading(true);
+    setErrorMsg('');
     try {
-      let userPages: string[] | null = null;
-      try {
-        const verifyRes = await fetch('/api/admin/verify', { cache: 'no-store' });
-        const verifyData = await verifyRes.json();
-        if (verifyData.authenticated) {
-          userPages =
-            verifyData.role === 'super_admin' || verifyData.role === 'admin'
-              ? null
-              : Array.isArray(verifyData.permissions)
-                ? verifyData.permissions
-                : [];
-          setAllowedPages(userPages);
-        }
-      } catch {}
-
-      const canLoad = (pageKey: string) => userPages === null || userPages.includes(pageKey);
-
-      // Load registration stats
-      const statsRes = await fetch('/api/stats?' + new URLSearchParams({ _t: Date.now().toString() }), { cache: 'no-store' });
-      const statsData = await statsRes.json();
-      if (statsData.success) {
-        setStats(statsData.data);
+      const res = await fetch('/api/admin/dashboard?_t=' + Date.now(), { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to load dashboard metrics');
       }
-
-      // Load finance stats if permitted
-      if (canLoad('/admin/finance')) {
-        try {
-          const financeRes = await fetch('/api/admin/finance', { cache: 'no-store' });
-          const financeData = await financeRes.json();
-          if (financeData.success && financeData.summary) {
-            setFinanceStats({
-              income: financeData.summary.totalIncome || 0,
-              expense: financeData.summary.totalExpense || 0,
-              balance: financeData.summary.balance || 0,
-            });
-          }
-        } catch {}
-      }
-
-      // Load inventory stats if permitted
-      if (canLoad('/admin/inventory')) {
-        try {
-          const invRes = await fetch('/api/admin/inventory', { cache: 'no-store' });
-          const invData = await invRes.json();
-          if (invData.success) {
-            setInventoryStats({
-              totalItems: invData.data?.length || 0,
-              activeLoans: 0,
-            });
-          }
-          const loansRes = await fetch('/api/admin/inventory/loans', { cache: 'no-store' });
-          const loansData = await loansRes.json();
-          if (loansData.success) {
-            setInventoryStats((prev) => ({
-              ...prev,
-              activeLoans: loansData.data?.filter((l: any) => l.status === 'active')?.length || 0,
-            }));
-          }
-        } catch {}
-      }
+      setStats({
+        total: data.registrations?.total || 0,
+        paid: data.registrations?.paid || 0,
+        pendingOnline: data.registrations?.pendingOnline || 0,
+        pendingCash: data.registrations?.pendingCash || 0,
+        rejected: data.registrations?.rejected || 0,
+        boys: data.registrations?.boys || 0,
+        girls: data.registrations?.girls || 0,
+      });
+      setFinanceStats(data.finance || null);
+      setInventoryStats(data.inventory || null);
+      setTopGames(Array.isArray(data.topGames) ? data.topGames : []);
+      setSystemHealth(data.systemHealth || null);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to load dashboard metrics');
     } finally {
       setLoading(false);
     }
@@ -144,20 +108,42 @@ export default function AdminDashboard() {
             OPERATIONS DASHBOARD
           </h1>
           <p className="text-xs font-mono text-[#94A3B8] mt-1">
-            MINI OLYMPICS 2026 • REAL-TIME REGISTRATION & LOGISTICS OVERVIEW
+            MINI OLYMPICS 2026 • REAL-TIME REGISTRATION &amp; LOGISTICS OVERVIEW
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/verify-cash"
-            className="px-4 py-2.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase transition-all inline-flex items-center gap-1.5"
+          <button
+            type="button"
+            onClick={loadDashboardData}
+            className="px-4 py-2.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#F8FAFC] bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] uppercase transition-all"
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>OPEN VERIFICATION DESK</span>
-          </Link>
+            Refresh
+          </button>
+          {hasAccess('/admin/registrations') && (
+            <Link
+              href="/verify-cash"
+              className="px-4 py-2.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase transition-all inline-flex items-center gap-1.5"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>OPEN VERIFICATION DESK</span>
+            </Link>
+          )}
         </div>
       </div>
+
+      {errorMsg && (
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-200 text-sm flex items-center justify-between gap-4">
+          <span>{errorMsg}</span>
+          <button
+            type="button"
+            onClick={loadDashboardData}
+            className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-xs font-semibold"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* 4 Hero KPI Blocks */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -198,7 +184,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Financial Treasury Balance */}
-        {hasAccess('/admin/finance') && (
+        {hasAccess('/admin/finance') && financeStats && (
           <div className="relative p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-[#3B82F6]/40 transition-all shadow-xl group">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">TREASURY BALANCE</span>
@@ -218,7 +204,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Equipment & Inventory */}
-        {hasAccess('/admin/inventory') && (
+        {hasAccess('/admin/inventory') && inventoryStats && (
           <div className="relative p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-[#FFD700]/40 transition-all shadow-xl group">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">EQUIPMENT ASSETS</span>
@@ -237,6 +223,66 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Analytics & System Health Row */}
+      {(topGames.length > 0 || systemHealth) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {topGames.length > 0 && (
+            <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-[#F8FAFC] flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-[#12E2C4]" />
+                  Top Registered Games
+                </h2>
+                <span className="text-xs font-mono text-[#94A3B8]">
+                  Boys: {stats.boys} • Girls: {stats.girls}
+                </span>
+              </div>
+              <div className="space-y-2.5">
+                {topGames.slice(0, 6).map((g) => {
+                  const max = topGames[0]?.count || 1;
+                  const pct = Math.max(8, Math.round((g.count / max) * 100));
+                  return (
+                    <div key={g.name} className="space-y-1">
+                      <div className="flex justify-between text-xs font-mono">
+                        <span className="text-[#E2E8F0] truncate">{g.name}</span>
+                        <span className="text-[#12E2C4] font-bold">{g.count}</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-[#080D1C] overflow-hidden">
+                        <div className="h-full bg-[#12E2C4] rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {systemHealth && (
+            <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-[#F8FAFC] flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  System Health
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 uppercase">
+                  {systemHealth.status}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 font-mono text-xs">
+                <div className="p-4 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-[#94A3B8]">Active Staff Accounts</p>
+                  <p className="text-2xl font-black text-[#F8FAFC] mt-1">{systemHealth.activeUsers}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-[#94A3B8]">Live Fixtures Scheduled</p>
+                  <p className="text-2xl font-black text-[#12E2C4] mt-1">{systemHealth.totalMatches}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Module Navigation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -321,7 +367,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Finance Ledger Module */}
-        {hasAccess('/admin/finance') && (
+        {hasAccess('/admin/finance') && financeStats && (
           <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] flex flex-col justify-between space-y-6">
             <div>
               <div className="flex items-center gap-3 mb-4">
@@ -330,9 +376,9 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
-                    Finance & Treasury
+                    Finance &amp; Treasury
                   </h3>
-                  <p className="text-xs font-mono text-[#94A3B8]">Incomes, expenses & sync</p>
+                  <p className="text-xs font-mono text-[#94A3B8]">Incomes, expenses &amp; sync</p>
                 </div>
               </div>
 

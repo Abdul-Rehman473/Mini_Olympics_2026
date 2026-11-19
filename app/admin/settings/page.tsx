@@ -19,104 +19,91 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
+import { canEditPage, useAdminSession } from '@/lib/admin-session-context';
 import {
   Settings,
-  Key,
   Save,
   Loader2,
   CheckCircle,
   Eye,
   EyeOff,
-  AlertCircle,
   Gamepad2,
   Plus,
   Trash2,
   Edit,
-  DollarSign,
-  Users,
   Mail,
   Server,
   Send,
   Tag,
   Lock,
   Unlock,
+  Banknote,
+  Power,
 } from 'lucide-react';
 
 type GamePricing = {
   id: number;
+  game_id?: string | null;
   game_name: string;
   gender: string;
   price: number;
   players: number | null;
   category?: string | null;
+  is_active?: boolean;
+  coupon_eligible?: boolean;
 };
 
 export default function SettingsPage() {
+  const adminSession = useAdminSession();
+  const canEdit = canEditPage(adminSession, '/admin/settings');
+  const toast = useToast();
+
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [savingSmtp, setSavingSmtp] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
   const [smtpSaveSuccess, setSmtpSaveSuccess] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
+
   const [settings, setSettings] = useState({
-    openai_api_key: '',
     smtp_host: 'smtp.gmail.com',
     smtp_port: '587',
     smtp_email: '',
     smtp_password: '',
     smtp_from_name: 'FCIT Sports Society',
     registrations_open: true,
+    cash_payment_enabled: true,
   });
+
   const [savingRegistrations, setSavingRegistrations] = useState(false);
-  // Defaults must match lib/email.ts so "what you see = what gets sent" until you save custom templates
+  const [savingCashToggle, setSavingCashToggle] = useState(false);
+
   const [emailTemplates, setEmailTemplates] = useState({
     email_registration_submitted_online_subject: 'Mini Olympics 2026 Registration',
-    email_registration_submitted_online_body: `<h2>Welcome to Mini Olympics 2026! 🏆</h2>
+    email_registration_submitted_online_body: `<h2>Welcome to Mini Olympics 2026!</h2>
 <p>Dear {{name}},</p>
-<p>Thank you for registering for the FCIT Sports Mini Olympics 2026. We're excited to have you on board!</p>
-<p>Your registration has been received and is currently being processed.</p>
+<p>Thank you for registering for the FCIT Sports Mini Olympics 2026.</p>
 <p><strong>Ticket #:</strong> {{regNum}}</p>
 <p><strong>Reference / Slip ID:</strong> {{slipId}}</p>
 <p><strong>Team name:</strong> {{teamName}}</p>
 <p><strong>Registered game(s):</strong></p>
-<ul>
-{{gamesList}}
-</ul>
-<p><strong>What's Next?</strong></p>
-<ul>
-  <li>You'll be notified once your payment is verified</li>
-  <li>Join the WhatsApp groups for your registered games</li>
-  <li>Stay tuned for match schedules</li>
-</ul>
-<p>Good luck and may the best athlete win!</p>`,
+<ul>{{gamesList}}</ul>`,
     email_registration_submitted_cash_subject: 'Mini Olympics 2026 Registration',
-    email_registration_submitted_cash_body: `<h2>Welcome to Mini Olympics 2026! 🏆</h2>
+    email_registration_submitted_cash_body: `<h2>Welcome to Mini Olympics 2026!</h2>
 <p>Dear {{name}},</p>
-<p>Thank you for registering for the FCIT Sports Mini Olympics 2026. We're excited to have you on board!</p>
-<p>Your registration has been received and is currently being processed.</p>
+<p>Thank you for registering for the FCIT Sports Mini Olympics 2026.</p>
 <p><strong>Ticket #:</strong> {{regNum}}</p>
 <p><strong>Reference / Slip ID:</strong> {{slipId}}</p>
 <p><strong>Team name:</strong> {{teamName}}</p>
 <p><strong>Registered game(s):</strong></p>
-<ul>
-{{gamesList}}
-</ul>
-<p><strong>What's Next?</strong></p>
-<ul>
-  <li>Submit the cash at the desk to complete the registration</li>
-  <li>Join the WhatsApp groups for your registered games</li>
-  <li>Stay tuned for match schedules</li>
-</ul>
-<p>Good luck and may the best athlete win!</p>`,
+<ul>{{gamesList}}</ul>`,
     email_payment_received_subject: 'Mini Olympics 2026 Registration',
-    email_payment_received_body: `<h2>Payment Confirmed ✅</h2>
+    email_payment_received_body: `<h2>Payment Confirmed</h2>
 <p>Dear {{name}},</p>
 <p>Your payment for <strong>Mini Olympics 2026</strong> has been received and verified.</p>
 <p><strong>Ticket #:</strong> {{regNum}}</p>
-<p><strong>Reference ID:</strong> {{slipId}}</p>
-<p>You are all set. We look forward to seeing you at the event.</p>`,
+<p><strong>Reference ID:</strong> {{slipId}}</p>`,
     email_payment_rejected_subject: 'Mini Olympics 2026 Registration',
     email_payment_rejected_body: `<h2>Payment Verification Required</h2>
 <p>Dear {{name}},</p>
@@ -126,7 +113,9 @@ export default function SettingsPage() {
   });
   const [savingTemplates, setSavingTemplates] = useState(false);
   const [templatesSaveSuccess, setTemplatesSaveSuccess] = useState(false);
-  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<'registration_online' | 'registration_cash' | 'payment_received' | 'payment_rejected'>('registration_online');
+  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<
+    'registration_online' | 'registration_cash' | 'payment_received' | 'payment_rejected'
+  >('registration_online');
 
   // Games state
   const [games, setGames] = useState<GamePricing[]>([]);
@@ -138,18 +127,34 @@ export default function SettingsPage() {
   const [gameForm, setGameForm] = useState({
     original_game_name: '',
     game_name: '',
-    category: 'team',
+    category: 'Team Sports',
+    is_active: true,
+    coupon_eligible: true,
     boys_price: '',
     boys_players: '',
     girls_price: '',
     girls_players: '',
   });
 
-  const [coupons, setCoupons] = useState<{ id: string; code: string; discount_percent: number; is_active: boolean }[]>([]);
+  // Coupons state
+  const [coupons, setCoupons] = useState<
+    { id: string; code: string; discount_percent: number; is_active: boolean }[]
+  >([]);
   const [loadingCoupons, setLoadingCoupons] = useState(true);
   const [couponForm, setCouponForm] = useState({ code: '', discountPercent: '' });
   const [savingCoupon, setSavingCoupon] = useState(false);
-  const [deletingCouponId, setDeletingCouponId] = useState<string | null>(null);
+  const [togglingCouponId, setTogglingCouponId] = useState<string | null>(null);
+
+  // Confirm dialogs state
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    onConfirm: () => Promise<void> | void;
+  }>({ open: false, title: '', description: '', confirmLabel: 'Confirm', onConfirm: () => {} });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -165,27 +170,35 @@ export default function SettingsPage() {
       if (data.success) {
         const d = data.data;
         setSettings({
-          openai_api_key: d.openai_api_key || '',
           smtp_host: d.smtp_host || 'smtp.gmail.com',
           smtp_port: d.smtp_port || '587',
           smtp_email: d.smtp_email || '',
           smtp_password: d.smtp_password || '',
           smtp_from_name: d.smtp_from_name || 'FCIT Sports Society',
           registrations_open: d.registrations_open !== 'false' && d.registrations_open !== '0',
+          cash_payment_enabled: d.cash_payment_enabled !== 'false' && d.cash_payment_enabled !== '0',
         });
-        setEmailTemplates(prev => ({
-          email_registration_submitted_online_subject: d.email_registration_submitted_online_subject !== undefined ? d.email_registration_submitted_online_subject : prev.email_registration_submitted_online_subject,
-          email_registration_submitted_online_body: d.email_registration_submitted_online_body !== undefined ? d.email_registration_submitted_online_body : prev.email_registration_submitted_online_body,
-          email_registration_submitted_cash_subject: d.email_registration_submitted_cash_subject !== undefined ? d.email_registration_submitted_cash_subject : prev.email_registration_submitted_cash_subject,
-          email_registration_submitted_cash_body: d.email_registration_submitted_cash_body !== undefined ? d.email_registration_submitted_cash_body : prev.email_registration_submitted_cash_body,
-          email_payment_received_subject: d.email_payment_received_subject !== undefined ? d.email_payment_received_subject : prev.email_payment_received_subject,
-          email_payment_received_body: d.email_payment_received_body !== undefined ? d.email_payment_received_body : prev.email_payment_received_body,
-          email_payment_rejected_subject: d.email_payment_rejected_subject !== undefined ? d.email_payment_rejected_subject : prev.email_payment_rejected_subject,
-          email_payment_rejected_body: d.email_payment_rejected_body !== undefined ? d.email_payment_rejected_body : prev.email_payment_rejected_body,
+        setEmailTemplates((prev) => ({
+          email_registration_submitted_online_subject:
+            d.email_registration_submitted_online_subject ?? prev.email_registration_submitted_online_subject,
+          email_registration_submitted_online_body:
+            d.email_registration_submitted_online_body ?? prev.email_registration_submitted_online_body,
+          email_registration_submitted_cash_subject:
+            d.email_registration_submitted_cash_subject ?? prev.email_registration_submitted_cash_subject,
+          email_registration_submitted_cash_body:
+            d.email_registration_submitted_cash_body ?? prev.email_registration_submitted_cash_body,
+          email_payment_received_subject:
+            d.email_payment_received_subject ?? prev.email_payment_received_subject,
+          email_payment_received_body:
+            d.email_payment_received_body ?? prev.email_payment_received_body,
+          email_payment_rejected_subject:
+            d.email_payment_rejected_subject ?? prev.email_payment_rejected_subject,
+          email_payment_rejected_body:
+            d.email_payment_rejected_body ?? prev.email_payment_rejected_body,
         }));
       }
     } catch (error) {
-      console.error('Load settings error:', error);
+      toast.error('Failed to load system settings');
     } finally {
       setLoading(false);
     }
@@ -194,13 +207,15 @@ export default function SettingsPage() {
   const loadGames = async () => {
     setLoadingGames(true);
     try {
-      const res = await fetch('/api/admin/games', { cache: 'no-store' });
+      const res = await fetch('/api/admin/games?includeInactive=true', { cache: 'no-store' });
       const data = await res.json();
       if (data.success) {
-        setGames(data.data);
+        setGames(data.data || []);
+      } else {
+        toast.error(data.error || 'Failed to load games');
       }
-    } catch (error) {
-      console.error('Load games error:', error);
+    } catch {
+      toast.error('Failed to load games');
     } finally {
       setLoadingGames(false);
     }
@@ -214,10 +229,113 @@ export default function SettingsPage() {
       if (data.success) {
         setCoupons(data.data || []);
       }
-    } catch (error) {
-      console.error('Load coupons error:', error);
+    } catch {
+      toast.error('Failed to load coupons');
     } finally {
       setLoadingCoupons(false);
+    }
+  };
+
+  const runSettingToggle = async (key: 'registrations_open' | 'cash_payment_enabled', next: boolean) => {
+    const setFlag = key === 'registrations_open' ? setSavingRegistrations : setSavingCashToggle;
+    setFlag(true);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value: next ? 'true' : 'false' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSettings((prev) => ({ ...prev, [key]: next }));
+        toast.success(`${key === 'registrations_open' ? 'Registrations' : 'Cash payments'} ${next ? 'enabled' : 'disabled'}`);
+      } else {
+        toast.error(data.error || 'Failed to update setting');
+      }
+    } catch {
+      toast.error('Failed to update setting');
+    } finally {
+      setFlag(false);
+    }
+  };
+
+  const handleSaveSmtp = async () => {
+    setSavingSmtp(true);
+    setSmtpSaveSuccess(false);
+    try {
+      const smtpSettings = [
+        { key: 'smtp_host', value: settings.smtp_host },
+        { key: 'smtp_port', value: settings.smtp_port },
+        { key: 'smtp_email', value: settings.smtp_email },
+        { key: 'smtp_password', value: settings.smtp_password },
+        { key: 'smtp_from_name', value: settings.smtp_from_name },
+      ];
+      for (const setting of smtpSettings) {
+        const res = await fetch('/api/admin/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(setting),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to save SMTP settings');
+        }
+      }
+      setSmtpSaveSuccess(true);
+      toast.success('SMTP configuration saved');
+      setTimeout(() => setSmtpSaveSuccess(false), 3000);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to save SMTP settings');
+    } finally {
+      setSavingSmtp(false);
+    }
+  };
+
+  const handleSaveEmailTemplates = async () => {
+    setSavingTemplates(true);
+    setTemplatesSaveSuccess(false);
+    try {
+      const keys = Object.keys(emailTemplates) as (keyof typeof emailTemplates)[];
+      for (const key of keys) {
+        const res = await fetch('/api/admin/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, value: emailTemplates[key] }),
+        });
+        if (!res.ok) throw new Error('Failed to save templates');
+      }
+      setTemplatesSaveSuccess(true);
+      toast.success('Email templates saved');
+      setTimeout(() => setTemplatesSaveSuccess(false), 3000);
+    } catch {
+      toast.error('Failed to save email templates');
+    } finally {
+      setSavingTemplates(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!settings.smtp_email) {
+      toast.error('Please enter SMTP email address first');
+      return;
+    }
+    setTestingEmail(true);
+    try {
+      const res = await fetch('/api/admin/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: settings.smtp_email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Test email sent successfully! Check your inbox.');
+      } else {
+        toast.error(data.error || 'Failed to send test email');
+      }
+    } catch {
+      toast.error('Failed to send test email');
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -225,11 +343,11 @@ export default function SettingsPage() {
     const code = couponForm.code.trim().toUpperCase();
     const pct = parseFloat(couponForm.discountPercent);
     if (!code) {
-      alert('Enter a coupon code');
+      toast.error('Enter a coupon code');
       return;
     }
     if (isNaN(pct) || pct <= 0 || pct > 100) {
-      alert('Discount percent must be between 1 and 100');
+      toast.error('Discount percent must be between 1 and 100');
       return;
     }
     setSavingCoupon(true);
@@ -242,150 +360,76 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success) {
         setCouponForm({ code: '', discountPercent: '' });
+        toast.success(`Coupon ${code} created`);
         loadCoupons();
       } else {
-        alert(data.error || 'Failed to create coupon');
+        toast.error(data.error || 'Failed to create coupon');
       }
-    } catch (e) {
-      alert('Failed to create coupon');
+    } catch {
+      toast.error('Failed to create coupon');
     } finally {
       setSavingCoupon(false);
     }
   };
 
-  const handleDeleteCoupon = async (id: string) => {
-    if (!confirm('Delete this coupon? It will no longer be usable.')) return;
-    setDeletingCouponId(id);
+  const handleToggleCoupon = async (coupon: { id: string; code: string; is_active: boolean }) => {
+    setTogglingCouponId(coupon.id);
     try {
-      const res = await fetch(`/api/admin/coupons?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await fetch('/api/admin/coupons', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: coupon.id, is_active: !coupon.is_active }),
+      });
       const data = await res.json();
       if (data.success) {
+        toast.success(`Coupon ${coupon.code} ${!coupon.is_active ? 'activated' : 'deactivated'}`);
         loadCoupons();
       } else {
-        alert(data.error || 'Failed to delete');
+        toast.error(data.error || 'Failed to update coupon');
       }
-    } catch (e) {
-      alert('Failed to delete coupon');
+    } catch {
+      toast.error('Failed to update coupon');
     } finally {
-      setDeletingCouponId(null);
+      setTogglingCouponId(null);
     }
   };
 
-  const handleSaveApiKey = async () => {
-    setSaving(true);
-    setSaveSuccess(false);
-    try {
-      const res = await fetch('/api/admin/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'openai_api_key', value: settings.openai_api_key }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
-      } else {
-        alert('Failed to save: ' + data.error);
-      }
-    } catch (error) {
-      alert('Failed to save settings');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveSmtp = async () => {
-    setSavingSmtp(true);
-    setSmtpSaveSuccess(false);
-    try {
-      // Save all SMTP settings
-      const smtpSettings = [
-        { key: 'smtp_host', value: settings.smtp_host },
-        { key: 'smtp_port', value: settings.smtp_port },
-        { key: 'smtp_email', value: settings.smtp_email },
-        { key: 'smtp_password', value: settings.smtp_password },
-        { key: 'smtp_from_name', value: settings.smtp_from_name },
-      ];
-
-      for (const setting of smtpSettings) {
-        await fetch('/api/admin/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(setting),
-        });
-      }
-
-      setSmtpSaveSuccess(true);
-      setTimeout(() => setSmtpSaveSuccess(false), 3000);
-    } catch (error) {
-      alert('Failed to save SMTP settings');
-    } finally {
-      setSavingSmtp(false);
-    }
-  };
-
-  const handleSaveEmailTemplates = async () => {
-    setSavingTemplates(true);
-    setTemplatesSaveSuccess(false);
-    try {
-      const keys = Object.keys(emailTemplates) as (keyof typeof emailTemplates)[];
-      for (const key of keys) {
-        await fetch('/api/admin/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key, value: emailTemplates[key] }),
-        });
-      }
-      setTemplatesSaveSuccess(true);
-      setTimeout(() => setTemplatesSaveSuccess(false), 3000);
-    } catch (error) {
-      alert('Failed to save email templates');
-    } finally {
-      setSavingTemplates(false);
-    }
-  };
-
-  const handleTestEmail = async () => {
-    if (!settings.smtp_email || !settings.smtp_password) {
-      alert('Please configure SMTP email and password first');
-      return;
-    }
-
-    setTestingEmail(true);
-    try {
-      const res = await fetch('/api/admin/email/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: settings.smtp_email }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Test email sent successfully! Check your inbox.');
-      } else {
-        alert('Failed to send test email: ' + data.error);
-      }
-    } catch (error) {
-      alert('Failed to send test email');
-    } finally {
-      setTestingEmail(false);
-    }
+  const requestDeleteCoupon = (c: { id: string; code: string }) => {
+    setConfirmState({
+      open: true,
+      title: `Delete coupon ${c.code}?`,
+      description: 'This coupon will be permanently removed and cannot be redeemed at checkout.',
+      confirmLabel: 'Delete Coupon',
+      destructive: true,
+      onConfirm: async () => {
+        const res = await fetch(`/api/admin/coupons?id=${encodeURIComponent(c.id)}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          toast.success(`Deleted coupon ${c.code}`);
+          loadCoupons();
+        } else {
+          toast.error(data.error || 'Failed to delete coupon');
+        }
+      },
+    });
   };
 
   const handleOpenGameDialog = (game?: GamePricing) => {
     if (game) {
-      // Find all entries for this game
       const gameName = game.game_name;
-      const boysEntry = games.find(g => g.game_name === gameName && g.gender === 'boys');
-      const girlsEntry = games.find(g => g.game_name === gameName && g.gender === 'girls');
-      
+      const boysEntry = games.find((g) => g.game_name === gameName && g.gender === 'boys');
+      const girlsEntry = games.find((g) => g.game_name === gameName && g.gender === 'girls');
+
       setEditingGame(game);
       setGameForm({
         original_game_name: gameName,
         game_name: gameName,
-        category: boysEntry?.category || girlsEntry?.category || 'team',
-        boys_price: boysEntry?.price?.toString() || '',
+        category: boysEntry?.category || girlsEntry?.category || 'Team Sports',
+        is_active: (boysEntry?.is_active ?? girlsEntry?.is_active) !== false,
+        coupon_eligible: (boysEntry?.coupon_eligible ?? girlsEntry?.coupon_eligible) !== false,
+        boys_price: boysEntry && boysEntry.is_active !== false ? boysEntry.price.toString() : '',
         boys_players: boysEntry?.players?.toString() || '',
-        girls_price: girlsEntry?.price?.toString() || '',
+        girls_price: girlsEntry && girlsEntry.is_active !== false ? girlsEntry.price.toString() : '',
         girls_players: girlsEntry?.players?.toString() || '',
       });
     } else {
@@ -393,7 +437,9 @@ export default function SettingsPage() {
       setGameForm({
         original_game_name: '',
         game_name: '',
-        category: 'team',
+        category: 'Team Sports',
+        is_active: true,
+        coupon_eligible: true,
         boys_price: '',
         boys_players: '',
         girls_price: '',
@@ -405,111 +451,127 @@ export default function SettingsPage() {
 
   const handleSaveGame = async () => {
     if (!gameForm.game_name.trim()) {
-      alert('Game name is required');
+      toast.error('Game name is required');
+      return;
+    }
+    if (!gameForm.boys_price && !gameForm.girls_price) {
+      toast.error('Provide pricing for at least Boys or Girls');
       return;
     }
 
     setSavingGame(true);
     try {
-      const nextName = gameForm.game_name.trim();
-      const origName = gameForm.original_game_name.trim();
-      let renamedOnce = false;
-
-      // Save boys pricing if provided
-      if (gameForm.boys_price) {
-        await fetch('/api/admin/games', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            game_name: nextName,
-            original_game_name: origName && origName !== nextName ? origName : undefined,
-            category: gameForm.category,
-            gender: 'boys',
-            price: parseFloat(gameForm.boys_price),
-            players: gameForm.boys_players ? parseInt(gameForm.boys_players) : null,
-          }),
-        });
-        renamedOnce = true;
-      } else if (editingGame) {
-        // Delete boys entry if price is removed
-        await fetch(`/api/admin/games?game_name=${encodeURIComponent(origName || nextName)}&gender=boys`, {
-          method: 'DELETE',
-        });
+      const res = await fetch('/api/admin/games', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          original_game_name: gameForm.original_game_name.trim() || undefined,
+          game_name: gameForm.game_name.trim(),
+          category: gameForm.category,
+          is_active: gameForm.is_active,
+          coupon_eligible: gameForm.coupon_eligible,
+          boys: {
+            enabled: Boolean(gameForm.boys_price),
+            price: gameForm.boys_price,
+            players: gameForm.boys_players,
+          },
+          girls: {
+            enabled: Boolean(gameForm.girls_price),
+            price: gameForm.girls_price,
+            players: gameForm.girls_players,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Saved ${gameForm.game_name.trim()}`);
+        setGameDialogOpen(false);
+        loadGames();
+      } else {
+        toast.error(data.error || 'Failed to save game');
       }
-
-      // Save girls pricing if provided
-      if (gameForm.girls_price) {
-        await fetch('/api/admin/games', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            game_name: nextName,
-            original_game_name: !renamedOnce && origName && origName !== nextName ? origName : undefined,
-            category: gameForm.category,
-            gender: 'girls',
-            price: parseFloat(gameForm.girls_price),
-            players: gameForm.girls_players ? parseInt(gameForm.girls_players) : null,
-          }),
-        });
-      } else if (editingGame) {
-        // Delete girls entry if price is removed
-        await fetch(`/api/admin/games?game_name=${encodeURIComponent(nextName)}&gender=girls`, {
-          method: 'DELETE',
-        });
-      }
-
-      setGameDialogOpen(false);
-      loadGames();
-    } catch (error) {
-      alert('Failed to save game');
+    } catch {
+      toast.error('Failed to save game');
     } finally {
       setSavingGame(false);
     }
   };
 
-  const handleSyncPdfGames = async () => {
-    if (!confirm('Sync all 49 championship games with the official PDF prices? Existing matching games will update to the PDF prices.')) {
-      return;
-    }
-    setSyncingPdfGames(true);
+  const handleToggleGameActive = async (gameName: string, nextActive: boolean) => {
     try {
       const res = await fetch('/api/admin/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'sync_pdf_defaults', replaceAll: true }),
+        body: JSON.stringify({ action: 'toggle_active', game_name: gameName, is_active: nextActive }),
       });
       const data = await res.json();
       if (data.success) {
-        alert(`Synced ${data.syncedCount} championship games with PDF prices!`);
+        toast.success(`${gameName} ${nextActive ? 'activated' : 'deactivated'}`);
         loadGames();
       } else {
-        alert(data.error || 'Failed to sync games');
+        toast.error(data.error || 'Failed to toggle game');
       }
     } catch {
-      alert('Failed to sync official games');
-    } finally {
-      setSyncingPdfGames(false);
+      toast.error('Failed to toggle game status');
     }
   };
 
-  const handleDeleteGame = async (gameName: string) => {
-    if (!confirm(`Delete "${gameName}" (both male and female pricing)?`)) return;
-
-    try {
-      // Delete both genders
-      await fetch(`/api/admin/games?game_name=${encodeURIComponent(gameName)}&gender=boys`, {
-        method: 'DELETE',
-      });
-      await fetch(`/api/admin/games?game_name=${encodeURIComponent(gameName)}&gender=girls`, {
-        method: 'DELETE',
-      });
-      loadGames();
-    } catch (error) {
-      alert('Failed to delete game');
-    }
+  const requestSyncPdfGames = () => {
+    setConfirmState({
+      open: true,
+      title: 'Sync official 49 PDF games & prices?',
+      description:
+        'All official championship games will be synced to PDF prices. Custom games with existing registrations are automatically deactivated instead of deleted.',
+      confirmLabel: 'Sync Official Games',
+      onConfirm: async () => {
+        setSyncingPdfGames(true);
+        try {
+          const res = await fetch('/api/admin/games', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'sync_pdf_defaults', replaceAll: true }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Synced ${data.syncedCount} championship games`);
+            loadGames();
+          } else {
+            toast.error(data.error || 'Failed to sync games');
+          }
+        } finally {
+          setSyncingPdfGames(false);
+        }
+      },
+    });
   };
 
-  // Group games by name for display
+  const requestDeleteGame = (gameName: string) => {
+    setConfirmState({
+      open: true,
+      title: `Delete "${gameName}"?`,
+      description:
+        'If registrations, matches, or groups reference this game, deletion will be blocked (409) and you can deactivate it safely instead.',
+      confirmLabel: 'Delete Game',
+      destructive: true,
+      onConfirm: async () => {
+        const resB = await fetch(`/api/admin/games?game_name=${encodeURIComponent(gameName)}&gender=boys`, {
+          method: 'DELETE',
+        });
+        const resG = await fetch(`/api/admin/games?game_name=${encodeURIComponent(gameName)}&gender=girls`, {
+          method: 'DELETE',
+        });
+        if (resB.status === 409 || resG.status === 409) {
+          const d = await (resB.status === 409 ? resB : resG).json();
+          toast.error(d.error || 'Game has historical references — deactivating instead.', 'Cannot Delete');
+          await handleToggleGameActive(gameName, false);
+          return;
+        }
+        toast.success(`Deleted ${gameName}`);
+        loadGames();
+      },
+    });
+  };
+
   const groupedGames = games.reduce((acc, game) => {
     if (!acc[game.game_name]) {
       acc[game.game_name] = { boys: null, girls: null };
@@ -524,250 +586,372 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+      <div className="min-h-screen flex items-center justify-center bg-[#080D1C]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#12E2C4]" />
       </div>
     );
   }
 
   return (
-    <div className="p-4 lg:p-6 pt-16 lg:pt-6 bg-slate-50 min-h-screen">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl shadow-lg">
-            <Settings className="h-5 w-5 text-white" />
+    <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-7xl mx-auto space-y-6 bg-[#080D1C] min-h-screen text-[#F8FAFC]">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/[0.08]">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#131B38] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
+            <span>// SYSTEM CONFIGURATION</span>
           </div>
-          Settings
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">Configure system settings (Super Admin only)</p>
+          <h1 className="text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight flex items-center gap-3">
+            <Settings className="h-7 w-7 text-[#12E2C4]" />
+            Settings &amp; Catalog
+          </h1>
+          <p className="text-xs font-mono text-[#94A3B8] mt-1">
+            REGISTRATION GATES, PAYMENT MODES, GAMES CATALOG, COUPONS &amp; SMTP TEMPLATES
+          </p>
+        </div>
+        {!canEdit && (
+          <span className="px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono">
+            READ-ONLY VIEW
+          </span>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Registrations open/closed */}
-        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg lg:col-span-2">
-          <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-2">
-              {settings.registrations_open ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
-              Registrations
+        {/* Registrations & Cash Payment Feature Flags */}
+        <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08] shadow-xl lg:col-span-2">
+          <CardHeader className="border-b border-white/[0.08]">
+            <CardTitle className="flex items-center gap-2 text-[#F8FAFC]">
+              {settings.registrations_open ? (
+                <Unlock className="h-5 w-5 text-[#12E2C4]" />
+              ) : (
+                <Lock className="h-5 w-5 text-amber-400" />
+              )}
+              Portal Feature Flags
             </CardTitle>
-            <CardDescription className="text-emerald-100">
-              When off, the public registration form shows a &quot;Registrations are closed&quot; message and no new submissions are accepted.
+            <CardDescription className="text-[#94A3B8]">
+              Control live public registration availability and accepted payment methods without redeploying.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between gap-4">
+          <CardContent className="p-6 grid gap-6 md:grid-cols-2">
+            <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[#0B1124] border border-white/[0.08]">
               <div>
-                <p className="font-medium text-slate-800">Accept new registrations</p>
-                <p className="text-sm text-slate-500 mt-0.5">
-                  {settings.registrations_open ? 'Registration form is live and accepting submissions.' : 'Registration form is closed; visitors see a message to contact sports.oc@pucit.edu.pk'}
+                <p className="font-semibold text-[#F8FAFC]">Accept New Registrations</p>
+                <p className="text-xs text-[#94A3B8] mt-0.5">
+                  {settings.registrations_open
+                    ? 'Public registration portal is open.'
+                    : 'Registrations paused; visitors see contact notice.'}
                 </p>
               </div>
               <button
                 type="button"
                 role="switch"
+                aria-label="Toggle registrations open"
                 aria-checked={settings.registrations_open}
-                onClick={async () => {
-                  const next = !settings.registrations_open;
-                  setSavingRegistrations(true);
-                  try {
-                    const res = await fetch('/api/admin/settings', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ key: 'registrations_open', value: next ? 'true' : 'false' }),
-                    });
-                    if (res.ok) {
-                      setSettings(prev => ({ ...prev, registrations_open: next }));
-                    } else {
-                      alert('Failed to update setting');
-                    }
-                  } catch {
-                    alert('Failed to update setting');
-                  } finally {
-                    setSavingRegistrations(false);
-                  }
-                }}
-                disabled={savingRegistrations}
-                className={`
-                  relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent
-                  transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  ${settings.registrations_open ? 'bg-emerald-500' : 'bg-slate-300'}
-                `}
+                disabled={!canEdit || savingRegistrations}
+                onClick={() => runSettingToggle('registrations_open', !settings.registrations_open)}
+                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#12E2C4] disabled:opacity-50 ${
+                  settings.registrations_open ? 'bg-[#12E2C4]' : 'bg-white/20'
+                }`}
               >
                 <span
-                  className={`
-                    pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0
-                    transition duration-200 ease-in-out
-                    ${settings.registrations_open ? 'translate-x-5' : 'translate-x-1'}
-                  `}
-                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-[#080D1C] shadow transition ${
+                    settings.registrations_open ? 'translate-x-5' : 'translate-x-0'
+                  }`}
                 />
               </button>
             </div>
-            {savingRegistrations && (
-              <p className="text-sm text-slate-500 mt-3 flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Saving…
-              </p>
+
+            <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[#0B1124] border border-white/[0.08]">
+              <div>
+                <p className="font-semibold text-[#F8FAFC] flex items-center gap-2">
+                  <Banknote className="w-4 h-4 text-[#F59E0B]" />
+                  Desk Cash Payments Enabled
+                </p>
+                <p className="text-xs text-[#94A3B8] mt-0.5">
+                  {settings.cash_payment_enabled
+                    ? 'Participants can choose Online or Desk Cash.'
+                    : 'Cash option hidden; Online transfer required.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-label="Toggle cash payments"
+                aria-checked={settings.cash_payment_enabled}
+                disabled={!canEdit || savingCashToggle}
+                onClick={() => runSettingToggle('cash_payment_enabled', !settings.cash_payment_enabled)}
+                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#12E2C4] disabled:opacity-50 ${
+                  settings.cash_payment_enabled ? 'bg-[#F59E0B]' : 'bg-white/20'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-[#080D1C] shadow transition ${
+                    settings.cash_payment_enabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Games & Pricing Management */}
+        <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08] shadow-xl lg:col-span-2">
+          <CardHeader className="border-b border-white/[0.08]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-[#F8FAFC]">
+                  <Gamepad2 className="h-5 w-5 text-[#12E2C4]" />
+                  Games &amp; Pricing Catalog ({Object.keys(groupedGames).length})
+                </CardTitle>
+                <CardDescription className="text-[#94A3B8]">
+                  Single source of truth synced with the public Games Directory and checkout pricing.
+                </CardDescription>
+              </div>
+              {canEdit && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={requestSyncPdfGames}
+                    disabled={syncingPdfGames}
+                    size="sm"
+                    variant="outline"
+                    className="border-white/15 bg-white/5 hover:bg-white/10 text-[#F8FAFC]"
+                  >
+                    {syncingPdfGames && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                    Sync PDF (49)
+                  </Button>
+                  <Button
+                    onClick={() => handleOpenGameDialog()}
+                    size="sm"
+                    className="bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#080D1C] font-bold"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Game
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            {loadingGames ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-[#12E2C4]" />
+              </div>
+            ) : Object.keys(groupedGames).length === 0 ? (
+              <div className="text-center py-8 text-[#94A3B8]">
+                <Gamepad2 className="h-12 w-12 mx-auto opacity-40 mb-2" />
+                <p>No games configured in database</p>
+              </div>
+            ) : (
+              <div className="max-h-[420px] overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-2.5 pr-1">
+                {Object.entries(groupedGames).map(([name, { boys, girls }]) => {
+                  const isActive = (boys?.is_active ?? girls?.is_active) !== false;
+                  const couponEligible = (boys?.coupon_eligible ?? girls?.coupon_eligible) !== false;
+                  return (
+                    <div
+                      key={name}
+                      className={`border rounded-xl p-3 transition-colors ${
+                        isActive
+                          ? 'bg-[#0B1124] border-white/[0.08] hover:border-[#12E2C4]/30'
+                          : 'bg-[#0B1124]/40 border-white/[0.04] opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-[#F8FAFC] truncate">{name}</h4>
+                            {!isActive && (
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">
+                                INACTIVE
+                              </span>
+                            )}
+                            {!couponEligible && (
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                                NO COUPON
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-1.5">
+                            {boys && boys.is_active !== false && (
+                              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-500/15 text-blue-300 border border-blue-500/25 rounded font-mono">
+                                Boys: Rs.{boys.price}
+                                {boys.players && boys.players > 1 && ` (${boys.players}p)`}
+                              </span>
+                            )}
+                            {girls && girls.is_active !== false && (
+                              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-pink-500/15 text-pink-300 border border-pink-500/25 rounded font-mono">
+                                Girls: Rs.{girls.price}
+                                {girls.players && girls.players > 1 && ` (${girls.players}p)`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {canEdit && (
+                          <div className="flex gap-1 flex-shrink-0">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title={isActive ? 'Deactivate game' : 'Activate game'}
+                              onClick={() => handleToggleGameActive(name, !isActive)}
+                              className="h-8 w-8 p-0 text-[#94A3B8] hover:text-[#12E2C4]"
+                            >
+                              <Power className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleOpenGameDialog(boys || girls!)}
+                              className="h-8 w-8 p-0 text-[#94A3B8] hover:text-white"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => requestDeleteGame(name)}
+                              className="h-8 w-8 p-0 text-[#94A3B8] hover:text-red-400"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* SMTP Email Settings */}
-        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg lg:col-span-2">
-          <CardHeader className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Email Configuration (SMTP)
+        {/* Coupons */}
+        <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08] shadow-xl flex flex-col min-h-[420px]">
+          <CardHeader className="border-b border-white/[0.08]">
+            <CardTitle className="flex items-center gap-2 text-[#F8FAFC]">
+              <Tag className="h-5 w-5 text-[#F59E0B]" />
+              Coupon Codes
             </CardTitle>
-            <CardDescription className="text-blue-100">
-              Configure email settings for sending notifications and announcements
+            <CardDescription className="text-[#94A3B8]">
+              Manage discount coupons. Disabled coupons are preserved for history but rejected at checkout.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="smtpEmail" className="text-sm font-medium">Email Address *</Label>
+          <CardContent className="p-6 flex flex-col flex-1 min-h-0">
+            {canEdit && (
+              <div className="flex flex-wrap gap-3 items-end mb-4">
+                <div className="space-y-1">
+                  <Label htmlFor="couponCodeInput" className="text-xs text-[#94A3B8]">
+                    Code
+                  </Label>
                   <Input
-                    id="smtpEmail"
-                    type="email"
-                    value={settings.smtp_email}
-                    onChange={(e) => setSettings({ ...settings, smtp_email: e.target.value })}
-                    autoComplete="email"
-                    placeholder="sports@pucit.edu.pk"
+                    id="couponCodeInput"
+                    value={couponForm.code}
+                    onChange={(e) => setCouponForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                    placeholder="EARLY10"
+                    className="w-32 bg-[#0B1124] border-white/15 text-[#F8FAFC]"
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label htmlFor="couponPctInput" className="text-xs text-[#94A3B8]">
+                    Discount %
+                  </Label>
+                  <Input
+                    id="couponPctInput"
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={couponForm.discountPercent}
+                    onChange={(e) => setCouponForm((f) => ({ ...f, discountPercent: e.target.value }))}
+                    placeholder="10"
+                    className="w-24 bg-[#0B1124] border-white/15 text-[#F8FAFC]"
+                  />
+                </div>
+                <Button
+                  onClick={handleCreateCoupon}
+                  disabled={savingCoupon}
+                  size="sm"
+                  className="bg-[#F59E0B] hover:bg-amber-600 text-[#080D1C] font-bold"
+                >
+                  {savingCoupon ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />}
+                  Add
+                </Button>
+              </div>
+            )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="smtpPassword" className="text-sm font-medium">App Password *</Label>
-                  <div className="relative">
-                    <Input
-                      id="smtpPassword"
-                      type={showSmtpPassword ? 'text' : 'password'}
-                      value={settings.smtp_password}
-                      onChange={(e) => setSettings({ ...settings, smtp_password: e.target.value })}
-                      autoComplete="off"
-                      placeholder="16-character app password"
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowSmtpPassword(!showSmtpPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            <div className="flex-1 min-h-[220px] overflow-y-auto rounded-xl border border-white/[0.08] bg-[#0B1124] p-2.5">
+              {loadingCoupons ? (
+                <div className="flex items-center justify-center h-full min-h-[200px]">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#F59E0B]" />
+                </div>
+              ) : coupons.length === 0 ? (
+                <div className="flex items-center justify-center h-full min-h-[200px] text-sm text-[#94A3B8]">
+                  No coupons yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {coupons.map((c) => (
+                    <div
+                      key={c.id}
+                      className={`flex items-center justify-between gap-2 p-3 border rounded-lg ${
+                        c.is_active
+                          ? 'bg-[#131B38] border-white/10'
+                          : 'bg-[#131B38]/40 border-white/5 opacity-60'
+                      }`}
                     >
-                      {showSmtpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Generate from{' '}
-                    <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
-                      Google App Passwords
-                    </a>
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="smtpFromName" className="text-sm font-medium">From Name</Label>
-                  <Input
-                    id="smtpFromName"
-                    value={settings.smtp_from_name}
-                    onChange={(e) => setSettings({ ...settings, smtp_from_name: e.target.value })}
-                    autoComplete="organization"
-                    placeholder="FCIT Sports Society"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtpHost" className="text-sm font-medium">SMTP Server</Label>
-                    <Input
-                      id="smtpHost"
-                      value={settings.smtp_host}
-                      onChange={(e) => setSettings({ ...settings, smtp_host: e.target.value })}
-                      placeholder="smtp.gmail.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="smtpPort" className="text-sm font-medium">Port</Label>
-                    <Input
-                      id="smtpPort"
-                      value={settings.smtp_port}
-                      onChange={(e) => setSettings({ ...settings, smtp_port: e.target.value })}
-                      placeholder="587"
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex gap-2">
-                    <Server className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-blue-800 font-medium">Gmail SMTP Settings:</p>
-                      <ul className="text-xs text-blue-700 mt-1 space-y-1">
-                        <li>• Server: <code className="bg-blue-100 px-1 rounded">smtp.gmail.com</code></li>
-                        <li>• Port: <code className="bg-blue-100 px-1 rounded">587</code> (TLS)</li>
-                        <li>• Enable 2-Step Verification on Google Account</li>
-                        <li>• Use App Password, not your Gmail password</li>
-                      </ul>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-mono font-semibold text-[#F8FAFC] truncate">{c.code}</p>
+                        <p className="text-xs text-[#94A3B8]">
+                          {c.discount_percent}% off • {c.is_active ? 'Active' : 'Paused'}
+                        </p>
+                      </div>
+                      {canEdit && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={togglingCouponId === c.id}
+                            onClick={() => handleToggleCoupon(c)}
+                            className="h-8 w-8 p-0 text-[#94A3B8] hover:text-[#12E2C4]"
+                            title={c.is_active ? 'Pause coupon' : 'Activate coupon'}
+                          >
+                            <Power className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => requestDeleteCoupon(c)}
+                            className="h-8 w-8 p-0 text-red-400 hover:bg-red-500/15"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  ))}
                 </div>
-
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    onClick={handleSaveSmtp}
-                    disabled={savingSmtp}
-                    className="bg-blue-500 hover:bg-blue-600"
-                  >
-                    {savingSmtp ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : smtpSaveSuccess ? (
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                    ) : (
-                      <Save className="h-4 w-4 mr-2" />
-                    )}
-                    {smtpSaveSuccess ? 'Saved!' : 'Save SMTP'}
-                  </Button>
-                  <Button
-                    onClick={handleTestEmail}
-                    disabled={testingEmail || !settings.smtp_email}
-                    variant="outline"
-                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                  >
-                    {testingEmail ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4 mr-2" />
-                    )}
-                    Send Test Email
-                  </Button>
-                </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Automated Email Templates — one at a time with dropdown */}
-        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg flex flex-col min-h-[420px]">
-          <CardHeader className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
+        {/* Automated Email Templates */}
+        <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08] shadow-xl flex flex-col min-h-[420px]">
+          <CardHeader className="border-b border-white/[0.08]">
+            <CardTitle className="flex items-center gap-2 text-[#F8FAFC]">
+              <Mail className="h-5 w-5 text-[#12E2C4]" />
               Automated Email Templates
             </CardTitle>
-            <CardDescription className="text-teal-100">
-              Edit one template at a time. Placeholders: name, regNum, slipId, teamName, gamesList. For Payment rejected: paymentAction.
+            <CardDescription className="text-[#94A3B8]">
+              Placeholders: name, regNum, slipId, teamName, gamesList, paymentAction.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 flex flex-col flex-1 min-h-0">
-            <div className="space-y-4 flex-1 flex flex-col min-h-0">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">Template</Label>
-                <Select value={selectedEmailTemplate} onValueChange={(v) => setSelectedEmailTemplate(v as typeof selectedEmailTemplate)}>
-                  <SelectTrigger className="w-full">
+            <div className="space-y-3 flex-1 flex flex-col min-h-0">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#94A3B8]">Template</Label>
+                <Select
+                  value={selectedEmailTemplate}
+                  onValueChange={(v) => setSelectedEmailTemplate(v as typeof selectedEmailTemplate)}
+                >
+                  <SelectTrigger className="w-full bg-[#0B1124] border-white/15 text-[#F8FAFC]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -779,7 +963,7 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="grid gap-2 flex-1 min-h-0 flex flex-col">
-                <Label className="text-sm">Subject</Label>
+                <Label className="text-xs text-[#94A3B8]">Subject</Label>
                 <Input
                   value={
                     selectedEmailTemplate === 'registration_online'
@@ -790,16 +974,20 @@ export default function SettingsPage() {
                           ? emailTemplates.email_payment_received_subject
                           : emailTemplates.email_payment_rejected_subject
                   }
+                  disabled={!canEdit}
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (selectedEmailTemplate === 'registration_online') setEmailTemplates(t => ({ ...t, email_registration_submitted_online_subject: v }));
-                    else if (selectedEmailTemplate === 'registration_cash') setEmailTemplates(t => ({ ...t, email_registration_submitted_cash_subject: v }));
-                    else if (selectedEmailTemplate === 'payment_received') setEmailTemplates(t => ({ ...t, email_payment_received_subject: v }));
-                    else setEmailTemplates(t => ({ ...t, email_payment_rejected_subject: v }));
+                    if (selectedEmailTemplate === 'registration_online')
+                      setEmailTemplates((t) => ({ ...t, email_registration_submitted_online_subject: v }));
+                    else if (selectedEmailTemplate === 'registration_cash')
+                      setEmailTemplates((t) => ({ ...t, email_registration_submitted_cash_subject: v }));
+                    else if (selectedEmailTemplate === 'payment_received')
+                      setEmailTemplates((t) => ({ ...t, email_payment_received_subject: v }));
+                    else setEmailTemplates((t) => ({ ...t, email_payment_rejected_subject: v }));
                   }}
-                  placeholder="Mini Olympics 2026 Registration"
+                  className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
                 />
-                <Label className="text-sm">Body (HTML)</Label>
+                <Label className="text-xs text-[#94A3B8]">Body (HTML)</Label>
                 <textarea
                   value={
                     selectedEmailTemplate === 'registration_online'
@@ -810,403 +998,326 @@ export default function SettingsPage() {
                           ? emailTemplates.email_payment_received_body
                           : emailTemplates.email_payment_rejected_body
                   }
+                  disabled={!canEdit}
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (selectedEmailTemplate === 'registration_online') setEmailTemplates(t => ({ ...t, email_registration_submitted_online_body: v }));
-                    else if (selectedEmailTemplate === 'registration_cash') setEmailTemplates(t => ({ ...t, email_registration_submitted_cash_body: v }));
-                    else if (selectedEmailTemplate === 'payment_received') setEmailTemplates(t => ({ ...t, email_payment_received_body: v }));
-                    else setEmailTemplates(t => ({ ...t, email_payment_rejected_body: v }));
+                    if (selectedEmailTemplate === 'registration_online')
+                      setEmailTemplates((t) => ({ ...t, email_registration_submitted_online_body: v }));
+                    else if (selectedEmailTemplate === 'registration_cash')
+                      setEmailTemplates((t) => ({ ...t, email_registration_submitted_cash_body: v }));
+                    else if (selectedEmailTemplate === 'payment_received')
+                      setEmailTemplates((t) => ({ ...t, email_payment_received_body: v }));
+                    else setEmailTemplates((t) => ({ ...t, email_payment_rejected_body: v }));
                   }}
-                  rows={8}
-                  className="w-full px-3 py-2 border rounded-lg text-sm font-mono resize-y flex-1 min-h-[180px]"
-                  placeholder="<p>Dear {{name}},</p>..."
+                  rows={7}
+                  className="w-full px-3 py-2 border border-white/15 bg-[#0B1124] text-[#F8FAFC] rounded-lg text-xs font-mono resize-y flex-1 min-h-[160px]"
                 />
               </div>
             </div>
-            <Button onClick={handleSaveEmailTemplates} disabled={savingTemplates} className="mt-4 bg-teal-500 hover:bg-teal-600">
-              {savingTemplates ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : templatesSaveSuccess ? <CheckCircle className="h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-              {templatesSaveSuccess ? 'Saved!' : 'Save templates'}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Coupons — same-size card with scrollable small coupon cards */}
-        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg flex flex-col min-h-[420px]">
-          <CardHeader className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-2">
-              <Tag className="h-5 w-5" />
-              Coupon Codes
-            </CardTitle>
-            <CardDescription className="text-amber-100">
-              Create coupon codes for a percentage discount. Participants enter the code at checkout.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 flex flex-col flex-1 min-h-0">
-            <div className="flex flex-wrap gap-3 items-end mb-4">
-              <div className="space-y-1">
-                <Label className="text-sm">Code</Label>
-                <Input
-                  value={couponForm.code}
-                  onChange={(e) => setCouponForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
-                  placeholder="e.g. EARLY10"
-                  className="w-32"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-sm">Discount %</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={couponForm.discountPercent}
-                  onChange={(e) => setCouponForm(f => ({ ...f, discountPercent: e.target.value }))}
-                  placeholder="10"
-                  className="w-20"
-                />
-              </div>
-              <Button onClick={handleCreateCoupon} disabled={savingCoupon} size="sm" className="bg-amber-500 hover:bg-amber-600">
-                {savingCoupon ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                Add
-              </Button>
-            </div>
-            <div className="flex-1 min-h-[220px] overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/50 p-2">
-              {loadingCoupons ? (
-                <div className="flex items-center justify-center h-full min-h-[200px]">
-                  <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
-                </div>
-              ) : coupons.length === 0 ? (
-                <div className="flex items-center justify-center h-full min-h-[200px] text-sm text-slate-500">
-                  No coupons yet. Add one above.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {coupons.map((c) => (
-                    <div
-                      key={c.id}
-                      className="flex items-center justify-between gap-2 p-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow transition-shadow min-h-[72px]"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-mono font-semibold text-slate-800 truncate">{c.code}</p>
-                        <p className="text-xs text-slate-600">{c.discount_percent}% off</p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteCoupon(c.id)}
-                        disabled={deletingCouponId === c.id}
-                        className="flex-shrink-0 h-8 w-8 p-0 text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        {deletingCouponId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* API Key Settings */}
-        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-2">
-              <Key className="h-5 w-5" />
-              AI API Configuration
-            </CardTitle>
-            <CardDescription className="text-purple-100">
-              Configure OpenAI API key for AI-powered match generation
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="apiKey" className="text-sm font-medium">OpenAI API Key</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="apiKey"
-                    type={showApiKey ? 'text' : 'password'}
-                    value={settings.openai_api_key}
-                    onChange={(e) => setSettings({ ...settings, openai_api_key: e.target.value })}
-                    placeholder="sk-..."
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500">
-                Get your API key from{' '}
-                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-purple-600 hover:underline">
-                  OpenAI Dashboard
-                </a>
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
+            {canEdit && (
               <Button
-                onClick={handleSaveApiKey}
-                disabled={saving}
-                className="bg-purple-500 hover:bg-purple-600"
+                onClick={handleSaveEmailTemplates}
+                disabled={savingTemplates}
+                className="mt-4 bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#080D1C] font-bold"
               >
-                {saving ? (
+                {savingTemplates ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : saveSuccess ? (
+                ) : templatesSaveSuccess ? (
                   <CheckCircle className="h-4 w-4 mr-2" />
                 ) : (
                   <Save className="h-4 w-4 mr-2" />
                 )}
-                {saveSuccess ? 'Saved!' : 'Save API Key'}
+                {templatesSaveSuccess ? 'Saved!' : 'Save Templates'}
               </Button>
-              
-              {settings.openai_api_key && (
-                <span className="flex items-center gap-1 text-sm text-emerald-600">
-                  <CheckCircle className="h-4 w-4" />
-                  API key configured
-                </span>
-              )}
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <div className="flex gap-2">
-                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm text-amber-800 font-medium">Important Notes:</p>
-                  <ul className="text-xs text-amber-700 mt-1 list-disc list-inside space-y-1">
-                    <li>The API key is stored securely in the database</li>
-                    <li>OpenAI charges for API usage - monitor your usage</li>
-                    <li>Use GPT-3.5-turbo for cost-effective match generation</li>
-                    <li>Only Super Admins can view and modify this setting</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Games & Pricing Management */}
-        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg lg:col-span-1">
-          <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Gamepad2 className="h-5 w-5" />
-                  Games & Pricing
-                </CardTitle>
-                <CardDescription className="text-emerald-100">
-                  Manage games, prices, and team sizes
-                </CardDescription>
+        {/* SMTP Email Settings */}
+        <Card className="bg-[#131B38] text-[#F8FAFC] border border-white/[0.08] shadow-xl lg:col-span-2">
+          <CardHeader className="border-b border-white/[0.08]">
+            <CardTitle className="flex items-center gap-2 text-[#F8FAFC]">
+              <Server className="h-5 w-5 text-blue-400" />
+              Email Configuration (SMTP)
+            </CardTitle>
+            <CardDescription className="text-[#94A3B8]">
+              Secrets are masked when retrieved. Leave App Password unchanged to preserve existing password.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="smtpEmail" className="text-xs text-[#94A3B8]">
+                    Email Address *
+                  </Label>
+                  <Input
+                    id="smtpEmail"
+                    type="email"
+                    disabled={!canEdit}
+                    value={settings.smtp_email}
+                    onChange={(e) => setSettings({ ...settings, smtp_email: e.target.value })}
+                    placeholder="sports@pucit.edu.pk"
+                    className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtpPassword" className="text-xs text-[#94A3B8]">
+                    App Password *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="smtpPassword"
+                      type={showSmtpPassword ? 'text' : 'password'}
+                      disabled={!canEdit}
+                      value={settings.smtp_password}
+                      onChange={(e) => setSettings({ ...settings, smtp_password: e.target.value })}
+                      autoComplete="off"
+                      placeholder="16-character app password"
+                      className="pr-10 bg-[#0B1124] border-white/15 text-[#F8FAFC]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                      aria-label="Toggle password visibility"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-white"
+                    >
+                      {showSmtpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtpFromName" className="text-xs text-[#94A3B8]">
+                    From Name
+                  </Label>
+                  <Input
+                    id="smtpFromName"
+                    disabled={!canEdit}
+                    value={settings.smtp_from_name}
+                    onChange={(e) => setSettings({ ...settings, smtp_from_name: e.target.value })}
+                    className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
+                  />
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={handleSyncPdfGames}
-                  disabled={syncingPdfGames}
-                  size="sm"
-                  className="bg-white/15 hover:bg-white/25 text-white"
-                >
-                  {syncingPdfGames ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                  Sync PDF (49)
-                </Button>
-                <Button
-                  onClick={() => handleOpenGameDialog()}
-                  size="sm"
-                  className="bg-white/20 hover:bg-white/30 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Game
-                </Button>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="smtpHost" className="text-xs text-[#94A3B8]">
+                      SMTP Server
+                    </Label>
+                    <Input
+                      id="smtpHost"
+                      disabled={!canEdit}
+                      value={settings.smtp_host}
+                      onChange={(e) => setSettings({ ...settings, smtp_host: e.target.value })}
+                      className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="smtpPort" className="text-xs text-[#94A3B8]">
+                      Port
+                    </Label>
+                    <Input
+                      id="smtpPort"
+                      disabled={!canEdit}
+                      value={settings.smtp_port}
+                      onChange={(e) => setSettings({ ...settings, smtp_port: e.target.value })}
+                      className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
+                    />
+                  </div>
+                </div>
+
+                {canEdit && (
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      onClick={handleSaveSmtp}
+                      disabled={savingSmtp}
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      {savingSmtp ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : smtpSaveSuccess ? (
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      {smtpSaveSuccess ? 'Saved!' : 'Save SMTP'}
+                    </Button>
+                    <Button
+                      onClick={handleTestEmail}
+                      disabled={testingEmail || !settings.smtp_email}
+                      variant="outline"
+                      className="border-white/15 bg-white/5 text-[#F8FAFC] hover:bg-white/10"
+                    >
+                      {testingEmail ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      Send Test Email
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-4">
-            {loadingGames ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
-              </div>
-            ) : Object.keys(groupedGames).length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
-                <Gamepad2 className="h-12 w-12 mx-auto text-slate-300 mb-2" />
-                <p>No games configured</p>
-                <p className="text-sm">Click "Add Game" to get started</p>
-              </div>
-            ) : (
-              <div className="max-h-[400px] overflow-y-auto space-y-2">
-                {Object.entries(groupedGames).map(([name, { boys, girls }]) => (
-                  <div key={name} className="border rounded-lg p-3 hover:bg-slate-50 transition-colors">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-slate-800 truncate">{name}</h4>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {boys && (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                              ♂ Rs.{boys.price}
-                              {boys.players && boys.players > 1 && (
-                                <span className="text-blue-500">({boys.players}p)</span>
-                              )}
-                            </span>
-                          )}
-                          {girls && (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-pink-100 text-pink-700 rounded">
-                              ♀ Rs.{girls.price}
-                              {girls.players && girls.players > 1 && (
-                                <span className="text-pink-500">({girls.players}p)</span>
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex gap-1 flex-shrink-0">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleOpenGameDialog(boys || girls!)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4 text-slate-400" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDeleteGame(name)}
-                          className="h-8 w-8 p-0 hover:text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Game Add/Edit Dialog */}
       <Dialog open={gameDialogOpen} onOpenChange={setGameDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-[#0B1124] border-white/15 text-[#F8FAFC]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Gamepad2 className="h-5 w-5 text-emerald-600" />
+            <DialogTitle className="flex items-center gap-2 text-[#F8FAFC]">
+              <Gamepad2 className="h-5 w-5 text-[#12E2C4]" />
               {editingGame ? 'Edit Game' : 'Add New Game'}
             </DialogTitle>
-            <DialogDescription>
-              {editingGame ? 'Update game pricing and settings' : 'Add a new game with pricing'}
+            <DialogDescription className="text-[#94A3B8]">
+              Changes sync immediately to Public Games Directory and Registration pricing.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 mt-4">
+          <div className="space-y-4 mt-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Game Name *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#94A3B8]">Game Name *</Label>
                 <Input
                   value={gameForm.game_name}
                   onChange={(e) => setGameForm({ ...gameForm, game_name: e.target.value })}
-                  placeholder="e.g., Cricket, Football, Chess"
+                  placeholder="e.g. Futsal"
+                  className="bg-[#131B38] border-white/15 text-[#F8FAFC]"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#94A3B8]">Category</Label>
                 <Select
                   value={gameForm.category}
                   onValueChange={(v) => setGameForm({ ...gameForm, category: v })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-[#131B38] border-white/15 text-[#F8FAFC]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="team">Team Sports</SelectItem>
-                    <SelectItem value="race">Races &amp; Relays</SelectItem>
-                    <SelectItem value="racket">Racket Sports</SelectItem>
-                    <SelectItem value="esports">Esports Arena</SelectItem>
-                    <SelectItem value="board">Board &amp; Card</SelectItem>
-                    <SelectItem value="skill">Fun &amp; Skill</SelectItem>
+                    <SelectItem value="Team Sports">Team Sports</SelectItem>
+                    <SelectItem value="Races & Track">Races &amp; Track</SelectItem>
+                    <SelectItem value="Racket Sports">Racket Sports</SelectItem>
+                    <SelectItem value="Esports">Esports</SelectItem>
+                    <SelectItem value="Board & Strategy">Board &amp; Strategy</SelectItem>
+                    <SelectItem value="Fun & Strength">Fun &amp; Strength</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
+            <div className="flex items-center justify-between gap-4 p-3 rounded-xl bg-[#131B38] border border-white/10 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={gameForm.is_active}
+                  onChange={(e) => setGameForm({ ...gameForm, is_active: e.target.checked })}
+                />
+                <span>Visible &amp; Active</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={gameForm.coupon_eligible}
+                  onChange={(e) => setGameForm({ ...gameForm, coupon_eligible: e.target.checked })}
+                />
+                <span>Coupon Eligible</span>
+              </label>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
-              {/* Male Pricing */}
-              <div className="space-y-3 p-3 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-800 flex items-center gap-1">
-                  <span className="text-lg">♂</span> Male
-                </h4>
-                <div className="space-y-2">
-                  <Label className="text-sm text-blue-700">Price (Rs.)</Label>
+              <div className="space-y-2.5 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                <h4 className="font-medium text-blue-300 text-sm">Boys Division</h4>
+                <div className="space-y-1">
+                  <Label className="text-xs text-blue-200">Price (Rs.)</Label>
                   <Input
                     type="number"
+                    min={0}
                     value={gameForm.boys_price}
                     onChange={(e) => setGameForm({ ...gameForm, boys_price: e.target.value })}
-                    placeholder="e.g., 200"
+                    className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm text-blue-700">Team Size</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs text-blue-200">Players / Team</Label>
                   <Input
                     type="number"
+                    min={1}
                     value={gameForm.boys_players}
                     onChange={(e) => setGameForm({ ...gameForm, boys_players: e.target.value })}
-                    placeholder="1 for singles"
+                    className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
                   />
                 </div>
               </div>
 
-              {/* Female Pricing */}
-              <div className="space-y-3 p-3 bg-pink-50 rounded-lg">
-                <h4 className="font-medium text-pink-800 flex items-center gap-1">
-                  <span className="text-lg">♀</span> Female
-                </h4>
-                <div className="space-y-2">
-                  <Label className="text-sm text-pink-700">Price (Rs.)</Label>
+              <div className="space-y-2.5 p-3 bg-pink-500/10 border border-pink-500/20 rounded-xl">
+                <h4 className="font-medium text-pink-300 text-sm">Girls Division</h4>
+                <div className="space-y-1">
+                  <Label className="text-xs text-pink-200">Price (Rs.)</Label>
                   <Input
                     type="number"
+                    min={0}
                     value={gameForm.girls_price}
                     onChange={(e) => setGameForm({ ...gameForm, girls_price: e.target.value })}
-                    placeholder="e.g., 200"
+                    className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm text-pink-700">Team Size</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs text-pink-200">Players / Team</Label>
                   <Input
                     type="number"
+                    min={1}
                     value={gameForm.girls_players}
                     onChange={(e) => setGameForm({ ...gameForm, girls_players: e.target.value })}
-                    placeholder="1 for singles"
+                    className="bg-[#0B1124] border-white/15 text-[#F8FAFC]"
                   />
                 </div>
               </div>
             </div>
 
-            <p className="text-xs text-slate-500">
-              Leave price empty to disable the game for that gender. Team size of 1 means individual game.
-            </p>
-
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setGameDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setGameDialogOpen(false)}
+                className="border-white/15 bg-white/5 text-[#F8FAFC]"
+              >
                 Cancel
               </Button>
               <Button
                 onClick={handleSaveGame}
                 disabled={savingGame || !gameForm.game_name.trim()}
-                className="bg-emerald-500 hover:bg-emerald-600"
+                className="bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#080D1C] font-bold"
               >
-                {savingGame ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
+                {savingGame ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 Save Game
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel={confirmState.confirmLabel}
+        destructive={confirmState.destructive}
+        loading={confirmLoading}
+        onCancel={() => setConfirmState((s) => ({ ...s, open: false }))}
+        onConfirm={async () => {
+          setConfirmLoading(true);
+          try {
+            await confirmState.onConfirm();
+            setConfirmState((s) => ({ ...s, open: false }));
+          } finally {
+            setConfirmLoading(false);
+          }
+        }}
+      />
     </div>
   );
 }

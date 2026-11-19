@@ -43,7 +43,12 @@ import {
   MessageCircle,
   Copy,
   Check,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
+import { canEditPage, useAdminSession } from '@/lib/admin-session-context';
 
 type TeamMember = { name: string; rollNumber: string; contactNumber: string };
 type Registration = {
@@ -66,6 +71,9 @@ type Registration = {
   screenshot_url: string | null;
   status: string;
   created_at: string;
+  has_screenshot?: boolean;
+  is_duplicate_roll?: boolean;
+  items?: Array<{ game_name: string; unit_price: number; currency: string; players_count?: number }>;
 };
 
 type Stats = {
@@ -83,8 +91,24 @@ type GamePrice = {
 };
 
 export default function RegistrationsPage() {
+  const adminSession = useAdminSession();
+  const canEdit = canEditPage(adminSession, '/admin/registrations');
+  const toast = useToast();
+
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [stats, setStats] = useState<Stats>({
     total: 0,
     paid: 0,
@@ -165,16 +189,20 @@ export default function RegistrationsPage() {
     if (gameFilter !== 'all') params.set('game', gameFilter);
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
+    params.set('limit', '500');
 
     fetch(`/api/registrations?${params.toString()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setRegistrations(data.data);
-          calculateDateRangeStats(data.data);
+          setRegistrations(data.data || []);
+          setSelectedIds([]);
+          calculateDateRangeStats(data.data || []);
+        } else {
+          toast.error(data.error || 'Failed to fetch registrations');
         }
       })
-      .catch(console.error)
+      .catch(() => toast.error('Failed to fetch registrations'))
       .finally(() => setLoading(false));
   };
 
@@ -201,23 +229,68 @@ export default function RegistrationsPage() {
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await response.json();
-      if (data.success) loadData();
-      else alert('Failed: ' + data.error);
-    } catch (error) {
-      alert('Failed to update status');
+      if (data.success) {
+        toast.success(`Updated status to ${newStatus.replace('_', ' ')}`);
+        loadData();
+      } else {
+        toast.error(data.error || 'Failed to update status');
+      }
+    } catch {
+      toast.error('Failed to update status');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this registration?')) return;
-    try {
-      const response = await fetch(`/api/registrations/${id}`, { method: 'DELETE' });
-      const data = await response.json();
-      if (data.success) loadData();
-      else alert('Failed: ' + data.error);
-    } catch (error) {
-      alert('Failed to delete');
-    }
+  const handleBulkStatus = (targetStatus: 'paid' | 'rejected') => {
+    if (selectedIds.length === 0) return;
+    setConfirmState({
+      open: true,
+      title: `${targetStatus === 'paid' ? 'Approve' : 'Reject'} ${selectedIds.length} selected registrations?`,
+      description:
+        targetStatus === 'paid'
+          ? 'Eligible pending/rejected entries will be marked Paid, synced to Finance Ledger, and notified by email.'
+          : 'Eligible pending entries will be marked Rejected and notified by email.',
+      confirmLabel: targetStatus === 'paid' ? 'Approve Selected' : 'Reject Selected',
+      destructive: targetStatus === 'rejected',
+      onConfirm: async () => {
+        setBulkProcessing(true);
+        try {
+          const res = await fetch('/api/registrations', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: selectedIds, status: targetStatus }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Updated ${data.updatedCount} registrations (${data.skippedCount} skipped)`);
+            loadData();
+          } else {
+            toast.error(data.error || 'Bulk update failed');
+          }
+        } finally {
+          setBulkProcessing(false);
+        }
+      },
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    setConfirmState({
+      open: true,
+      title: 'Delete this registration?',
+      description: 'Paid registrations cannot be deleted directly and must be refunded instead.',
+      confirmLabel: 'Delete Registration',
+      destructive: true,
+      onConfirm: async () => {
+        const response = await fetch(`/api/registrations/${id}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (data.success) {
+          toast.success('Registration deleted');
+          loadData();
+        } else {
+          toast.error(data.error || 'Failed to delete registration');
+        }
+      },
+    });
   };
 
   const handleExport = async () => {
@@ -235,7 +308,7 @@ export default function RegistrationsPage() {
       const res = await fetch(`/api/export?${params.toString()}`, { credentials: 'include' });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        alert(err?.error || `Export failed (${res.status})`);
+        toast.error(err?.error || `Export failed (${res.status})`);
         return;
       }
       const blob = await res.blob();
@@ -247,23 +320,37 @@ export default function RegistrationsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error(e);
-      alert('Export failed. Please try again.');
+    } catch {
+      toast.error('Export failed. Please try again.');
     }
   };
 
-  const handleView = (reg: Registration) => {
+  const handleView = async (reg: Registration) => {
     setSelectedRegistration(reg);
     setDiscountValue(reg.discount?.toString() || '0');
     setEditingDiscount(false);
     setViewDialogOpen(true);
+    setLoadingDetail(true);
+    try {
+      const res = await fetch(`/api/registrations/${reg.id}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setSelectedRegistration(data.data);
+      }
+    } catch {
+      // Keep summary record
+    } finally {
+      setLoadingDetail(false);
+    }
   };
 
   const handleSaveDiscount = async () => {
     if (!selectedRegistration) return;
     const discountNum = parseFloat(discountValue) || 0;
-    if (discountNum < 0) { alert('Discount cannot be negative'); return; }
+    if (discountNum < 0) {
+      toast.error('Discount cannot be negative');
+      return;
+    }
 
     setSavingDiscount(true);
     try {
@@ -276,8 +363,11 @@ export default function RegistrationsPage() {
       if (data.success) {
         setSelectedRegistration({ ...selectedRegistration, discount: discountNum });
         setEditingDiscount(false);
+        toast.success('Discount updated');
         fetchRegistrations();
-      } else alert('Failed: ' + data.error);
+      } else {
+        toast.error(data.error || 'Failed to update discount');
+      }
     } finally {
       setSavingDiscount(false);
     }
@@ -498,11 +588,57 @@ export default function RegistrationsPage() {
         </CardHeader>
 
         <CardContent className="p-0">
+          {canEdit && selectedIds.length > 0 && (
+            <div className="p-3 bg-blue-50 border-b border-blue-200 flex flex-wrap items-center justify-between gap-2 text-slate-900">
+              <span className="text-sm font-medium">{selectedIds.length} registration(s) selected</span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  disabled={bulkProcessing}
+                  onClick={() => handleBulkStatus('paid')}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  Approve Selected
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={bulkProcessing}
+                  onClick={() => handleBulkStatus('rejected')}
+                >
+                  Reject Selected
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setSelectedIds([])}>
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Desktop Table */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+                  {canEdit && (
+                    <th className="p-4 text-left w-10">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all visible registrations"
+                        checked={
+                          paginatedRegistrations.length > 0 &&
+                          paginatedRegistrations.every((r) => selectedIds.includes(r.id))
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(paginatedRegistrations.map((r) => r.id));
+                          } else {
+                            setSelectedIds([]);
+                          }
+                        }}
+                      />
+                    </th>
+                  )}
                   <th className="p-4 text-left font-semibold">Ticket</th>
                   <th className="p-4 text-left font-semibold">Participant</th>
                   <th className="p-4 text-left font-semibold">Games</th>
@@ -518,16 +654,43 @@ export default function RegistrationsPage() {
                   try { selectedGames = Array.isArray(reg.selected_games) ? reg.selected_games : JSON.parse(reg.selected_games); } catch {}
                   return (
                     <tr key={reg.id} className="hover:bg-blue-50/50 transition-colors group">
+                      {canEdit && (
+                        <td className="p-4">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select registration ${reg.name}`}
+                            checked={selectedIds.includes(reg.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedIds((prev) => Array.from(new Set([...prev, reg.id])));
+                              } else {
+                                setSelectedIds((prev) => prev.filter((x) => x !== reg.id));
+                              }
+                            }}
+                          />
+                        </td>
+                      )}
                       <td className="p-4">
                         {reg.registration_number ? <span className="font-bold text-blue-600">#{reg.registration_number}</span> : <span className="text-slate-400">-</span>}
                       </td>
                       <td className="p-4">
-                        <p className="font-semibold text-slate-800">{reg.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-slate-800">{reg.name}</p>
+                          {reg.is_duplicate_roll && (
+                            <span
+                              title="Roll number appears in multiple registrations"
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-medium"
+                            >
+                              <AlertTriangle className="w-3 h-3" />
+                              Multi
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-slate-500">{reg.roll_number}</p>
                       </td>
                       <td className="p-4">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${reg.gender === 'boys' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
-                          {reg.gender === 'boys' ? '♂ Male' : '♀ Female'}
+                          {reg.gender === 'boys' ? 'Boys' : 'Girls'}
                         </span>
                         <span className="ml-2 text-sm">{selectedGames.length} game(s)</span>
                       </td>
@@ -547,27 +710,50 @@ export default function RegistrationsPage() {
                       <td className="p-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                           reg.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
+                          reg.status === 'refunded' ? 'bg-purple-100 text-purple-700' :
                           reg.status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
                         }`}>
                           {reg.status.replace('_', ' ').toUpperCase()}
                         </span>
                       </td>
                       <td className="p-4">
-                        <div className="flex gap-1 opacity-70 group-hover:opacity-100">
+                        <div className="flex gap-1 opacity-80 group-hover:opacity-100">
                           <Button size="sm" variant="outline" onClick={() => handleView(reg)}><Eye className="h-4 w-4" /></Button>
-                          {reg.status !== 'paid' && (
+                          {canEdit && reg.status !== 'paid' && reg.status !== 'refunded' && (
                             <Button size="sm" onClick={() => handleStatusUpdate(reg.id, 'paid')} className="bg-emerald-500 hover:bg-emerald-600 text-white">
                               <CheckCircle2 className="h-4 w-4" />
                             </Button>
                           )}
-                          {reg.status !== 'rejected' && (
+                          {canEdit && (reg.status === 'pending_cash' || reg.status === 'pending_online') && (
                             <Button size="sm" variant="destructive" onClick={() => handleStatusUpdate(reg.id, 'rejected')}>
                               <XCircle className="h-4 w-4" />
                             </Button>
                           )}
-                          <Button size="sm" variant="ghost" onClick={() => handleDelete(reg.id)} className="text-slate-400 hover:text-red-600">
-                            <X className="h-4 w-4" />
-                          </Button>
+                          {canEdit && reg.status === 'paid' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title="Mark Refunded"
+                              onClick={() =>
+                                setConfirmState({
+                                  open: true,
+                                  title: 'Refund this paid registration?',
+                                  description: 'This marks the registration Refunded and records a compensating expense entry in Finance.',
+                                  confirmLabel: 'Mark Refunded',
+                                  destructive: true,
+                                  onConfirm: () => handleStatusUpdate(reg.id, 'refunded'),
+                                })
+                              }
+                              className="text-purple-700 border-purple-200 hover:bg-purple-50"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canEdit && reg.status !== 'paid' && (
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(reg.id)} className="text-slate-400 hover:text-red-600">
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -670,7 +856,7 @@ export default function RegistrationsPage() {
                 </div>
               )}
 
-              <div className="bg-slate-50 rounded-xl p-4">
+              <div className="bg-slate-50 text-slate-900 rounded-xl p-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2"><Users className="h-4 w-4 text-blue-600" /> Personal Info</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><p className="text-slate-500">Name</p><p className="font-medium">{selectedRegistration.name}</p></div>
@@ -681,7 +867,7 @@ export default function RegistrationsPage() {
                 </div>
               </div>
 
-              <div className="bg-emerald-50 rounded-xl p-4">
+              <div className="bg-emerald-50 text-slate-900 rounded-xl p-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2"><Trophy className="h-4 w-4 text-emerald-600" /> Games</h3>
                 <div className="flex flex-wrap gap-2">
                   {(Array.isArray(selectedRegistration.selected_games) ? selectedRegistration.selected_games : JSON.parse(selectedRegistration.selected_games || '[]')).map((g: string) => (
@@ -703,7 +889,7 @@ export default function RegistrationsPage() {
                 const gamesWithTeams = selectedGamesList.filter((g: string) => Array.isArray(teamMembersMap[g]) && teamMembersMap[g].length > 0);
                 if (gamesWithTeams.length === 0) return null;
                 return (
-                  <div className="bg-blue-50 rounded-xl p-4">
+                  <div className="bg-blue-50 text-slate-900 rounded-xl p-4">
                     <h3 className="font-semibold mb-3 flex items-center gap-2"><Users className="h-4 w-4 text-blue-600" /> Team Members (Team Games)</h3>
                     <div className="space-y-4">
                       {gamesWithTeams.map((gameName: string) => (
@@ -725,7 +911,7 @@ export default function RegistrationsPage() {
                 );
               })()}
 
-              <div className="bg-amber-50 rounded-xl p-4">
+              <div className="bg-amber-50 text-slate-900 rounded-xl p-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2"><DollarSign className="h-4 w-4 text-amber-600" /> Payment</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><p className="text-slate-500">Method</p><p className="font-medium capitalize">{selectedRegistration.payment_method}</p></div>
@@ -755,15 +941,19 @@ export default function RegistrationsPage() {
                   </div>
                   <div className="col-span-2"><p className="text-slate-500">Reference</p><p className="font-mono text-blue-600">{selectedRegistration.slip_id || 'N/A'}</p></div>
                 </div>
-                {selectedRegistration.screenshot_url && (
+                {loadingDetail && selectedRegistration.has_screenshot && !selectedRegistration.screenshot_url ? (
+                  <p className="mt-4 text-xs text-slate-500 flex items-center gap-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading payment screenshot...
+                  </p>
+                ) : selectedRegistration.screenshot_url ? (
                   <div className="mt-4">
                     <p className="text-slate-500 text-sm mb-2">Screenshot</p>
                     <img src={selectedRegistration.screenshot_url} alt="Payment" className="max-w-full rounded-lg border" />
                   </div>
-                )}
+                ) : null}
               </div>
 
-              <div className="bg-purple-50 rounded-xl p-4">
+              <div className="bg-purple-50 text-slate-900 rounded-xl p-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2"><Calendar className="h-4 w-4 text-purple-600" /> Details</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><p className="text-slate-500">ID</p><p className="font-mono text-xs break-all">{selectedRegistration.id}</p></div>
@@ -800,7 +990,7 @@ export default function RegistrationsPage() {
               />
             </div>
 
-            <div className="bg-slate-50 rounded-lg p-4">
+            <div className="bg-slate-50 text-slate-900 rounded-lg p-4">
               <h4 className="font-medium text-slate-700 mb-3">
                 {phoneSearch ? 'Search Results' : 'All Paid Registrations'}
               </h4>
@@ -911,6 +1101,27 @@ export default function RegistrationsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {confirmState && (
+        <ConfirmDialog
+          open={confirmState.open}
+          title={confirmState.title}
+          description={confirmState.description}
+          confirmLabel={confirmState.confirmLabel}
+          destructive={confirmState.destructive}
+          loading={confirmBusy}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={async () => {
+            setConfirmBusy(true);
+            try {
+              await confirmState.onConfirm();
+              setConfirmState(null);
+            } finally {
+              setConfirmBusy(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

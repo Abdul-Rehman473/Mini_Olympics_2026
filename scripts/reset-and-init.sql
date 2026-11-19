@@ -58,48 +58,12 @@ CREATE TABLE IF NOT EXISTS games_pricing (
   UNIQUE(game_name, gender)
 );
 
--- Step 6: Insert games pricing data
-INSERT INTO games_pricing (game_name, gender, price, players) VALUES
--- Boys games
-('Cricket', 'boys', 2200.00, 11),
-('Football', 'boys', 2200.00, 11),
-('Double Wicket', 'boys', 500.00, 2),
-('Badminton Singles', 'boys', 200.00, 1),
-('Badminton Doubles', 'boys', 400.00, 2),
-('Table Tennis Singles', 'boys', 200.00, 1),
-('Table Tennis Doubles', 'boys', 400.00, 2),
-('Foosball Doubles', 'boys', 400.00, 2),
-('Ludo Singles', 'boys', 150.00, 1),
-('Ludo Doubles', 'boys', 300.00, 2),
-('Carrom Singles', 'boys', 150.00, 1),
-('Carrom Doubles', 'boys', 250.00, 2),
-('Darts Singles', 'boys', 150.00, 1),
-('Tug of War', 'boys', 1000.00, 10),
-('Jenga', 'boys', 150.00, 1),
-('Chess', 'boys', 150.00, 1),
-('Arm Wrestling', 'boys', 150.00, 1),
-('Pitho Gol Garam', 'boys', 1000.00, 6),
-('Uno', 'boys', 100.00, 1),
-('Tekken', 'boys', 300.00, 1),
-('Fifa', 'boys', 300.00, 1),
--- Girls games
-('Cricket', 'girls', 1200.00, 5),
-('Football', 'girls', 1200.00, 6),
-('Badminton Singles', 'girls', 200.00, 1),
-('Badminton Doubles', 'girls', 200.00, 2),
-('Table Tennis Doubles', 'girls', 400.00, 2),
-('Foosball Doubles', 'girls', 400.00, 2),
-('Ludo Singles', 'girls', 150.00, 1),
-('Ludo Doubles', 'girls', 300.00, 2),
-('Carrom Singles', 'girls', 150.00, 1),
-('Carrom Doubles', 'girls', 250.00, 2),
-('Darts Singles', 'girls', 150.00, 1),
-('Tug of War', 'girls', 600.00, 6),
-('Jenga', 'girls', 150.00, 1),
-('Chess', 'girls', 150.00, 1),
-('Tekken', 'girls', 300.00, 1),
-('Fifa', 'girls', 300.00, 1)
-ON CONFLICT (game_name, gender) DO NOTHING;
+-- Step 6: Run `node scripts/sync-pdf-games.js --replace` after schema reset to seed all 49 canonical games.
+ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS game_id VARCHAR(120);
+ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS coupon_eligible BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'PKR';
 
 -- Step 7: Create esports_settings table
 CREATE TABLE IF NOT EXISTS esports_settings (

@@ -33,7 +33,11 @@ import {
   UserCheck,
   Gamepad2,
   Lock,
+  History,
+  LogIn,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 type PageMeta = {
   key: string;
@@ -87,6 +91,12 @@ export default function PermissionsPage() {
 
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'audit'>('accounts');
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<AdminUserRecord | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
+  const toast = useToast();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUserRecord | null>(null);
@@ -322,20 +332,63 @@ export default function PermissionsPage() {
     }
   };
 
-  const handleDeleteUser = async (user: AdminUserRecord) => {
-    if (!confirm(`Delete account "${user.username}"? Their permissions will be removed.`)) return;
+  const loadAuditLogs = async () => {
+    setLoadingAudit(true);
     try {
-      const res = await fetch(`/api/admin/permissions?userId=${encodeURIComponent(user.id)}`, {
+      const res = await fetch('/api/admin/audit-logs?limit=50', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success) {
+        setAuditLogs(data.data || []);
+      }
+    } catch {
+      toast.error('Failed to load audit logs');
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
+  const handleImpersonate = async (user: AdminUserRecord) => {
+    try {
+      const res = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: user.id }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Impersonation failed');
+        return;
+      }
+      toast.success(`Now viewing as ${data.username}`);
+      window.location.href = user.role === 'coordinator' ? '/admin/coordinator' : '/admin/dashboard';
+    } catch {
+      toast.error('Impersonation request failed');
+    }
+  };
+
+  const handleDeleteUser = (user: AdminUserRecord) => {
+    setConfirmDeleteUser(user);
+  };
+
+  const executeDeleteUser = async () => {
+    if (!confirmDeleteUser) return;
+    setDeletingUser(true);
+    try {
+      const res = await fetch(`/api/admin/permissions?userId=${encodeURIComponent(confirmDeleteUser.id)}`, {
         method: 'DELETE',
       });
       const data = await res.json();
       if (!data.success) {
-        alert(data.error || 'Failed to delete user');
+        toast.error(data.error || 'Failed to delete user');
         return;
       }
+      toast.success(`Deleted account ${confirmDeleteUser.username}`);
+      setConfirmDeleteUser(null);
       await loadData();
     } catch {
-      alert('Failed to delete user');
+      toast.error('Failed to delete user');
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -398,6 +451,33 @@ export default function PermissionsPage() {
         {canEditPermissions && (
           <div className="flex flex-wrap gap-2">
             <Button
+              variant={activeTab === 'accounts' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('accounts')}
+              className={
+                activeTab === 'accounts'
+                  ? 'rounded-xl text-xs font-mono font-bold bg-[#182244] border border-[#12E2C4]/40 text-[#12E2C4]'
+                  : 'rounded-xl text-xs font-mono bg-[#0B1124] border-white/10 text-[#94A3B8]'
+              }
+            >
+              <Users className="w-4 h-4 mr-1.5" />
+              Accounts
+            </Button>
+            <Button
+              variant={activeTab === 'audit' ? 'default' : 'outline'}
+              onClick={() => {
+                setActiveTab('audit');
+                loadAuditLogs();
+              }}
+              className={
+                activeTab === 'audit'
+                  ? 'rounded-xl text-xs font-mono font-bold bg-[#182244] border border-[#12E2C4]/40 text-[#12E2C4]'
+                  : 'rounded-xl text-xs font-mono bg-[#0B1124] border-white/10 text-[#94A3B8]'
+              }
+            >
+              <History className="w-4 h-4 mr-1.5" />
+              Audit Logs
+            </Button>
+            <Button
               onClick={() => openCreateModal('coordinator')}
               className="rounded-xl text-xs font-mono font-bold tracking-wider bg-[#F068B1] hover:bg-[#dc529c] text-white uppercase"
             >
@@ -414,6 +494,61 @@ export default function PermissionsPage() {
           </div>
         )}
       </div>
+
+      {activeTab === 'audit' ? (
+        <div className="p-6 rounded-2xl bg-[#131B38] border border-white/[0.08] space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-[#F8FAFC] flex items-center gap-2">
+              <History className="w-4 h-4 text-[#12E2C4]" />
+              Recent Admin &amp; Permission Audit Trail
+            </h2>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={loadAuditLogs}
+              className="border-white/15 bg-white/5 text-xs text-[#F8FAFC]"
+            >
+              Refresh
+            </Button>
+          </div>
+          {loadingAudit ? (
+            <div className="py-10 flex justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-[#12E2C4]" />
+            </div>
+          ) : auditLogs.length === 0 ? (
+            <p className="text-xs font-mono text-[#94A3B8] py-8 text-center">No audit events recorded yet.</p>
+          ) : (
+            <div className="space-y-2 max-h-[540px] overflow-y-auto">
+              {auditLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="p-3.5 rounded-xl bg-[#0B1124] border border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono"
+                >
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-0.5 rounded bg-[#12E2C4]/15 text-[#12E2C4] font-bold">
+                        {log.action}
+                      </span>
+                      <span className="text-[#F8FAFC]">by @{log.actor_username || 'system'}</span>
+                      <span className="text-[#94A3B8]">
+                        ({log.target_type}
+                        {log.target_id ? `:${log.target_id}` : ''})
+                      </span>
+                    </div>
+                    {log.after_json && (
+                      <p className="text-[11px] text-[#94A3B8] truncate max-w-3xl">{log.after_json}</p>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-[#64748B] shrink-0">
+                    {new Date(log.created_at).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -512,15 +647,28 @@ export default function PermissionsPage() {
 
                 {canEditPermissions && !isProtectedSuper && (
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEditModal(user)}
-                      className="h-8 px-2.5 bg-[#0B1124] border-white/[0.1] text-[#12E2C4] hover:bg-[#182244]"
-                    >
-                      <Pencil className="w-3.5 h-3.5 mr-1" />
-                      Edit
-                    </Button>
+                    {isSuperAdmin && user.role !== 'super_admin' && user.isActive && currentUser?.userId !== user.id && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleImpersonate(user)}
+                        title="Impersonate user (logged)"
+                        className="h-8 px-2 bg-[#0B1124] border-amber-500/30 text-amber-300 hover:bg-amber-500/15"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    {currentUser?.userId !== user.id && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditModal(user)}
+                        className="h-8 px-2.5 bg-[#0B1124] border-white/[0.1] text-[#12E2C4] hover:bg-[#182244]"
+                      >
+                        <Pencil className="w-3.5 h-3.5 mr-1" />
+                        Edit
+                      </Button>
+                    )}
                     {currentUser?.userId !== user.id && (
                       <Button
                         size="sm"
@@ -614,6 +762,19 @@ export default function PermissionsPage() {
           No accounts match your filter.
         </div>
       )}
+        </>
+      )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDeleteUser)}
+        title={`Delete account "@${confirmDeleteUser?.username}"?`}
+        description="This staff account, active sessions, and delegated permissions will be permanently deleted."
+        confirmLabel="Delete Account"
+        destructive
+        loading={deletingUser}
+        onCancel={() => setConfirmDeleteUser(null)}
+        onConfirm={executeDeleteUser}
+      />
 
       {/* Create / Edit User & Permissions Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -660,7 +821,7 @@ export default function PermissionsPage() {
                   type="password"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder={editingUser ? '••••••••' : 'Minimum 4 characters'}
+                  placeholder={editingUser ? '•••••••• (min 8 chars)' : 'Minimum 8 characters'}
                   className="bg-[#0B1124] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl"
                 />
               </div>

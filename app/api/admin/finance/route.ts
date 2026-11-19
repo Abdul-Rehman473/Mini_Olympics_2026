@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPagePermission(session, '/admin/finance', 'view') && !hasPagePermission(session, '/admin/dashboard', 'view')) {
+    if (!hasPagePermission(session, '/admin/finance', 'view')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -195,6 +195,16 @@ export async function PUT(request: NextRequest) {
       WHERE id = ${id}
     `;
 
+    const { logAudit, getClientIp } = await import('@/lib/audit');
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'finance.delete',
+      targetType: 'finance_record',
+      targetId: id,
+      ip: getClientIp(request),
+    });
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Update finance record error:', error);
@@ -225,6 +235,16 @@ export async function DELETE(request: NextRequest) {
     }
 
     await sql`DELETE FROM finance_records WHERE id = ${id}`;
+
+    const { logAudit, getClientIp } = await import('@/lib/audit');
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'finance.delete',
+      targetType: 'finance_record',
+      targetId: id,
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

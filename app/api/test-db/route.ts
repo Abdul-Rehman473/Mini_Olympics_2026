@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { getAdminSession } from '@/lib/auth';
+import { cookies } from 'next/headers';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('admin_session')?.value;
+    const session = await getAdminSession(sessionToken);
+    if (!session || session.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Forbidden - Super Admin required' }, { status: 403 });
+    }
+
     // Check if table exists
     const tableCheck = (await sql`
       SELECT EXISTS (

@@ -7,13 +7,15 @@ import { cookies } from 'next/headers';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Helper function to escape CSV values
+// Helper function to escape CSV values and neutralize spreadsheet formula injection
 function escapeCsvValue(value: any): string {
   if (value === null || value === undefined) {
     return '';
   }
-  const stringValue = String(value);
-  // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+  let stringValue = String(value);
+  if (/^[=+\-@\t\r]/.test(stringValue)) {
+    stringValue = `'${stringValue}`;
+  }
   if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
     return `"${stringValue.replace(/"/g, '""')}"`;
   }

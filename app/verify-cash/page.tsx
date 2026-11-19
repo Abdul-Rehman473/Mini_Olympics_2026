@@ -24,6 +24,7 @@ import {
   Check,
   AlertCircle,
 } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
 
 type Registration = {
   id: string;
@@ -45,6 +46,7 @@ type Registration = {
 };
 
 function VerifyCashContent() {
+  const toast = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
   const regNum = searchParams?.get('regNum');
@@ -172,7 +174,7 @@ function VerifyCashContent() {
     try {
       const discountValue = parseFloat(discount) || 0;
       if (discountValue < 0) {
-        alert('Discount cannot be negative');
+        toast.error('Discount cannot be negative');
         setApproving(false);
         return;
       }
@@ -189,12 +191,12 @@ function VerifyCashContent() {
       const data = await response.json();
       if (data.success) {
         await fetchRegistration(registration.registration_number?.toString(), registration.slip_id);
-        alert('Payment verified & marked PAID successfully!');
+        toast.success('Payment verified & marked PAID successfully!');
       } else {
-        alert('Failed to approve: ' + data.error);
+        toast.error(data.error || 'Failed to approve payment');
       }
     } catch {
-      alert('Failed to approve payment');
+      toast.error('Failed to approve payment');
     } finally {
       setApproving(false);
     }
