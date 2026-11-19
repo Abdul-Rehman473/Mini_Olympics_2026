@@ -31,6 +31,8 @@ type SqlFunction = {
   (query: string, params?: any[]): Promise<any[]>;
   // Unsafe method for raw queries
   unsafe?: (query: string, params?: any[]) => Promise<any[]>;
+  // Neon HTTP non-interactive transaction
+  transaction?: (queriesOrFn: any) => Promise<any[]>;
 };
 
 // Create a typed wrapper that always returns Promise<any[]> for template literal queries
@@ -64,6 +66,10 @@ function createSqlWrapper(): SqlFunction {
   sqlTag.unsafe = (query: string, params?: any[]): Promise<any[]> => {
     return (instance as any).unsafe(query, params).then(normalizeResult);
   };
+
+  sqlTag.transaction = (queriesOrFn: any): Promise<any[]> => {
+    return (instance as any).transaction(queriesOrFn);
+  };
   
   return sqlTag;
 }
@@ -77,7 +83,13 @@ export const sql = sqlWrapper as unknown as {
   (strings: TemplateStringsArray, ...values: any[]): Promise<any[]>;
   (query: string, params?: any[]): Promise<any[]>;
   unsafe?: (query: string, params?: any[]) => Promise<any[]>;
+  transaction?: (queriesOrFn: any) => Promise<any[]>;
 };
+
+export async function runTransaction(queriesOrFn: (txn: any) => any[]): Promise<any[]> {
+  const instance = getSqlInstance() as any;
+  return await instance.transaction(queriesOrFn);
+}
 
 // Helper function to execute queries
 export async function query<T = any>(query: string, params?: any[]): Promise<T[]> {

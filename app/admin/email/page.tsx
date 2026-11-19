@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,483 +13,577 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
+import { useAdminSession, canEditPage } from '@/lib/admin-session-context';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 import {
   Mail,
   Send,
-  Loader2,
   Users,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
   Eye,
-  FileText,
-  CheckCircle,
-  AlertCircle,
-  Image,
-  X,
-  Plus,
+  Sparkles,
+  Search,
+  Lock,
+  Settings,
+  RefreshCw,
 } from 'lucide-react';
 
 type Recipient = {
   email: string;
   name: string;
   gender: string;
+  status: string;
+  registration_number?: number | null;
+  team_name?: string | null;
 };
 
-const emailTemplates = [
+type GameOption = {
+  name: string;
+};
+
+const QUICK_TEMPLATES = [
   {
-    id: 'welcome',
-    name: '🎉 Registration Confirmation',
-    subject: 'Welcome to Mini Olympics 2026!',
-    content: `<h2>Welcome to Mini Olympics 2026! 🏆</h2>
-<p>Dear {name},</p>
-<p>Thank you for registering for the FCIT Sports Mini Olympics 2026. We're excited to have you on board!</p>
-<p>Your registration has been received and is currently being processed.</p>
-<p><strong>What's Next?</strong></p>
-<ul>
-  <li>Complete your payment if not already done</li>
-  <li>Join the WhatsApp groups for your registered games</li>
-  <li>Stay tuned for match schedules</li>
-</ul>
-<p>Good luck and may the best athlete win!</p>`,
-  },
-  {
-    id: 'payment_reminder',
-    name: '💰 Payment Reminder',
-    subject: 'Action Required: Complete Your Mini Olympics Payment',
-    content: `<h2>Payment Reminder 💰</h2>
-<p>Dear {name},</p>
-<p>We noticed that your registration payment for Mini Olympics 2026 is still pending.</p>
-<p>Please complete your payment as soon as possible to confirm your participation.</p>
-<p><strong>Payment Options:</strong></p>
-<ul>
-  <li>Cash payment at the registration desk</li>
-  <li>Online transfer (check registration page for details)</li>
-</ul>
-<p>If you have already paid, please ignore this message or contact us with your payment proof.</p>`,
+    id: 'approval',
+    label: 'Team Approved',
+    subject: 'Mini Olympics 2026 — Registration Approved!',
+    body: `Dear {{name}},\n\nCongratulations! Your registration (Ticket #{{regNum}}, Team: {{teamName}}) for Mini Olympics 2026 has been officially approved.\n\nPlease join your sport WhatsApp group for match schedules, timings, and venue announcements.\n\nBest of luck!`,
   },
   {
     id: 'schedule',
-    name: '📅 Match Schedule',
-    subject: 'Your Match Schedule - Mini Olympics 2026',
-    content: `<h2>Match Schedule Released! 📅</h2>
-<p>Dear {name},</p>
-<p>The match schedules for Mini Olympics 2026 are now available!</p>
-<p>Please check your registered games and note down your match timings.</p>
-<p><strong>Important:</strong></p>
-<ul>
-  <li>Arrive at least 15 minutes before your scheduled match</li>
-  <li>Bring your registration ticket/ID</li>
-  <li>Wear appropriate sports attire</li>
-</ul>
-<p>Best of luck for your matches!</p>`,
+    label: 'Match Schedule Notice',
+    subject: 'Mini Olympics 2026 — Match Schedule Update',
+    body: `Dear {{name}},\n\nMatch schedules for Mini Olympics 2026 have been updated. Please report to your assigned venue 20 minutes before your scheduled match time with your university ID card.\n\nTicket #: {{regNum}} | Team: {{teamName}}`,
   },
   {
-    id: 'announcement',
-    name: '📢 General Announcement',
-    subject: 'Important Update - Mini Olympics 2026',
-    content: `<h2>Important Announcement 📢</h2>
-<p>Dear {name},</p>
-<p>[Your announcement content here]</p>
-<p>Stay connected and follow our social media for live updates.</p>`,
-  },
-  {
-    id: 'custom',
-    name: '✏️ Custom Email',
-    subject: '',
-    content: '',
+    id: 'reminder',
+    label: 'Payment Reminder',
+    subject: 'Mini Olympics 2026 — Payment Verification Reminder',
+    body: `Dear {{name}},\n\nYour registration (Ticket #{{regNum}}) is currently pending payment verification. Please complete your payment and submit your screenshot or visit the cash desk so your team can be included in the official brackets.`,
   },
 ];
 
+function buildBrandedHtml(subject: string, rawBody: string, sample?: Recipient): string {
+  const name = sample?.name || 'Participant';
+  const regNum = sample?.registration_number ? String(sample.registration_number) : '1001';
+  const teamName = sample?.team_name || name;
+
+  const replaced = rawBody
+    .replace(/\{\{name\}\}|\{name\}/gi, name)
+    .replace(/\{\{regNum\}\}|\{regNum\}/gi, regNum)
+    .replace(/\{\{teamName\}\}|\{teamName\}/gi, teamName);
+
+  const paragraphs = replaced
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 14px 0;">${p.replace(/\n/g, '<br/>')}</p>`)
+    .join('');
+
+  return `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#080D1C;">
+  <div style="max-width:600px;margin:0 auto;padding:32px 16px;">
+    <div style="height:5px;border-radius:14px 14px 0 0;background:linear-gradient(90deg,#0081C8 0%,#FCB131 35%,#12E2C4 70%,#EE334E 100%);"></div>
+    <div style="background:linear-gradient(135deg,#131B38 0%,#0B1124 100%);padding:24px 28px;text-align:center;color:#F8FAFC;">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#12E2C4;font-weight:700;">FCIT SPORTS SOCIETY • OFFICIAL NOTICE</p>
+      <h1 style="margin:0;font-size:22px;font-weight:800;">Mini Olympics 2026</h1>
+    </div>
+    <div style="background:#FFFFFF;border-radius:0 0 14px 14px;padding:28px;color:#1E293B;line-height:1.7;font-size:15px;">
+      <h2 style="margin:0 0 16px 0;font-size:18px;color:#0F172A;">${subject || 'Mini Olympics 2026 Update'}</h2>
+      ${paragraphs}
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid #E2E8F0;color:#64748B;font-size:13px;">
+        Best regards,<br/><strong style="color:#0F172A;">FCIT Sports Society</strong>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`.trim();
+}
+
 export default function EmailComposerPage() {
-  const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
+  const toast = useToast();
+  const adminSession = useAdminSession();
+  const canEdit = canEditPage(adminSession, '/admin/email');
+
   const [recipients, setRecipients] = useState<Recipient[]>([]);
-  const [loadingRecipients, setLoadingRecipients] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [sendSuccess, setSendSuccess] = useState(false);
-  
-  // Filter states
-  const [recipientFilter, setRecipientFilter] = useState('paid');
-  const [genderFilter, setGenderFilter] = useState('all');
-  
-  // Email form states
-  const [selectedTemplate, setSelectedTemplate] = useState('welcome');
-  const [subject, setSubject] = useState('Welcome to Mini Olympics 2026!');
-  const [content, setContent] = useState(emailTemplates[0].content);
-  const [customTo, setCustomTo] = useState('');
-  const [cc, setCc] = useState('');
-  const [bcc, setBcc] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
-  
-  // Load recipients based on filter
+  const [games, setGames] = useState<GameOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [smtpConfigured, setSmtpConfigured] = useState(false);
+  const [smtpEmail, setSmtpEmail] = useState<string | null>(null);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending'>('paid');
+  const [genderFilter, setGenderFilter] = useState<'all' | 'boys' | 'girls'>('all');
+  const [gameFilter, setGameFilter] = useState('all');
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [customEmail, setCustomEmail] = useState('');
+
+  // Composer
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [sendProgress, setSendProgress] = useState<{ sent: number; failed: number; total: number } | null>(null);
+
   useEffect(() => {
-    loadRecipients();
-  }, [recipientFilter, genderFilter]);
+    fetch('/api/games?includeInactive=true', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && Array.isArray(d.data)) setGames(d.data);
+      })
+      .catch(() => {});
+  }, []);
 
   const loadRecipients = async () => {
-    setLoadingRecipients(true);
+    setLoading(true);
     try {
-      const params = new URLSearchParams();
-      params.set('filter', recipientFilter);
-      if (genderFilter !== 'all') params.set('gender', genderFilter);
-      
-      const res = await fetch(`/api/admin/email?${params.toString()}`, { cache: 'no-store' });
+      const qs = new URLSearchParams();
+      qs.set('filter', statusFilter);
+      if (genderFilter !== 'all') qs.set('gender', genderFilter);
+      if (gameFilter !== 'all') qs.set('game', gameFilter);
+      const res = await fetch(`/api/admin/email?${qs.toString()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.success) {
-        setRecipients(data.data);
-      }
-    } catch (error) {
-      console.error('Load recipients error:', error);
-    } finally {
-      setLoadingRecipients(false);
-    }
-  };
-
-  const handleTemplateChange = (templateId: string) => {
-    setSelectedTemplate(templateId);
-    const template = emailTemplates.find(t => t.id === templateId);
-    if (template) {
-      setSubject(template.subject);
-      setContent(template.content);
-    }
-  };
-
-  const generateEmailHtml = (recipientName: string = 'Participant') => {
-    const processedContent = content.replace(/{name}/g, recipientName);
-    
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); border-radius: 16px 16px 0 0; padding: 32px; text-align: center; color: white;">
-            ${logoUrl ? `<img src="${logoUrl}" alt="Logo" style="max-width: 120px; margin-bottom: 16px;">` : '<div style="font-size: 48px; margin-bottom: 16px;">🏆</div>'}
-            <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">Mini Olympics 2026</h1>
-            <p style="margin: 0; opacity: 0.9; font-size: 14px;">FCIT Sports Society</p>
-          </div>
-          
-          <!-- Content -->
-          <div style="background: white; border-radius: 0 0 16px 16px; padding: 32px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-            <div style="color: #334155; line-height: 1.7; font-size: 15px;">
-              ${processedContent}
-            </div>
-            
-            <!-- Footer in content -->
-            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0; color: #64748b; font-size: 14px;">
-                Best regards,<br>
-                <strong style="color: #334155;">FCIT Sports Society</strong>
-              </p>
-            </div>
-          </div>
-          
-          <!-- Footer (character icons so they show in all email clients) -->
-          <div style="text-align: center; margin-top: 24px; color: #94a3b8; font-size: 12px;">
-            <p style="margin: 0 0 12px 0;">© 2026 <a href="https://pucit.edu.pk" style="color: #3b82f6; text-decoration: none; font-weight: 600;">FCIT Sports Society</a>. All rights reserved.</p>
-            <p style="margin: 0;">
-              <a href="mailto:sports.oc@pucit.edu.pk" style="color: #64748b; text-decoration: none; font-size: 18px; margin: 0 8px;" title="Email">✉︎</a>
-              <a href="https://facebook.com/PucitSSOldCampus/" style="color: #64748b; text-decoration: none; font-size: 18px; margin: 0 8px;" title="Facebook">ⓕ</a>
-              <a href="https://instagram.com/fcit_oc_sports" style="color: #64748b; text-decoration: none; font-size: 18px; margin: 0 8px;" title="Instagram">📷</a>
-              <a href="https://linkedin.com/company/fcit-sports-society-oc/" style="color: #64748b; text-decoration: none; font-size: 18px; margin: 0 8px;" title="LinkedIn">🔗</a>
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  };
-
-  const handleSendEmails = async () => {
-    const toList = customTo 
-      ? customTo.split(',').map(e => e.trim()).filter(e => e) 
-      : recipients.map(r => r.email);
-
-    if (toList.length === 0) {
-      alert('No recipients selected');
-      return;
-    }
-
-    if (!subject.trim()) {
-      alert('Please enter a subject');
-      return;
-    }
-
-    setSending(true);
-    setSendSuccess(false);
-    
-    try {
-      // Send emails (in batches for bulk)
-      const batchSize = 50;
-      let successCount = 0;
-      let failCount = 0;
-
-      for (let i = 0; i < toList.length; i += batchSize) {
-        const batch = toList.slice(i, i + batchSize);
-        
-        for (const email of batch) {
-          const recipient = recipients.find(r => r.email === email);
-          const html = generateEmailHtml(recipient?.name || 'Participant');
-          
-          try {
-            const res = await fetch('/api/admin/email', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                to: email,
-                cc: cc ? cc.split(',').map(e => e.trim()) : undefined,
-                bcc: bcc ? bcc.split(',').map(e => e.trim()) : undefined,
-                subject,
-                html,
-              }),
-            });
-            
-            if (res.ok) {
-              successCount++;
-            } else {
-              failCount++;
-            }
-          } catch {
-            failCount++;
-          }
-        }
-      }
-
-      if (failCount === 0) {
-        setSendSuccess(true);
-        setTimeout(() => setSendSuccess(false), 5000);
-        alert(`✅ Successfully sent ${successCount} email(s)!`);
+        const list: Recipient[] = data.data || [];
+        setRecipients(list);
+        setSelectedEmails(list.map((r) => r.email));
+        setSmtpConfigured(Boolean(data.smtpConfigured));
+        setSmtpEmail(data.smtpEmail || null);
       } else {
-        alert(`Sent ${successCount} email(s), ${failCount} failed.`);
+        toast.error(data.error || 'Failed to load recipients');
       }
-    } catch (error: any) {
-      alert('Failed to send emails: ' + error.message);
+    } catch {
+      toast.error('Failed to load recipients');
     } finally {
-      setSending(false);
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadRecipients();
+  }, [statusFilter, genderFilter, gameFilter]);
+
+  const visibleRecipients = useMemo(() => {
+    const q = recipientSearch.trim().toLowerCase();
+    if (!q) return recipients;
+    return recipients.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.email.toLowerCase().includes(q) ||
+        (r.team_name || '').toLowerCase().includes(q)
+    );
+  }, [recipients, recipientSearch]);
+
+  const finalTargetRecipients = useMemo(() => {
+    const map = new Map<string, Recipient>();
+    for (const r of recipients) {
+      if (selectedEmails.includes(r.email)) {
+        map.set(r.email.toLowerCase(), r);
+      }
+    }
+    const extra = customEmail
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.includes('@'));
+    for (const em of extra) {
+      if (!map.has(em.toLowerCase())) {
+        map.set(em.toLowerCase(), {
+          email: em,
+          name: 'Participant',
+          gender: 'both',
+          status: 'paid',
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [recipients, selectedEmails, customEmail]);
+
+  const toggleEmail = (email: string) => {
+    setSelectedEmails((prev) =>
+      prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email]
+    );
+  };
+
+  const insertPlaceholder = (token: string) => {
+    setBody((prev) => (prev ? `${prev} ${token}` : token));
+  };
+
+  const handleSendAll = async () => {
+    if (!canEdit) return;
+    setConfirmOpen(false);
+    setSending(true);
+    const targets = finalTargetRecipients;
+    setSendProgress({ sent: 0, failed: 0, total: targets.length });
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const r of targets) {
+      try {
+        const html = buildBrandedHtml(subject, body, r);
+        const res = await fetch('/api/admin/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: r.email,
+            subject,
+            html,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          sent++;
+        } else {
+          failed++;
+        }
+      } catch {
+        failed++;
+      }
+      setSendProgress({ sent, failed, total: targets.length });
+    }
+
+    setSending(false);
+    if (failed === 0) {
+      toast.success(`Successfully sent ${sent} email(s)!`);
+    } else if (sent > 0) {
+      toast.error(`Sent ${sent}, failed ${failed}. Check Gmail SMTP settings.`);
+    } else {
+      toast.error('Failed to send emails. Please verify Gmail SMTP in Settings.');
+    }
+  };
+
+  const previewHtml = useMemo(
+    () => buildBrandedHtml(subject, body, finalTargetRecipients[0] || recipients[0]),
+    [subject, body, finalTargetRecipients, recipients]
+  );
 
   return (
-    <div className="p-4 lg:p-6 pt-16 lg:pt-6 bg-slate-50 min-h-screen">
+    <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-7xl mx-auto space-y-6 text-[#F8FAFC]">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl shadow-lg">
-            <Mail className="h-5 w-5 text-white" />
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/[0.08]">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#131B38] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
+            <OlympicRingsIcon className="w-5 h-3" />
+            <span>// PARTICIPANT COMMUNICATIONS</span>
           </div>
-          Email Composer
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">Send beautiful emails to participants</p>
+          <h1 className="text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight">
+            Email Composer
+          </h1>
+          <p className="text-xs font-mono text-[#94A3B8] mt-1">
+            Send personalized announcements, schedules &amp; reminders via Gmail SMTP
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {!canEdit && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono uppercase">
+              <Lock className="w-3.5 h-3.5" /> Read-Only
+            </span>
+          )}
+          {smtpConfigured ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Gmail SMTP: {smtpEmail}
+            </span>
+          ) : (
+            <Link
+              href="/admin/settings"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 text-xs font-mono transition-colors"
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Configure Gmail SMTP
+              <Settings className="w-3 h-3 ml-1" />
+            </Link>
+          )}
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Recipients */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5" />
-              Recipients
-            </CardTitle>
-            <CardDescription className="text-indigo-100">
-              Select who will receive this email
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left: Recipient Selector */}
+        <Card className="lg:col-span-5 bg-[#131B38] border border-white/[0.08] text-[#F8FAFC] flex flex-col">
+          <CardHeader className="border-b border-white/[0.08] pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2 text-[#F8FAFC]">
+                <Users className="w-4 h-4 text-[#12E2C4]" />
+                Recipients ({finalTargetRecipients.length})
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={loadRecipients}
+                className="h-7 px-2 text-[#94A3B8] hover:text-white"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+            <CardDescription className="text-xs text-[#94A3B8]">
+              Filter by payment status, gender, or specific game
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label className="text-sm">Filter by Status</Label>
-                <Select value={recipientFilter} onValueChange={setRecipientFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Registrations</SelectItem>
-                    <SelectItem value="paid">Paid Only</SelectItem>
-                    <SelectItem value="pending">Pending Payment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-sm">Filter by Gender</Label>
-                <Select value={genderFilter} onValueChange={setGenderFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="boys">Male</SelectItem>
-                    <SelectItem value="girls">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            <div className="bg-indigo-50 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-indigo-800">Selected Recipients</span>
-                {loadingRecipients ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
-                ) : (
-                  <span className="text-2xl font-bold text-indigo-600">{recipients.length}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm">Or Enter Custom Emails</Label>
-              <textarea
-                value={customTo}
-                onChange={(e) => setCustomTo(e.target.value)}
-                placeholder="email1@example.com, email2@example.com"
-                className="w-full h-20 px-3 py-2 text-sm border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <p className="text-xs text-slate-500">Comma-separated. Leave empty to use filtered recipients.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="text-sm">CC</Label>
-                <Input
-                  value={cc}
-                  onChange={(e) => setCc(e.target.value)}
-                  placeholder="cc@email.com"
-                  className="text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">BCC</Label>
-                <Input
-                  value={bcc}
-                  onChange={(e) => setBcc(e.target.value)}
-                  placeholder="bcc@email.com"
-                  className="text-sm"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Middle Column - Compose */}
-        <Card className="border-0 shadow-lg lg:col-span-2">
-          <CardHeader className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="h-5 w-5" />
-              Compose Email
-            </CardTitle>
-            <CardDescription className="text-blue-100">
-              Write your email content
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm">Template</Label>
-              <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
-                <SelectTrigger>
+          <CardContent className="p-4 space-y-4 flex-1 flex flex-col">
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger className="bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  {emailTemplates.map(t => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
+                <SelectContent className="bg-[#131B38] border-white/15 text-[#F8FAFC]">
+                  <SelectItem value="paid">Paid / Approved</SelectItem>
+                  <SelectItem value="pending">Pending Only</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={genderFilter} onValueChange={(v) => setGenderFilter(v as any)}>
+                <SelectTrigger className="bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#131B38] border-white/15 text-[#F8FAFC]">
+                  <SelectItem value="all">All Genders</SelectItem>
+                  <SelectItem value="boys">Boys</SelectItem>
+                  <SelectItem value="girls">Girls</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm">Subject *</Label>
+            <Select value={gameFilter} onValueChange={setGameFilter}>
+              <SelectTrigger className="bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]">
+                <SelectValue placeholder="Filter by Game" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#131B38] border-white/15 text-[#F8FAFC] max-h-64">
+                <SelectItem value="all">All Games</SelectItem>
+                {games.map((g) => (
+                  <SelectItem key={g.name} value={g.name}>
+                    {g.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                value={recipientSearch}
+                onChange={(e) => setRecipientSearch(e.target.value)}
+                placeholder="Search name, team, or email..."
+                className="pl-8 h-9 bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]"
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-mono text-[#94A3B8]">
+              <span>
+                Selected: <strong className="text-[#12E2C4]">{selectedEmails.length}</strong> / {recipients.length}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedEmails(recipients.map((r) => r.email))}
+                  className="text-[#12E2C4] hover:underline"
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedEmails([])}
+                  className="text-rose-400 hover:underline"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div className="border border-white/[0.08] rounded-xl bg-[#0B1124] max-h-64 overflow-y-auto divide-y divide-white/[0.05]">
+              {loading ? (
+                <div className="p-8 text-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-[#12E2C4] mx-auto" />
+                </div>
+              ) : visibleRecipients.length === 0 ? (
+                <div className="p-6 text-center text-xs font-mono text-[#94A3B8]">
+                  No recipients match these filters.
+                </div>
+              ) : (
+                visibleRecipients.map((r) => (
+                  <label
+                    key={r.email}
+                    className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.03] cursor-pointer text-xs"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedEmails.includes(r.email)}
+                      onChange={() => toggleEmail(r.email)}
+                      className="accent-[#12E2C4]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-[#F8FAFC] truncate">
+                        {r.name}
+                        {r.registration_number ? ` (#${r.registration_number})` : ''}
+                      </p>
+                      <p className="text-[11px] font-mono text-[#94A3B8] truncate">{r.email}</p>
+                    </div>
+                  </label>
+                ))
+              )}
+            </div>
+
+            <div className="space-y-1.5 pt-2 border-t border-white/[0.08]">
+              <Label className="text-[11px] font-mono text-[#94A3B8] uppercase">
+                Additional Emails (comma-separated)
+              </Label>
+              <Input
+                value={customEmail}
+                disabled={!canEdit}
+                onChange={(e) => setCustomEmail(e.target.value)}
+                placeholder="extra1@pucit.edu.pk, extra2@gmail.com"
+                className="bg-[#0B1124] border-white/15 text-xs text-[#F8FAFC]"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Right: Message Composer & Preview */}
+        <Card className="lg:col-span-7 bg-[#131B38] border border-white/[0.08] text-[#F8FAFC]">
+          <CardHeader className="border-b border-white/[0.08] pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-base flex items-center gap-2 text-[#F8FAFC]">
+                <Mail className="w-4 h-4 text-[#12E2C4]" />
+                Compose Message
+              </CardTitle>
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    disabled={!canEdit}
+                    onClick={() => {
+                      setSubject(tpl.subject);
+                      setBody(tpl.body);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0B1124] border border-white/10 hover:border-[#12E2C4]/40 text-[11px] font-mono text-[#E2E8F0] transition-colors disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3 h-3 text-[#F59E0B]" />
+                    {tpl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-5 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-mono text-[#94A3B8] uppercase">Subject *</Label>
               <Input
                 value={subject}
+                disabled={!canEdit}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="Email subject..."
+                placeholder="e.g. Mini Olympics 2026 — Match Schedule Update"
+                className="bg-[#0B1124] border-white/15 text-sm text-[#F8FAFC]"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm">Logo URL (optional)</Label>
-              <Input
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="https://example.com/logo.png"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm">Content (HTML supported)</Label>
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label className="text-xs font-mono text-[#94A3B8] uppercase">Message Body *</Label>
+                <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                  <span className="text-[#94A3B8]">Insert:</span>
+                  {['{{name}}', '{{regNum}}', '{{teamName}}'].map((tok) => (
+                    <button
+                      key={tok}
+                      type="button"
+                      disabled={!canEdit}
+                      onClick={() => insertPlaceholder(tok)}
+                      className="px-2 py-0.5 rounded bg-[#0B1124] border border-white/15 text-[#12E2C4] hover:bg-[#12E2C4]/10 disabled:opacity-50"
+                    >
+                      {tok}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your email content here... Use {name} for recipient's name."
-                className="w-full h-64 px-3 py-2 text-sm border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                rows={9}
+                value={body}
+                disabled={!canEdit}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write your announcement here... Placeholders like {{name}} and {{teamName}} are personalized per student."
+                className="w-full p-3.5 rounded-xl bg-[#0B1124] border border-white/15 text-sm text-[#F8FAFC] font-mono focus:outline-none focus:border-[#12E2C4] resize-y"
               />
-              <p className="text-xs text-slate-500">
-                Use <code className="bg-slate-100 px-1 rounded">{'{name}'}</code> to insert recipient's name
-              </p>
             </div>
 
-            <div className="flex gap-3 pt-2">
+            {sendProgress && (
+              <div className="p-3 rounded-xl bg-[#0B1124] border border-[#12E2C4]/30 text-xs font-mono flex items-center justify-between">
+                <span>
+                  Progress: <strong className="text-[#12E2C4]">{sendProgress.sent}</strong> sent
+                  {sendProgress.failed > 0 && (
+                    <span className="text-rose-400 ml-2">{sendProgress.failed} failed</span>
+                  )}
+                </span>
+                <span className="text-[#94A3B8]">
+                  {sendProgress.sent + sendProgress.failed} / {sendProgress.total}
+                </span>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <Button
-                onClick={() => setPreviewOpen(true)}
+                type="button"
                 variant="outline"
-                className="flex-1"
+                onClick={() => setShowPreview((p) => !p)}
+                className="border-white/15 bg-[#0B1124] text-[#F8FAFC] hover:bg-white/10"
               >
-                <Eye className="h-4 w-4 mr-2" />
-                Preview
+                <Eye className="w-4 h-4 mr-1.5 text-[#12E2C4]" />
+                {showPreview ? 'Hide Preview' : 'Live Preview'}
               </Button>
-              <Button
-                onClick={handleSendEmails}
-                disabled={sending || (!customTo && recipients.length === 0)}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-              >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : sendSuccess ? (
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                ) : (
-                  <Send className="h-4 w-4 mr-2" />
-                )}
-                {sending ? 'Sending...' : sendSuccess ? 'Sent!' : `Send to ${customTo ? 'Custom' : recipients.length} recipient(s)`}
-              </Button>
+
+              {canEdit && (
+                <Button
+                  type="button"
+                  disabled={sending || !subject.trim() || !body.trim() || finalTargetRecipients.length === 0}
+                  onClick={() => setConfirmOpen(true)}
+                  className="bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#080D1C] font-black font-mono uppercase tracking-wider px-6"
+                >
+                  {sending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send to {finalTargetRecipients.length} Recipient(s)
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
+
+            {showPreview && (
+              <div className="mt-4 rounded-2xl overflow-hidden border border-white/15 bg-[#080D1C]">
+                <div className="px-4 py-2 bg-[#182244] text-[11px] font-mono text-[#94A3B8] border-b border-white/10">
+                  EMAIL PREVIEW (sample recipient: {finalTargetRecipients[0]?.name || 'Participant'})
+                </div>
+                <iframe
+                  title="Email Preview"
+                  srcDoc={previewHtml}
+                  className="w-full h-[380px] bg-[#080D1C]"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Preview Dialog */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-blue-600" />
-              Email Preview
-            </DialogTitle>
-            <DialogDescription>
-              This is how your email will look
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4">
-            <div className="bg-slate-100 rounded-lg p-2 mb-4">
-              <p className="text-sm"><strong>Subject:</strong> {subject}</p>
-              <p className="text-sm"><strong>To:</strong> {customTo || `${recipients.length} recipients`}</p>
-              {cc && <p className="text-sm"><strong>CC:</strong> {cc}</p>}
-              {bcc && <p className="text-sm"><strong>BCC:</strong> {bcc}</p>}
-            </div>
-            <div 
-              className="border rounded-lg overflow-hidden"
-              dangerouslySetInnerHTML={{ __html: generateEmailHtml('John Doe') }}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        title={`Send email to ${finalTargetRecipients.length} recipient(s)?`}
+        description={`Subject: "${subject}". Emails will be dispatched via your configured Gmail SMTP account.`}
+        confirmLabel="Send Emails"
+        onConfirm={handleSendAll}
+      />
     </div>
   );
 }

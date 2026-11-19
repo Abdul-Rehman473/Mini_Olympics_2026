@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +31,6 @@ import {
   Calendar,
   Mail,
   Phone,
-  Trophy,
   ChevronLeft,
   ChevronRight,
   Filter,
@@ -43,7 +43,12 @@ import {
   MessageCircle,
   Copy,
   Check,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
+import { canEditPage, useAdminSession } from '@/lib/admin-session-context';
 
 type TeamMember = { name: string; rollNumber: string; contactNumber: string };
 type Registration = {
@@ -66,6 +71,9 @@ type Registration = {
   screenshot_url: string | null;
   status: string;
   created_at: string;
+  has_screenshot?: boolean;
+  is_duplicate_roll?: boolean;
+  items?: Array<{ game_name: string; unit_price: number; currency: string; players_count?: number }>;
 };
 
 type Stats = {
@@ -83,8 +91,24 @@ type GamePrice = {
 };
 
 export default function RegistrationsPage() {
+  const adminSession = useAdminSession();
+  const canEdit = canEditPage(adminSession, '/admin/registrations');
+  const toast = useToast();
+
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [stats, setStats] = useState<Stats>({
     total: 0,
     paid: 0,
@@ -124,7 +148,7 @@ export default function RegistrationsPage() {
 
   const loadGames = async () => {
     try {
-      const res = await fetch(`/api/games?t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch(`/api/games?includeInactive=true&t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.success && data.data) {
         setAllGames(data.data);
@@ -165,16 +189,20 @@ export default function RegistrationsPage() {
     if (gameFilter !== 'all') params.set('game', gameFilter);
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
+    params.set('limit', '500');
 
     fetch(`/api/registrations?${params.toString()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setRegistrations(data.data);
-          calculateDateRangeStats(data.data);
+          setRegistrations(data.data || []);
+          setSelectedIds([]);
+          calculateDateRangeStats(data.data || []);
+        } else {
+          toast.error(data.error || 'Failed to fetch registrations');
         }
       })
-      .catch(console.error)
+      .catch(() => toast.error('Failed to fetch registrations'))
       .finally(() => setLoading(false));
   };
 
@@ -201,23 +229,78 @@ export default function RegistrationsPage() {
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await response.json();
-      if (data.success) loadData();
-      else alert('Failed: ' + data.error);
-    } catch (error) {
-      alert('Failed to update status');
+      if (data.success) {
+        if (newStatus === 'paid' || newStatus === 'rejected') {
+          if (data.emailSent) {
+            toast.success(`Marked ${newStatus.replace('_', ' ')} & confirmation email sent!`);
+          } else if (data.emailWarning) {
+            toast.success(`Marked ${newStatus.replace('_', ' ')} (Email skipped: configure Gmail SMTP in Settings)`);
+          } else {
+            toast.success(`Updated status to ${newStatus.replace('_', ' ')}`);
+          }
+        } else {
+          toast.success(`Updated status to ${newStatus.replace('_', ' ')}`);
+        }
+        loadData();
+      } else {
+        toast.error(data.error || 'Failed to update status');
+      }
+    } catch {
+      toast.error('Failed to update status');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this registration?')) return;
-    try {
-      const response = await fetch(`/api/registrations/${id}`, { method: 'DELETE' });
-      const data = await response.json();
-      if (data.success) loadData();
-      else alert('Failed: ' + data.error);
-    } catch (error) {
-      alert('Failed to delete');
-    }
+  const handleBulkStatus = (targetStatus: 'paid' | 'rejected') => {
+    if (selectedIds.length === 0) return;
+    setConfirmState({
+      open: true,
+      title: `${targetStatus === 'paid' ? 'Approve' : 'Reject'} ${selectedIds.length} selected registrations?`,
+      description:
+        targetStatus === 'paid'
+          ? 'Eligible pending/rejected entries will be marked Paid, synced to Finance Ledger, and notified by email.'
+          : 'Eligible pending entries will be marked Rejected and notified by email.',
+      confirmLabel: targetStatus === 'paid' ? 'Approve Selected' : 'Reject Selected',
+      destructive: targetStatus === 'rejected',
+      onConfirm: async () => {
+        setBulkProcessing(true);
+        try {
+          const res = await fetch('/api/registrations', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: selectedIds, status: targetStatus }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Updated ${data.updatedCount} registrations (${data.skippedCount} skipped)`);
+            loadData();
+          } else {
+            toast.error(data.error || 'Bulk update failed');
+          }
+        } finally {
+          setBulkProcessing(false);
+        }
+      },
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    setConfirmState({
+      open: true,
+      title: 'Delete this registration?',
+      description: 'Paid registrations cannot be deleted directly and must be refunded instead.',
+      confirmLabel: 'Delete Registration',
+      destructive: true,
+      onConfirm: async () => {
+        const response = await fetch(`/api/registrations/${id}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (data.success) {
+          toast.success('Registration deleted');
+          loadData();
+        } else {
+          toast.error(data.error || 'Failed to delete registration');
+        }
+      },
+    });
   };
 
   const handleExport = async () => {
@@ -235,7 +318,7 @@ export default function RegistrationsPage() {
       const res = await fetch(`/api/export?${params.toString()}`, { credentials: 'include' });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        alert(err?.error || `Export failed (${res.status})`);
+        toast.error(err?.error || `Export failed (${res.status})`);
         return;
       }
       const blob = await res.blob();
@@ -247,23 +330,37 @@ export default function RegistrationsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error(e);
-      alert('Export failed. Please try again.');
+    } catch {
+      toast.error('Export failed. Please try again.');
     }
   };
 
-  const handleView = (reg: Registration) => {
+  const handleView = async (reg: Registration) => {
     setSelectedRegistration(reg);
     setDiscountValue(reg.discount?.toString() || '0');
     setEditingDiscount(false);
     setViewDialogOpen(true);
+    setLoadingDetail(true);
+    try {
+      const res = await fetch(`/api/registrations/${reg.id}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setSelectedRegistration(data.data);
+      }
+    } catch {
+      // Keep summary record
+    } finally {
+      setLoadingDetail(false);
+    }
   };
 
   const handleSaveDiscount = async () => {
     if (!selectedRegistration) return;
     const discountNum = parseFloat(discountValue) || 0;
-    if (discountNum < 0) { alert('Discount cannot be negative'); return; }
+    if (discountNum < 0) {
+      toast.error('Discount cannot be negative');
+      return;
+    }
 
     setSavingDiscount(true);
     try {
@@ -276,8 +373,11 @@ export default function RegistrationsPage() {
       if (data.success) {
         setSelectedRegistration({ ...selectedRegistration, discount: discountNum });
         setEditingDiscount(false);
+        toast.success('Discount updated');
         fetchRegistrations();
-      } else alert('Failed: ' + data.error);
+      } else {
+        toast.error(data.error || 'Failed to update discount');
+      }
     } finally {
       setSavingDiscount(false);
     }
@@ -307,16 +407,17 @@ export default function RegistrationsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 pt-16 lg:pt-8">
+    <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-7xl mx-auto text-[#F8FAFC]">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-            <Users className="h-6 w-6 text-white" />
-          </div>
+      <div className="mb-8 pb-6 border-b border-white/[0.08]">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#131B38] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
+          <OlympicRingsIcon className="w-5 h-3" />
+          <span>// PARTICIPANT REGISTRY</span>
+        </div>
+        <h1 className="text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight flex items-center gap-3">
           Registrations
         </h1>
-        <p className="text-slate-500 mt-1">Manage participant registrations</p>
+        <p className="text-xs font-mono text-[#94A3B8] mt-1">Manage participant registrations, verification &amp; exports</p>
       </div>
 
       {/* Stats Cards */}
@@ -424,6 +525,8 @@ export default function RegistrationsPage() {
                   <SelectItem value="paid">Paid</SelectItem>
                   <SelectItem value="pending_online">Pending Online</SelectItem>
                   <SelectItem value="pending_cash">Pending Cash</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={genderFilter} onValueChange={setGenderFilter}>
@@ -479,15 +582,15 @@ export default function RegistrationsPage() {
       )}
 
       {/* Registrations Table */}
-      <Card className="border-0 shadow-lg overflow-hidden">
-        <CardHeader className="bg-slate-50 border-b px-6 py-4">
+      <Card className="bg-[#131B38] border border-white/[0.08] text-[#F8FAFC] shadow-xl overflow-hidden">
+        <CardHeader className="bg-[#182244] border-b border-white/[0.08] px-6 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Registrations</CardTitle>
-              <CardDescription>{startIndex + 1}-{Math.min(startIndex + itemsPerPage, searchedRegistrations.length)} of {searchedRegistrations.length}</CardDescription>
+              <CardTitle className="text-[#F8FAFC]">Registrations</CardTitle>
+              <CardDescription className="text-[#94A3B8]">{startIndex + 1}-{Math.min(startIndex + itemsPerPage, searchedRegistrations.length)} of {searchedRegistrations.length}</CardDescription>
             </div>
             <Select value={itemsPerPage.toString()} onValueChange={(v) => setItemsPerPage(Number(v))}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-32 bg-[#0B1124] border-white/15 text-[#F8FAFC]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="25">25</SelectItem>
                 <SelectItem value="50">50</SelectItem>
@@ -498,11 +601,57 @@ export default function RegistrationsPage() {
         </CardHeader>
 
         <CardContent className="p-0">
+          {canEdit && selectedIds.length > 0 && (
+            <div className="p-3 bg-[#12E2C4]/10 border-b border-[#12E2C4]/25 flex flex-wrap items-center justify-between gap-2 text-[#F8FAFC]">
+              <span className="text-sm font-medium">{selectedIds.length} registration(s) selected</span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  disabled={bulkProcessing}
+                  onClick={() => handleBulkStatus('paid')}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  Approve Selected
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={bulkProcessing}
+                  onClick={() => handleBulkStatus('rejected')}
+                >
+                  Reject Selected
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setSelectedIds([])}>
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Desktop Table */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr className="bg-[#0B1124]/60 text-xs font-mono uppercase text-[#94A3B8] border-b border-white/[0.08]">
+                  {canEdit && (
+                    <th className="p-4 text-left w-10">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all visible registrations"
+                        checked={
+                          paginatedRegistrations.length > 0 &&
+                          paginatedRegistrations.every((r) => selectedIds.includes(r.id))
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(paginatedRegistrations.map((r) => r.id));
+                          } else {
+                            setSelectedIds([]);
+                          }
+                        }}
+                      />
+                    </th>
+                  )}
                   <th className="p-4 text-left font-semibold">Ticket</th>
                   <th className="p-4 text-left font-semibold">Participant</th>
                   <th className="p-4 text-left font-semibold">Games</th>
@@ -512,62 +661,125 @@ export default function RegistrationsPage() {
                   <th className="p-4 text-left font-semibold">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-white/[0.06]">
                 {paginatedRegistrations.map((reg) => {
                   let selectedGames: string[] = [];
                   try { selectedGames = Array.isArray(reg.selected_games) ? reg.selected_games : JSON.parse(reg.selected_games); } catch {}
                   return (
-                    <tr key={reg.id} className="hover:bg-blue-50/50 transition-colors group">
+                    <tr key={reg.id} className="hover:bg-white/[0.03] transition-colors group">
+                      {canEdit && (
+                        <td className="p-4">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select registration ${reg.name}`}
+                            checked={selectedIds.includes(reg.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedIds((prev) => Array.from(new Set([...prev, reg.id])));
+                              } else {
+                                setSelectedIds((prev) => prev.filter((x) => x !== reg.id));
+                              }
+                            }}
+                          />
+                        </td>
+                      )}
                       <td className="p-4">
-                        {reg.registration_number ? <span className="font-bold text-blue-600">#{reg.registration_number}</span> : <span className="text-slate-400">-</span>}
+                        {reg.registration_number ? <span className="font-bold font-mono text-[#12E2C4]">#{reg.registration_number}</span> : <span className="text-[#94A3B8]">-</span>}
                       </td>
                       <td className="p-4">
-                        <p className="font-semibold text-slate-800">{reg.name}</p>
-                        <p className="text-sm text-slate-500">{reg.roll_number}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-[#F8FAFC]">{reg.name}</p>
+                          {reg.is_duplicate_roll && (
+                            <span
+                              title="Roll number appears in multiple registrations"
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-medium"
+                            >
+                              <AlertTriangle className="w-3 h-3" />
+                              Multi
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-mono text-[#94A3B8]">{reg.roll_number}</p>
                       </td>
                       <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${reg.gender === 'boys' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
-                          {reg.gender === 'boys' ? '♂ Male' : '♀ Female'}
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${reg.gender === 'boys' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-pink-500/20 text-pink-300 border border-pink-500/30'}`}>
+                          {reg.gender === 'boys' ? 'Boys' : 'Girls'}
                         </span>
-                        <span className="ml-2 text-sm">{selectedGames.length} game(s)</span>
+                        <span className="ml-2 text-sm text-[#E2E8F0]">{selectedGames.length} game(s)</span>
                       </td>
                       <td className="p-4">
-                        <p className="font-bold text-emerald-600">Rs. {(reg.total_amount - (reg.discount || 0)).toLocaleString()}</p>
+                        <p className="font-bold font-mono text-emerald-400">Rs. {(reg.total_amount - (reg.discount || 0)).toLocaleString()}</p>
                         {(reg.discount && Number(reg.discount) > 0) && (
-                          <p className="text-xs text-slate-500 mt-0.5">
+                          <p className="text-xs text-[#94A3B8] mt-0.5">
                             {reg.coupon_code ? `Coupon: ${reg.coupon_code}` : `Discount: Rs. ${Number(reg.discount).toLocaleString()}`}
                           </p>
                         )}
                       </td>
                       <td className="p-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${reg.payment_method === 'online' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
-                          {reg.payment_method}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${reg.payment_method === 'online' ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'}`}>
+                            {reg.payment_method}
+                          </span>
+                          {reg.has_screenshot && (
+                            <button
+                              type="button"
+                              onClick={() => handleView(reg)}
+                              title="View payment screenshot"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#12E2C4]/15 text-[#12E2C4] border border-[#12E2C4]/30 hover:bg-[#12E2C4]/25 transition-colors"
+                            >
+                              <Eye className="w-3 h-3" />
+                              Proof
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          reg.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
-                          reg.status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                          reg.status === 'paid' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                          reg.status === 'refunded' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                          reg.status === 'rejected' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                         }`}>
                           {reg.status.replace('_', ' ').toUpperCase()}
                         </span>
                       </td>
                       <td className="p-4">
-                        <div className="flex gap-1 opacity-70 group-hover:opacity-100">
+                        <div className="flex gap-1 opacity-80 group-hover:opacity-100">
                           <Button size="sm" variant="outline" onClick={() => handleView(reg)}><Eye className="h-4 w-4" /></Button>
-                          {reg.status !== 'paid' && (
+                          {canEdit && reg.status !== 'paid' && reg.status !== 'refunded' && (
                             <Button size="sm" onClick={() => handleStatusUpdate(reg.id, 'paid')} className="bg-emerald-500 hover:bg-emerald-600 text-white">
                               <CheckCircle2 className="h-4 w-4" />
                             </Button>
                           )}
-                          {reg.status !== 'rejected' && (
+                          {canEdit && (reg.status === 'pending_cash' || reg.status === 'pending_online') && (
                             <Button size="sm" variant="destructive" onClick={() => handleStatusUpdate(reg.id, 'rejected')}>
                               <XCircle className="h-4 w-4" />
                             </Button>
                           )}
-                          <Button size="sm" variant="ghost" onClick={() => handleDelete(reg.id)} className="text-slate-400 hover:text-red-600">
-                            <X className="h-4 w-4" />
-                          </Button>
+                          {canEdit && reg.status === 'paid' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title="Mark Refunded"
+                              onClick={() =>
+                                setConfirmState({
+                                  open: true,
+                                  title: 'Refund this paid registration?',
+                                  description: 'This marks the registration Refunded and records a compensating expense entry in Finance.',
+                                  confirmLabel: 'Mark Refunded',
+                                  destructive: true,
+                                  onConfirm: () => handleStatusUpdate(reg.id, 'refunded'),
+                                })
+                              }
+                              className="text-purple-700 border-purple-200 hover:bg-purple-50"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canEdit && reg.status !== 'paid' && (
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(reg.id)} className="text-slate-400 hover:text-red-600">
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -591,16 +803,17 @@ export default function RegistrationsPage() {
                       <p className="text-sm text-slate-500">{reg.roll_number}</p>
                     </div>
                     <span className={`h-fit px-2 py-1 rounded-full text-xs font-semibold ${
-                      reg.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
-                      reg.status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                      reg.status === 'paid' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                      reg.status === 'refunded' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                      reg.status === 'rejected' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                     }`}>
                       {reg.status.replace('_', ' ').toUpperCase()}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-2 text-sm mb-3 items-center">
-                    <span className="font-bold text-emerald-600">Rs. {(reg.total_amount - (reg.discount || 0)).toLocaleString()}</span>
+                  <div className="flex flex-wrap gap-2 text-sm mb-3 items-center text-[#94A3B8]">
+                    <span className="font-bold font-mono text-emerald-400">Rs. {(reg.total_amount - (reg.discount || 0)).toLocaleString()}</span>
                     {(reg.discount && Number(reg.discount) > 0) && (
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-[#94A3B8]">
                         ({reg.coupon_code ? `Coupon: ${reg.coupon_code}` : `Rs. ${Number(reg.discount).toLocaleString()} off`})
                       </span>
                     )}
@@ -610,9 +823,9 @@ export default function RegistrationsPage() {
                     <span className="capitalize">{reg.payment_method}</span>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => handleView(reg)} className="flex-1">View</Button>
-                    {reg.status !== 'paid' && <Button size="sm" onClick={() => handleStatusUpdate(reg.id, 'paid')} className="flex-1 bg-emerald-500">Approve</Button>}
-                    {reg.status !== 'rejected' && <Button size="sm" variant="destructive" onClick={() => handleStatusUpdate(reg.id, 'rejected')} className="flex-1">Reject</Button>}
+                    <Button size="sm" variant="outline" onClick={() => handleView(reg)} className="flex-1 bg-[#0B1124] border-white/15 text-[#F8FAFC]">View</Button>
+                    {canEdit && reg.status !== 'paid' && <Button size="sm" onClick={() => handleStatusUpdate(reg.id, 'paid')} className="flex-1 bg-emerald-500 text-[#080D1C] font-bold">Approve</Button>}
+                    {canEdit && reg.status !== 'rejected' && <Button size="sm" variant="destructive" onClick={() => handleStatusUpdate(reg.id, 'rejected')} className="flex-1">Reject</Button>}
                   </div>
                 </div>
               );
@@ -655,37 +868,37 @@ export default function RegistrationsPage() {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-blue-600" />
+            <DialogTitle className="flex items-center gap-2 text-[#F8FAFC]">
+              <OlympicRingsIcon className="w-6 h-3.5" />
               Registration Details
             </DialogTitle>
-            <DialogDescription>Complete information</DialogDescription>
+            <DialogDescription className="text-[#94A3B8]">Complete information</DialogDescription>
           </DialogHeader>
           {selectedRegistration && (
             <div className="space-y-4 mt-4">
               {selectedRegistration.registration_number && (
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-5 text-center text-white">
-                  <p className="text-blue-100 text-sm">Ticket Number</p>
-                  <p className="text-4xl font-bold">#{selectedRegistration.registration_number}</p>
+                <div className="bg-gradient-to-r from-[#182244] to-[#131B38] border border-[#12E2C4]/30 rounded-xl p-5 text-center text-[#F8FAFC]">
+                  <p className="text-[#12E2C4] text-xs font-mono uppercase">Ticket Number</p>
+                  <p className="text-4xl font-black font-['Space_Grotesk']">#{selectedRegistration.registration_number}</p>
                 </div>
               )}
 
-              <div className="bg-slate-50 rounded-xl p-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2"><Users className="h-4 w-4 text-blue-600" /> Personal Info</h3>
+              <div className="bg-[#131B38] border border-white/[0.08] text-[#F8FAFC] rounded-xl p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2 text-[#F8FAFC]"><Users className="h-4 w-4 text-[#12E2C4]" /> Personal Info</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-slate-500">Name</p><p className="font-medium">{selectedRegistration.name}</p></div>
-                  <div><p className="text-slate-500">Roll</p><p className="font-medium">{selectedRegistration.roll_number}</p></div>
-                  <div><p className="text-slate-500">Gender</p><p className="font-medium capitalize">{selectedRegistration.gender}</p></div>
-                  <div><p className="text-slate-500">Phone</p><p className="font-medium">{selectedRegistration.contact_number}</p></div>
-                  <div className="col-span-2"><p className="text-slate-500">Email</p><p className="font-medium">{selectedRegistration.email}</p></div>
+                  <div><p className="text-[#94A3B8] text-xs">Name</p><p className="font-medium">{selectedRegistration.name}</p></div>
+                  <div><p className="text-[#94A3B8] text-xs">Roll</p><p className="font-medium font-mono">{selectedRegistration.roll_number}</p></div>
+                  <div><p className="text-[#94A3B8] text-xs">Gender</p><p className="font-medium capitalize">{selectedRegistration.gender}</p></div>
+                  <div><p className="text-[#94A3B8] text-xs">Phone</p><p className="font-medium font-mono">{selectedRegistration.contact_number}</p></div>
+                  <div className="col-span-2"><p className="text-[#94A3B8] text-xs">Email</p><p className="font-medium">{selectedRegistration.email}</p></div>
                 </div>
               </div>
 
-              <div className="bg-emerald-50 rounded-xl p-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2"><Trophy className="h-4 w-4 text-emerald-600" /> Games</h3>
+              <div className="bg-[#131B38] border border-emerald-500/25 text-[#F8FAFC] rounded-xl p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2 text-[#F8FAFC]"><OlympicRingsIcon className="w-5 h-3" /> Games</h3>
                 <div className="flex flex-wrap gap-2">
                   {(Array.isArray(selectedRegistration.selected_games) ? selectedRegistration.selected_games : JSON.parse(selectedRegistration.selected_games || '[]')).map((g: string) => (
-                    <span key={g} className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-sm font-medium">{g}</span>
+                    <span key={g} className="px-3 py-1 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-lg text-sm font-medium">{g}</span>
                   ))}
                 </div>
               </div>
@@ -703,18 +916,18 @@ export default function RegistrationsPage() {
                 const gamesWithTeams = selectedGamesList.filter((g: string) => Array.isArray(teamMembersMap[g]) && teamMembersMap[g].length > 0);
                 if (gamesWithTeams.length === 0) return null;
                 return (
-                  <div className="bg-blue-50 rounded-xl p-4">
-                    <h3 className="font-semibold mb-3 flex items-center gap-2"><Users className="h-4 w-4 text-blue-600" /> Team Members (Team Games)</h3>
+                  <div className="bg-[#131B38] border border-sky-500/25 text-[#F8FAFC] rounded-xl p-4">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2"><Users className="h-4 w-4 text-sky-400" /> Team Members (Team Games)</h3>
                     <div className="space-y-4">
                       {gamesWithTeams.map((gameName: string) => (
-                        <div key={gameName} className="border border-blue-200 rounded-lg p-3 bg-white/60">
-                          <p className="font-medium text-blue-900 mb-2">{gameName}</p>
+                        <div key={gameName} className="border border-white/10 rounded-lg p-3 bg-[#0B1124]">
+                          <p className="font-medium text-[#12E2C4] mb-2">{gameName}</p>
                           <div className="space-y-2">
                             {(teamMembersMap[gameName] || []).map((member: TeamMember, idx: number) => (
-                              <div key={idx} className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-700">
-                                <span><span className="text-slate-500">Name:</span> {member.name || '—'}</span>
-                                <span><span className="text-slate-500">Roll:</span> {member.rollNumber || '—'}</span>
-                                <span><span className="text-slate-500">Contact:</span> {member.contactNumber || '—'}</span>
+                              <div key={idx} className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#E2E8F0]">
+                                <span><span className="text-[#94A3B8]">Name:</span> {member.name || '—'}</span>
+                                <span><span className="text-[#94A3B8]">Roll:</span> {member.rollNumber || '—'}</span>
+                                <span><span className="text-[#94A3B8]">Contact:</span> {member.contactNumber || '—'}</span>
                               </div>
                             ))}
                           </div>
@@ -725,49 +938,53 @@ export default function RegistrationsPage() {
                 );
               })()}
 
-              <div className="bg-amber-50 rounded-xl p-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2"><DollarSign className="h-4 w-4 text-amber-600" /> Payment</h3>
+              <div className="bg-[#131B38] border border-amber-500/25 text-[#F8FAFC] rounded-xl p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><DollarSign className="h-4 w-4 text-amber-400" /> Payment</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-slate-500">Method</p><p className="font-medium capitalize">{selectedRegistration.payment_method}</p></div>
-                  <div><p className="text-slate-500">Status</p><p className="font-medium capitalize">{selectedRegistration.status.replace('_', ' ')}</p></div>
-                  <div><p className="text-slate-500">Amount</p><p className="font-medium">Rs. {selectedRegistration.total_amount?.toLocaleString()}</p></div>
+                  <div><p className="text-[#94A3B8] text-xs">Method</p><p className="font-medium capitalize">{selectedRegistration.payment_method}</p></div>
+                  <div><p className="text-[#94A3B8] text-xs">Status</p><p className="font-medium capitalize">{selectedRegistration.status.replace('_', ' ')}</p></div>
+                  <div><p className="text-[#94A3B8] text-xs">Amount</p><p className="font-medium font-mono">Rs. {selectedRegistration.total_amount?.toLocaleString()}</p></div>
                   {selectedRegistration.coupon_code && (
-                    <div className="col-span-2"><p className="text-slate-500">Coupon applied</p><p className="font-medium text-amber-700">{selectedRegistration.coupon_code}</p></div>
+                    <div className="col-span-2"><p className="text-[#94A3B8] text-xs">Coupon applied</p><p className="font-medium text-amber-300">{selectedRegistration.coupon_code}</p></div>
                   )}
                   <div>
-                    <p className="text-slate-500">Discount</p>
-                    {editingDiscount ? (
+                    <p className="text-[#94A3B8] text-xs">Discount</p>
+                    {editingDiscount && canEdit ? (
                       <div className="flex gap-2">
-                        <Input type="number" min="0" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} className="w-20 h-7" />
+                        <Input type="number" min="0" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} className="w-20 h-7 bg-[#0B1124] border-white/15" />
                         <Button size="sm" onClick={handleSaveDiscount} disabled={savingDiscount}>{savingDiscount ? '...' : 'Save'}</Button>
                         <Button size="sm" variant="ghost" onClick={() => setEditingDiscount(false)}>X</Button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-red-600">Rs. {(selectedRegistration.discount || 0).toLocaleString()}</p>
-                        {selectedRegistration.status !== 'paid' && <Button size="sm" variant="outline" onClick={() => setEditingDiscount(true)} className="h-6 text-xs">Edit</Button>}
+                        <p className="font-medium font-mono text-rose-400">Rs. {(selectedRegistration.discount || 0).toLocaleString()}</p>
+                        {canEdit && selectedRegistration.status !== 'paid' && <Button size="sm" variant="outline" onClick={() => setEditingDiscount(true)} className="h-6 text-xs bg-[#0B1124] border-white/15 text-[#F8FAFC]">Edit</Button>}
                       </div>
                     )}
                   </div>
                   <div className="col-span-2">
-                    <p className="text-slate-500">Final Amount</p>
-                    <p className="text-2xl font-bold text-emerald-600">Rs. {(selectedRegistration.total_amount - (selectedRegistration.discount || 0)).toLocaleString()}</p>
+                    <p className="text-[#94A3B8] text-xs">Final Amount</p>
+                    <p className="text-2xl font-bold font-mono text-emerald-400">Rs. {(selectedRegistration.total_amount - (selectedRegistration.discount || 0)).toLocaleString()}</p>
                   </div>
-                  <div className="col-span-2"><p className="text-slate-500">Reference</p><p className="font-mono text-blue-600">{selectedRegistration.slip_id || 'N/A'}</p></div>
+                  <div className="col-span-2"><p className="text-[#94A3B8] text-xs">Reference</p><p className="font-mono text-[#12E2C4]">{selectedRegistration.slip_id || 'N/A'}</p></div>
                 </div>
-                {selectedRegistration.screenshot_url && (
+                {loadingDetail && selectedRegistration.has_screenshot && !selectedRegistration.screenshot_url ? (
+                  <p className="mt-4 text-xs text-[#94A3B8] flex items-center gap-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading payment screenshot...
+                  </p>
+                ) : selectedRegistration.screenshot_url ? (
                   <div className="mt-4">
-                    <p className="text-slate-500 text-sm mb-2">Screenshot</p>
-                    <img src={selectedRegistration.screenshot_url} alt="Payment" className="max-w-full rounded-lg border" />
+                    <p className="text-[#94A3B8] text-xs mb-2">Screenshot</p>
+                    <img src={selectedRegistration.screenshot_url} alt="Payment" className="max-w-full rounded-lg border border-white/10" />
                   </div>
-                )}
+                ) : null}
               </div>
 
-              <div className="bg-purple-50 rounded-xl p-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2"><Calendar className="h-4 w-4 text-purple-600" /> Details</h3>
+              <div className="bg-[#131B38] border border-purple-500/25 text-[#F8FAFC] rounded-xl p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><Calendar className="h-4 w-4 text-purple-400" /> Details</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-slate-500">ID</p><p className="font-mono text-xs break-all">{selectedRegistration.id}</p></div>
-                  <div><p className="text-slate-500">Date</p><p className="font-medium">{new Date(selectedRegistration.created_at).toLocaleString()}</p></div>
+                  <div><p className="text-[#94A3B8] text-xs">ID</p><p className="font-mono text-xs break-all">{selectedRegistration.id}</p></div>
+                  <div><p className="text-[#94A3B8] text-xs">Date</p><p className="font-medium">{new Date(selectedRegistration.created_at).toLocaleString()}</p></div>
                 </div>
               </div>
             </div>
@@ -800,8 +1017,8 @@ export default function RegistrationsPage() {
               />
             </div>
 
-            <div className="bg-slate-50 rounded-lg p-4">
-              <h4 className="font-medium text-slate-700 mb-3">
+            <div className="bg-[#131B38] border border-white/[0.08] text-[#F8FAFC] rounded-lg p-4">
+              <h4 className="font-medium text-[#94A3B8] mb-3">
                 {phoneSearch ? 'Search Results' : 'All Paid Registrations'}
               </h4>
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -823,23 +1040,23 @@ export default function RegistrationsPage() {
                       (reg.alternative_contact_number || '').replace(/\D/g, '').includes(phoneSearch.replace(/\D/g, ''))
                     );
                     return (
-                      <div 
-                        key={reg.id} 
+                      <div
+                        key={reg.id}
                         className={`p-3 rounded-lg border transition-all ${
-                          isMatch 
-                            ? 'bg-green-50 border-green-300 ring-2 ring-green-200' 
-                            : 'bg-white border-slate-200 hover:bg-slate-50'
+                          isMatch
+                            ? 'bg-emerald-500/15 border-emerald-500/40 ring-1 ring-emerald-500/30'
+                            : 'bg-[#0B1124] border-white/[0.08] hover:border-white/20'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-blue-600">#{reg.registration_number}</span>
-                              <span className="font-semibold text-slate-800">{reg.name}</span>
-                              <span className="text-sm text-slate-500">{reg.roll_number}</span>
+                              <span className="font-bold font-mono text-[#12E2C4]">#{reg.registration_number}</span>
+                              <span className="font-semibold text-[#F8FAFC]">{reg.name}</span>
+                              <span className="text-xs font-mono text-[#94A3B8]">{reg.roll_number}</span>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="font-mono text-lg font-semibold text-slate-800">
+                              <span className="font-mono text-lg font-semibold text-[#F8FAFC]">
                                 {reg.contact_number}
                               </span>
                               <Button
@@ -911,6 +1128,27 @@ export default function RegistrationsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {confirmState && (
+        <ConfirmDialog
+          open={confirmState.open}
+          title={confirmState.title}
+          description={confirmState.description}
+          confirmLabel={confirmState.confirmLabel}
+          destructive={confirmState.destructive}
+          loading={confirmBusy}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={async () => {
+            setConfirmBusy(true);
+            try {
+              await confirmState.onConfirm();
+              setConfirmState(null);
+            } finally {
+              setConfirmBusy(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

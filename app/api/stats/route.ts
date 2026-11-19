@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { getAdminSession } from '@/lib/auth';
+import { cookies } from 'next/headers';
 
 // Force dynamic rendering and disable caching
 export const dynamic = 'force-dynamic';
@@ -7,6 +9,13 @@ export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('admin_session')?.value;
+    const session = await getAdminSession(sessionToken);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Get total registrations
     const totalResult = await sql`SELECT COUNT(*) as count FROM registrations` as any[];
     const total = Number(totalResult[0]?.count) || 0;

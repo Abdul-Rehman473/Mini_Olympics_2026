@@ -1,65 +1,67 @@
-/* Import distinctive fonts - must be at the top */
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Mini Olympics Theme - Vibrant & Bold */
-    --background: 220 20% 97%;
-    --foreground: 220 30% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 30% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 30% 10%;
-    --primary: 220 90% 56%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 20% 94%;
-    --secondary-foreground: 220 30% 20%;
-    --muted: 220 15% 92%;
-    --muted-foreground: 220 15% 45%;
-    --accent: 45 95% 55%;
-    --accent-foreground: 220 30% 10%;
-    --destructive: 0 85% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 20% 88%;
-    --input: 220 20% 88%;
-    --ring: 220 90% 56%;
-    --radius: 0.625rem;
+    color-scheme: dark;
+
+    /* Mini Olympics 2026 - Official PDF Deep Navy, Aqua Cyan & Championship Gold Palette */
+    --background: 226 53% 9%; /* #0B1124 Deep Midnight Navy */
+    --foreground: 210 40% 98%; /* #F8FAFC Crisp White */
     
-    /* Olympic Medal Colors */
-    --gold: 45 95% 55%;
-    --silver: 220 10% 75%;
-    --bronze: 30 70% 50%;
+    --card: 227 49% 15%; /* #131B38 Card Navy */
+    --card-foreground: 210 40% 98%;
     
-    /* Status Colors */
-    --success: 145 65% 42%;
-    --warning: 38 95% 50%;
-    --info: 200 95% 50%;
+    --popover: 227 50% 12%; /* #101730 */
+    --popover-foreground: 210 40% 98%;
+    
+    --primary: 171 85% 48%; /* #12E2C4 PDF Aqua Cyan */
+    --primary-foreground: 226 53% 9%; /* #0B1124 */
+    
+    --secondary: 226 48% 18%; /* #182244 Header Navy */
+    --secondary-foreground: 210 40% 98%;
+    
+    --muted: 226 42% 18%;
+    --muted-foreground: 215 20% 65%; /* #94A3B8 */
+    
+    --accent: 38 92% 50%; /* #F59E0B PDF Championship Amber/Gold */
+    --accent-foreground: 226 53% 9%;
+    
+    --destructive: 355 78% 56%; /* #E63946 Olympic Red */
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 226 40% 20%;
+    --input: 226 40% 20%;
+    --ring: 171 85% 48%;
+    --radius: 0.75rem;
+
+    --scrollbar-thumb: #24325c;
+    --scrollbar-track: #0B1124;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    scrollbar-width: thin;
   }
 
   .dark {
-    --background: 222 47% 8%;
+    --background: 226 53% 9%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
+    --card: 227 49% 15%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 227 50% 12%;
     --popover-foreground: 210 40% 98%;
-    --primary: 220 90% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 217 30% 18%;
+    --primary: 171 85% 48%;
+    --primary-foreground: 226 53% 9%;
+    --secondary: 226 48% 18%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 30% 18%;
+    --muted: 226 42% 18%;
     --muted-foreground: 215 20% 65%;
-    --accent: 45 95% 55%;
-    --accent-foreground: 220 30% 10%;
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 217 30% 22%;
-    --input: 217 30% 22%;
-    --ring: 220 90% 60%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 226 53% 9%;
+    --destructive: 355 78% 56%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 226 40% 20%;
+    --input: 226 40% 20%;
+    --ring: 171 85% 48%;
   }
 }
 
@@ -69,188 +71,233 @@
   }
   
   html {
-    scroll-behavior: smooth;
+    background-color: #0B1124;
+    color: #F8FAFC;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
   
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: 'Outfit', system-ui, sans-serif;
+    background-color: #0B1124;
+    color: #F8FAFC;
+    font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
   }
   
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Outfit', system-ui, sans-serif;
-    font-weight: 700;
+  h1, h2, h3, h4 {
+    font-family: var(--font-display), system-ui, sans-serif;
     letter-spacing: -0.02em;
   }
 }
 
-@layer components {
-  /* Olympic Rings Inspired Gradient */
-  .olympic-gradient {
-    background: linear-gradient(
-      135deg,
-      hsl(220, 90%, 56%) 0%,
-      hsl(280, 80%, 55%) 25%,
-      hsl(0, 85%, 55%) 50%,
-      hsl(45, 95%, 55%) 75%,
-      hsl(145, 70%, 45%) 100%
-    );
+.font-\[\'Space_Grotesk\'\] {
+  font-family: var(--font-display), system-ui, sans-serif;
+}
+
+/* Legacy fallback for browsers without standard scrollbar-color */
+@supports not (scrollbar-color: auto) {
+  :root {
+    scrollbar-width: auto;
   }
-  
-  /* Glassmorphism Card */
-  .glass-card {
-    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl;
-    @apply border border-white/20 dark:border-slate-700/50;
-    @apply shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50;
-  }
-  
-  /* Stat Card Hover Effect */
-  .stat-card {
-    @apply relative overflow-hidden transition-all duration-300;
-    @apply hover:shadow-2xl hover:-translate-y-1;
-  }
-  
-  .stat-card::before {
-    content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
-  }
-  
-  .stat-card:hover::before {
-    @apply opacity-100;
-  }
-  
-  /* Animated Gradient Text */
-  .gradient-text {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(220, 90%, 56%), hsl(280, 80%, 55%), hsl(45, 95%, 55%));
-    background-size: 200% 200%;
-    animation: gradient-shift 3s ease infinite;
-  }
-  
-  @keyframes gradient-shift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
-  
-  /* Pulse Ring Animation */
-  .pulse-ring {
-    @apply relative;
-  }
-  
-  .pulse-ring::after {
-    content: '';
-    @apply absolute inset-0 rounded-full;
-    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  
-  @keyframes pulse-ring {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.05); opacity: 0.8; }
-  }
-  
-  /* Table Row Hover */
-  .table-row-hover {
-    @apply transition-all duration-200;
-  }
-  
-  .table-row-hover:hover {
-    @apply bg-gradient-to-r from-blue-50/80 to-indigo-50/50 dark:from-slate-800/50 dark:to-slate-700/30;
-    box-shadow: inset 4px 0 0 hsl(220, 90%, 56%);
-  }
-  
-  /* Badge Styles */
-  .badge-gold {
-    @apply bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-900 font-semibold;
-    @apply shadow-md shadow-amber-200/50;
-  }
-  
-  .badge-success {
-    @apply bg-gradient-to-r from-emerald-400 to-green-500 text-white font-semibold;
-    @apply shadow-md shadow-emerald-200/50;
-  }
-  
-  .badge-warning {
-    @apply bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold;
-    @apply shadow-md shadow-amber-200/50;
-  }
-  
-  .badge-danger {
-    @apply bg-gradient-to-r from-rose-400 to-red-500 text-white font-semibold;
-    @apply shadow-md shadow-rose-200/50;
-  }
-  
-  /* Button with shine effect */
-  .btn-shine {
-    @apply relative overflow-hidden;
-  }
-  
-  .btn-shine::after {
-    content: '';
-    @apply absolute top-0 -left-full w-1/2 h-full;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-    transition: left 0.5s;
-  }
-  
-  .btn-shine:hover::after {
-    left: 100%;
-  }
-  
-  /* Staggered Animation */
-  .stagger-fade-in {
-    @apply opacity-0;
-    animation: fade-in 0.5s ease forwards;
-  }
-  
-  .stagger-fade-in:nth-child(1) { animation-delay: 0.1s; }
-  .stagger-fade-in:nth-child(2) { animation-delay: 0.2s; }
-  .stagger-fade-in:nth-child(3) { animation-delay: 0.3s; }
-  .stagger-fade-in:nth-child(4) { animation-delay: 0.4s; }
-  .stagger-fade-in:nth-child(5) { animation-delay: 0.5s; }
-  
-  @keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
-  /* Floating Animation */
-  .float {
-    animation: float 3s ease-in-out infinite;
-  }
-  
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-  
-  /* Scrollbar Styling */
+
   ::-webkit-scrollbar {
-    @apply w-2 h-2;
+    width: 7px;
+    height: 7px;
   }
-  
+
   ::-webkit-scrollbar-track {
-    @apply bg-slate-100 dark:bg-slate-800 rounded-full;
+    background: var(--scrollbar-track);
   }
-  
+
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 dark:bg-slate-600 rounded-full;
-    @apply hover:bg-slate-400 dark:hover:bg-slate-500;
+    background: var(--scrollbar-thumb);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #12E2C4;
   }
 }
 
-/* Number Counter Animation */
-@property --num {
-  syntax: '<integer>';
-  inherits: false;
-  initial-value: 0;
+/* Native modal dialog scroll containment & top-layer entry/exit transitions */
+dialog.game-dossier-dialog {
+  opacity: 0;
+  transition-property: opacity, transform, display, overlay;
+  transition-duration: 0.24s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  transition-behavior: allow-discrete;
 }
 
-.counter {
-  transition: --num 1s;
-  counter-reset: num var(--num);
+dialog.game-dossier-dialog[open]:where(:not([data-closing])) {
+  opacity: 1;
 }
 
-.counter::after {
-  content: counter(num);
+@starting-style {
+  dialog.game-dossier-dialog[open]:where(:not([data-closing])) {
+    opacity: 0;
+  }
+}
+
+dialog.game-dossier-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog.game-dossier-dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(5, 6, 9, 0);
+  backdrop-filter: blur(0px);
+  transition-property: background-color, backdrop-filter, display, overlay;
+  transition-duration: 0.24s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  transition-behavior: allow-discrete;
+}
+
+dialog.game-dossier-dialog[open]:where(:not([data-closing]))::backdrop {
+  background-color: rgba(5, 6, 9, 0.84);
+  backdrop-filter: blur(14px);
+}
+
+@starting-style {
+  dialog.game-dossier-dialog[open]:where(:not([data-closing]))::backdrop {
+    background-color: rgba(5, 6, 9, 0);
+    backdrop-filter: blur(0px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  dialog.game-dossier-dialog {
+    transform: translateY(10px) scale(0.96);
+  }
+
+  dialog.game-dossier-dialog[open]:where(:not([data-closing])) {
+    transform: translateY(0) scale(1);
+  }
+
+  @starting-style {
+    dialog.game-dossier-dialog[open]:where(:not([data-closing])) {
+      transform: translateY(10px) scale(0.96);
+    }
+  }
+
+  /* Orchestrated hero headline & 3D stage reveal */
+  @keyframes hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes hero-scene-reveal {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes register-step-enter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .hero-stagger {
+    animation: hero-rise 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .hero-stagger-1 {
+    animation-delay: 0ms;
+  }
+
+  .hero-stagger-2 {
+    animation-delay: 80ms;
+  }
+
+  .hero-stagger-3 {
+    animation-delay: 160ms;
+  }
+
+  .hero-stagger-sub {
+    animation-delay: 240ms;
+  }
+
+  .hero-scene-reveal {
+    animation: hero-scene-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .register-step-enter {
+    animation: register-step-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.game-dossier-dialog,
+  dialog.game-dossier-dialog::backdrop {
+    transition-duration: 0.1s;
+  }
+}
+
+/* Horizontal scroll-snap carousel track */
+.games-carousel-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  touch-action: manipulation;
+}
+
+.games-carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .games-carousel-track {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Stadium Radial Mesh & Subtle Textures */
+.stadium-mesh {
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(18, 226, 196, 0.14) 0%, transparent 60%),
+    radial-gradient(circle at 85% 30%, rgba(245, 158, 11, 0.10) 0%, transparent 50%),
+    radial-gradient(circle at 15% 70%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+}
+
+.stadium-grid {
+  background-image: 
+    linear-gradient(to right, rgba(248, 250, 252, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(248, 250, 252, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Chrome text sheen effect */
+.metallic-sheen {
+  background: linear-gradient(
+    135deg,
+    #F8FAFC 0%,
+    #12E2C4 50%,
+    #F59E0B 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

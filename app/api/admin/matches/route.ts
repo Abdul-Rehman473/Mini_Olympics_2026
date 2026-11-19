@@ -1,48 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
-import { getAdminSession } from '@/lib/auth';
-import { cookies } from 'next/headers';
+import { sql, runTransaction } from '@/lib/db';
+import { ensureAuthAndPermissionsSchema, requireAdminPermission } from '@/lib/auth';
+import { generateDeterministicSchedule, BracketTeamInput } from '@/lib/matching';
+import { toGameSlug } from '@/lib/games-sync';
+import { logAudit, getClientIp } from '@/lib/audit';
 import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = 'force-dynamic';
 
-// GET - Fetch match schedules and teams
+// GET - Fetch match schedules and verified paid teams
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get('admin_session')?.value;
-    const session = await getAdminSession(sessionId);
+    const auth = await requireAdminPermission('/admin/hoc', 'view');
+    if (auth.error) return auth.error;
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!['super_admin', 'admin', 'hoc_admin'].includes(session.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    await ensureAuthAndPermissionsSchema();
 
     const { searchParams } = new URL(request.url);
     const game = searchParams.get('game');
     const gender = searchParams.get('gender');
 
-    // Get teams (verified registrations with team names)
     let teamsQuery = `
-      SELECT DISTINCT team_name, name, gender, selected_games
+      SELECT id, registration_number, team_name, name, roll_number, contact_number, email, gender, selected_games
       FROM registrations
-      WHERE status = 'paid' AND team_name IS NOT NULL AND team_name != ''
+      WHERE status = 'paid'
     `;
     const teamsParams: any[] = [];
 
-    if (gender) {
+    if (gender && gender !== 'all') {
       teamsParams.push(gender);
       teamsQuery += ` AND gender = $${teamsParams.length}`;
     }
 
-    teamsQuery += ' ORDER BY team_name ASC';
+    teamsQuery += ' ORDER BY COALESCE(NULLIF(team_name, \'\'), name) ASC';
+    const rawTeams = (await sql(teamsQuery, teamsParams)) as any[];
 
-    const teams = await sql(teamsQuery, teamsParams);
+    const teams = game
+      ? rawTeams.filter((t) => {
+          try {
+            const sg = typeof t.selected_games === 'string' ? JSON.parse(t.selected_games) : t.selected_games;
+            return Array.isArray(sg) && sg.some((g: string) => g.toLowerCase() === game.toLowerCase());
+          } catch {
+            return false;
+          }
+        })
+      : rawTeams;
 
-    // Get existing schedules (table may not exist if DB was inited without match_schedules)
     let schedules: any[] = [];
     try {
       let schedulesQuery = 'SELECT * FROM match_schedules';
@@ -51,9 +54,9 @@ export async function GET(request: NextRequest) {
 
       if (game) {
         schedulesParams.push(game);
-        schedulesConditions.push(`game_name = $${schedulesParams.length}`);
+        schedulesConditions.push(`LOWER(game_name) = LOWER($${schedulesParams.length})`);
       }
-      if (gender) {
+      if (gender && gender !== 'all') {
         schedulesParams.push(gender);
         schedulesConditions.push(`gender = $${schedulesParams.length}`);
       }
@@ -63,18 +66,17 @@ export async function GET(request: NextRequest) {
       }
       schedulesQuery += ' ORDER BY created_at DESC';
 
-      schedules = await sql(schedulesQuery, schedulesParams);
+      schedules = (await sql(schedulesQuery, schedulesParams)) as any[];
     } catch (schedErr: any) {
       if (schedErr?.code !== '42P01' && !schedErr?.message?.includes('match_schedules')) {
         throw schedErr;
       }
-      // Table does not exist; return empty schedules
     }
 
     return NextResponse.json({
       success: true,
-      teams: teams,
-      schedules: schedules,
+      teams,
+      schedules,
     });
   } catch (error: any) {
     console.error('Fetch matches error:', error);
@@ -82,129 +84,156 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Generate matches using AI
+// POST - Deterministically generate tournament fixtures (replaces removed AI generation)
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get('admin_session')?.value;
-    const session = await getAdminSession(sessionId);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAdminPermission('/admin/hoc', 'edit');
+    if (auth.error) return auth.error;
+    const { session } = auth;
 
-    if (!['super_admin', 'admin', 'hoc_admin'].includes(session.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    await ensureAuthAndPermissionsSchema();
 
     const body = await request.json();
-    const { game, gender, teams, customPrompt } = body;
+    const game = String(body?.game || '').trim();
+    const gender = body?.gender === 'girls' ? 'girls' : 'boys';
+    const format = (['knockout', 'round_robin', 'group_stage'].includes(body?.format)
+      ? body.format
+      : 'knockout') as 'knockout' | 'round_robin' | 'group_stage';
+    const matchDate = body?.matchDate ? String(body.matchDate).trim() : null;
+    const startTime = body?.startTime ? String(body.startTime).trim() : null;
+    const venue = body?.venue ? String(body.venue).trim() : null;
+    const breakMinutes = body?.breakMinutes !== undefined ? Number(body.breakMinutes) : 10;
+    const matchDurationMinutes = body?.matchDurationMinutes !== undefined ? Number(body.matchDurationMinutes) : 30;
+    const syncToMatches = body?.syncToMatches !== false;
+    const seed = body?.seed ? String(body.seed).trim() : `${game}:${gender}:${format}:${new Date().toISOString().slice(0, 10)}`;
 
-    if (!game || !gender || !teams || !Array.isArray(teams) || teams.length < 2) {
-      return NextResponse.json({ error: 'Game, gender, and at least 2 teams are required' }, { status: 400 });
+    if (!game) {
+      return NextResponse.json({ error: 'Game is required' }, { status: 400 });
     }
 
-    if (!customPrompt || !customPrompt.trim()) {
-      return NextResponse.json({ error: 'Please provide scheduling instructions' }, { status: 400 });
+    const paidRows = (await sql`
+      SELECT id, registration_number, name, team_name, roll_number, contact_number, email, selected_games
+      FROM registrations
+      WHERE status = 'paid' AND gender = ${gender}
+      ORDER BY registration_number ASC
+    `) as any[];
+
+    const dbTeamsByName = new Map<string, BracketTeamInput>();
+    for (const r of paidRows) {
+      let selected: string[] = [];
+      try {
+        selected = typeof r.selected_games === 'string' ? JSON.parse(r.selected_games) : r.selected_games || [];
+      } catch {}
+      if (!selected.some((g) => g.toLowerCase() === game.toLowerCase())) continue;
+      const tName = String(r.team_name || r.name).trim();
+      dbTeamsByName.set(tName.toLowerCase(), {
+        id: r.id,
+        teamName: tName,
+        rollNumber: r.roll_number,
+        contactNumber: r.contact_number,
+        email: r.email,
+      });
     }
 
-    // Get API key from settings
-    const apiKeyResult = await sql`SELECT value FROM system_settings WHERE key = 'openai_api_key'`;
-    const apiKey = (apiKeyResult as any[])[0]?.value;
+    const requestedTeams: string[] = Array.isArray(body?.teams)
+      ? body.teams.map((t: any) => String(t).trim()).filter(Boolean)
+      : [];
 
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI API key not configured. Go to Settings to add it.' }, { status: 400 });
+    let verifiedTeams: BracketTeamInput[];
+    if (requestedTeams.length > 0) {
+      const seen = new Set<string>();
+      verifiedTeams = [];
+      for (const name of requestedTeams) {
+        const key = name.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const found = dbTeamsByName.get(key);
+        if (!found) {
+          return NextResponse.json(
+            { error: `Team "${name}" is not a verified paid registration for ${game} (${gender}).` },
+            { status: 400 }
+          );
+        }
+        verifiedTeams.push(found);
+      }
+    } else {
+      verifiedTeams = Array.from(dbTeamsByName.values());
     }
 
-    // Generate matches using OpenAI with custom prompt
-    const prompt = `Generate a tournament match schedule for ${game} (${gender}).
-
-Teams (${teams.length} total): ${teams.join(', ')}
-
-USER INSTRUCTIONS: "${customPrompt}"
-
-IMPORTANT: Follow the user's instructions EXACTLY. If they ask for groups, create groups. If they ask for specific number of matches per team, ensure each team plays that many matches.
-
-Return ONLY valid JSON in this format:
-{
-  "format": "group-stage" or "round-robin" or "knockout" or "custom",
-  "groups": [
-    {
-      "name": "Group A",
-      "teams": ["Team1", "Team2", "Team3"]
+    if (verifiedTeams.length < 2) {
+      return NextResponse.json(
+        { error: `At least 2 verified paid entrants are required for ${game} (${gender}). Found ${verifiedTeams.length}.` },
+        { status: 400 }
+      );
     }
-  ],
-  "rounds": [
-    {
-      "round": 1,
-      "name": "Group A - Round 1" or "Quarter Finals" etc,
-      "matches": [
-        { "match": 1, "team1": "Team A", "team2": "Team B", "time": "TBD", "venue": "TBD" }
-      ]
-    }
-  ],
-  "notes": "Summary of the format used based on user instructions"
-}
 
-Make sure to include the groups array if creating a group-stage format. Ensure the schedule is fair and follows the user's instructions.`;
-
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: 'You are a sports tournament scheduler. Generate fair match schedules. Only respond with valid JSON.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }),
+    const scheduleData = generateDeterministicSchedule({
+      gameName: game,
+      gender,
+      teams: verifiedTeams,
+      format,
+      matchDate,
+      startTime,
+      venue,
+      breakMinutes: Number.isFinite(breakMinutes) ? breakMinutes : 10,
+      matchDurationMinutes: Number.isFinite(matchDurationMinutes) ? matchDurationMinutes : 30,
+      seed,
     });
 
-    if (!aiResponse.ok) {
-      const errorData = await aiResponse.json();
-      console.error('OpenAI error:', errorData);
-      return NextResponse.json({ error: 'AI generation failed', details: errorData.error?.message || 'Unknown error' }, { status: 500 });
-    }
-
-    const aiData = await aiResponse.json();
-    const generatedContent = aiData.choices?.[0]?.message?.content;
-
-    if (!generatedContent) {
-      return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
-    }
-
-    // Parse the JSON response
-    let scheduleData;
-    try {
-      // Extract JSON from response (in case there's extra text)
-      const jsonMatch = generatedContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        scheduleData = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch (parseError) {
-      console.error('Parse error:', parseError);
-      return NextResponse.json({ error: 'Failed to parse AI response', rawResponse: generatedContent }, { status: 500 });
-    }
-
-    // Save the schedule
     const id = uuidv4();
-    await sql`
-      INSERT INTO match_schedules (id, game_name, gender, schedule_data, generated_by, created_at, updated_at)
-      VALUES (${id}, ${game}, ${gender}, ${JSON.stringify(scheduleData)}, ${session.username}, NOW(), NOW())
-      ON CONFLICT (id) DO UPDATE SET schedule_data = ${JSON.stringify(scheduleData)}, updated_at = NOW()
-    `;
+    const gameSlug = toGameSlug(game);
+    await runTransaction((txn) => [
+      txn`
+        INSERT INTO match_schedules (id, game_name, gender, schedule_data, generated_by, created_at, updated_at)
+        VALUES (${id}, ${game}, ${gender}, ${JSON.stringify(scheduleData)}, ${session.username}, NOW(), NOW())
+      `,
+      ...(syncToMatches
+        ? scheduleData.flatMatches.map(
+            (slot) => txn`
+              INSERT INTO coordinator_matches (
+                id, game_id, game_name, gender, round_name, match_number,
+                player1_name, player1_reg_id, player1_roll, player1_contact,
+                player2_name, player2_reg_id, player2_roll, player2_contact,
+                scheduled_date, scheduled_time, scheduled_start_at, scheduled_end_at,
+                venue, status, winner_name, pair_reason, assignment_scope,
+                coordinator_id, coordinator_username, created_at, updated_at
+              ) VALUES (
+                ${uuidv4()}, ${gameSlug}, ${game}, ${gender}, ${slot.round}, ${slot.matchNumber},
+                ${slot.player1.teamName}, ${slot.player1.id || null}, ${slot.player1.rollNumber || null}, ${slot.player1.contactNumber || null},
+                ${slot.player2 ? slot.player2.teamName : 'BYE'}, ${slot.player2?.id || null}, ${slot.player2?.rollNumber || null}, ${slot.player2?.contactNumber || null},
+                ${slot.scheduledDate}, ${slot.scheduledTime}, ${slot.scheduledStartAt}::timestamptz, ${slot.scheduledEndAt}::timestamptz,
+                ${slot.venue}, ${slot.isBye ? 'completed' : 'scheduled'}, ${slot.isBye ? slot.player1.teamName : null},
+                ${slot.pairReason}, 'hoc_bracket',
+                ${session.adminUserId}, ${session.username}, NOW(), NOW()
+              )
+            `
+          )
+        : []),
+    ]);
 
-    return NextResponse.json({ 
-      success: true, 
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'schedule.generate',
+      targetType: 'match_schedule',
+      targetId: id,
+      after: {
+        game,
+        gender,
+        format,
+        teamCount: verifiedTeams.length,
+        matchCount: scheduleData.flatMatches.length,
+        syncToMatches,
+        seed,
+      },
+      ip: getClientIp(request),
+    });
+
+    return NextResponse.json({
+      success: true,
       id,
-      schedule: scheduleData 
+      schedule: scheduleData,
+      syncedMatchesCount: syncToMatches ? scheduleData.flatMatches.length : 0,
     });
   } catch (error: any) {
     console.error('Generate matches error:', error);
@@ -215,17 +244,9 @@ Make sure to include the groups array if creating a group-stage format. Ensure t
 // DELETE - Delete a schedule
 export async function DELETE(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get('admin_session')?.value;
-    const session = await getAdminSession(sessionId);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!['super_admin', 'admin', 'hoc_admin'].includes(session.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const auth = await requireAdminPermission('/admin/hoc', 'edit');
+    if (auth.error) return auth.error;
+    const { session } = auth;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -235,6 +256,15 @@ export async function DELETE(request: NextRequest) {
     }
 
     await sql`DELETE FROM match_schedules WHERE id = ${id}`;
+
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'schedule.delete',
+      targetType: 'match_schedule',
+      targetId: id,
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

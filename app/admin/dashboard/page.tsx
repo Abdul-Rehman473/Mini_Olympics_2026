@@ -2,22 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Users,
-  DollarSign,
-  CheckCircle2,
   Package,
   Wallet,
-  TrendingUp,
-  Trophy,
   ArrowRight,
   Loader2,
   Medal,
-  Target,
+  ShieldCheck,
+  Clock,
+  Activity,
   BarChart3,
+  Radio,
+  CheckCircle2,
+  CalendarClock,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useAdminSession, canEditPage } from '@/lib/admin-session-context';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 
 type Stats = {
   total: number;
@@ -25,66 +26,94 @@ type Stats = {
   pendingOnline: number;
   pendingCash: number;
   rejected: number;
+  boys: number;
+  girls: number;
+};
+
+type MatchSummary = {
+  total: number;
+  scheduled: number;
+  inProgress: number;
+  completed: number;
+};
+
+type RecentMatch = {
+  id: string;
+  game_name: string;
+  gender: string;
+  round_name: string;
+  match_number: number;
+  player1_name: string;
+  player2_name: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  venue: string | null;
+  status: string;
+  winner_name: string | null;
+  score_summary: string | null;
+  coordinator_username: string | null;
 };
 
 export default function AdminDashboard() {
+  const adminSession = useAdminSession();
   const [stats, setStats] = useState<Stats>({
     total: 0,
     paid: 0,
     pendingOnline: 0,
     pendingCash: 0,
     rejected: 0,
+    boys: 0,
+    girls: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [financeStats, setFinanceStats] = useState({ income: 0, expense: 0, balance: 0 });
-  const [inventoryStats, setInventoryStats] = useState({ totalItems: 0, activeLoans: 0 });
+  const [errorMsg, setErrorMsg] = useState('');
+  const [financeStats, setFinanceStats] = useState<{ income: number; expense: number; balance: number } | null>(null);
+  const [inventoryStats, setInventoryStats] = useState<{ totalItems: number; totalStock: number; lowStock: number } | null>(null);
+  const [topGames, setTopGames] = useState<Array<{ name: string; count: number }>>([]);
+  const [matchSummary, setMatchSummary] = useState<MatchSummary | null>(null);
+  const [recentMatches, setRecentMatches] = useState<RecentMatch[]>([]);
+  const [systemHealth, setSystemHealth] = useState<{
+    status: string;
+    activeUsers: number;
+    activeSessions: number;
+    totalMatches: number;
+    unsyncedPaidRegistrations: number;
+  } | null>(null);
 
   useEffect(() => {
     loadDashboardData();
   }, []);
 
+  const hasAccess = (pageKey: string) =>
+    adminSession.role === 'super_admin' || adminSession.permissions.includes(pageKey);
+  const canEditRegistrations = canEditPage(adminSession, '/admin/registrations');
+
   const loadDashboardData = async () => {
     setLoading(true);
+    setErrorMsg('');
     try {
-      // Load registration stats
-      const statsRes = await fetch('/api/stats?' + new URLSearchParams({ _t: Date.now().toString() }), { cache: 'no-store' });
-      const statsData = await statsRes.json();
-      if (statsData.success) {
-        setStats(statsData.data);
+      const res = await fetch('/api/admin/dashboard?_t=' + Date.now(), { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to load dashboard metrics');
       }
-
-      // Load finance stats
-      try {
-        const financeRes = await fetch('/api/admin/finance', { cache: 'no-store' });
-        const financeData = await financeRes.json();
-        if (financeData.success && financeData.summary) {
-          setFinanceStats({
-            income: financeData.summary.totalIncome || 0,
-            expense: financeData.summary.totalExpense || 0,
-            balance: financeData.summary.balance || 0,
-          });
-        }
-      } catch (e) {}
-
-      // Load inventory stats
-      try {
-        const invRes = await fetch('/api/admin/inventory', { cache: 'no-store' });
-        const invData = await invRes.json();
-        if (invData.success) {
-          setInventoryStats({
-            totalItems: invData.data?.length || 0,
-            activeLoans: 0,
-          });
-        }
-        const loansRes = await fetch('/api/admin/inventory/loans', { cache: 'no-store' });
-        const loansData = await loansRes.json();
-        if (loansData.success) {
-          setInventoryStats(prev => ({
-            ...prev,
-            activeLoans: loansData.data?.filter((l: any) => l.status === 'active')?.length || 0,
-          }));
-        }
-      } catch (e) {}
+      setStats({
+        total: data.registrations?.total || 0,
+        paid: data.registrations?.paid || 0,
+        pendingOnline: data.registrations?.pendingOnline || 0,
+        pendingCash: data.registrations?.pendingCash || 0,
+        rejected: data.registrations?.rejected || 0,
+        boys: data.registrations?.boys || 0,
+        girls: data.registrations?.girls || 0,
+      });
+      setFinanceStats(data.finance || null);
+      setInventoryStats(data.inventory || null);
+      setTopGames(Array.isArray(data.topGames) ? data.topGames : []);
+      setMatchSummary(data.matches || null);
+      setRecentMatches(Array.isArray(data.recentMatches) ? data.recentMatches : []);
+      setSystemHealth(data.systemHealth || null);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to load dashboard metrics');
     } finally {
       setLoading(false);
     }
@@ -92,202 +121,468 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-[#12E2C4] mx-auto" />
+          <p className="text-xs font-mono text-[#94A3B8] tracking-widest uppercase">
+            LOADING TOURNAMENT DASHBOARD METRICS...
+          </p>
+        </div>
       </div>
     );
   }
 
   const totalPending = stats.pendingOnline + stats.pendingCash;
 
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case 'in_progress':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-amber-500/15 text-amber-300 border border-amber-500/30">
+            <Radio className="w-2.5 h-2.5 animate-pulse" />
+            Ongoing
+          </span>
+        );
+      case 'completed':
+      case 'walkover':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            <CheckCircle2 className="w-2.5 h-2.5" />
+            {status === 'walkover' ? 'Walkover' : 'Completed'}
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-sky-500/15 text-sky-300 border border-sky-500/30">
+            <CalendarClock className="w-2.5 h-2.5" />
+            Scheduled
+          </span>
+        );
+    }
+  };
+
   return (
-    <div className="p-6 lg:p-8 pt-16 lg:pt-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-lg">
-            <Medal className="h-6 w-6 text-white" />
+    <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-7xl mx-auto space-y-10">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/[0.08]">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#131B38] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
+            <OlympicRingsIcon className="w-5 h-3" />
+            <span>// TOURNAMENT COMMAND CENTER</span>
           </div>
-          Dashboard
-        </h1>
-        <p className="text-slate-500 mt-1">Mini Olympics 2026 - Overview</p>
+          <h1 className="text-3xl sm:text-4xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight">
+            OPERATIONS DASHBOARD
+          </h1>
+          <p className="text-xs font-mono text-[#94A3B8] mt-1">
+            MINI OLYMPICS 2026 • REAL-TIME REGISTRATION, MATCHES &amp; LOGISTICS OVERVIEW
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={loadDashboardData}
+            className="px-4 py-2.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#F8FAFC] bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] uppercase transition-all"
+          >
+            Refresh
+          </button>
+          {canEditRegistrations && (
+            <Link
+              href="/verify-cash"
+              className="px-4 py-2.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase transition-all inline-flex items-center gap-1.5"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>OPEN VERIFICATION DESK</span>
+            </Link>
+          )}
+        </div>
       </div>
 
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {errorMsg && (
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-200 text-sm flex items-center justify-between gap-4">
+          <span>{errorMsg}</span>
+          <button
+            type="button"
+            onClick={loadDashboardData}
+            className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-xs font-semibold"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* 4 Hero KPI Blocks */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Registrations */}
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
-          <CardContent className="p-6 relative">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-blue-100 text-sm font-medium">Total Registrations</p>
-                <p className="text-4xl font-bold mt-2">{stats.total}</p>
-                <p className="text-blue-200 text-sm mt-1">{stats.paid} verified</p>
-              </div>
-              <div className="p-3 bg-white/20 rounded-xl">
-                <Users className="h-6 w-6" />
-              </div>
+        <div className="relative p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-[#12E2C4]/40 transition-all shadow-xl group">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">TOTAL REGISTRATIONS</span>
+            <div className="p-2.5 rounded-xl bg-[#12E2C4]/10 text-[#12E2C4]">
+              <Users className="w-4 h-4" />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="text-4xl sm:text-5xl font-black text-[#F8FAFC] font-['Space_Grotesk'] leading-none">
+            {stats.total}
+          </div>
+          <div className="mt-3 flex items-center justify-between text-xs font-mono">
+            <span className="text-[#12E2C4] font-bold">{stats.paid} Verified</span>
+            <span className="text-[#94A3B8]">{totalPending} Pending</span>
+          </div>
+          <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#12E2C4] opacity-40 group-hover:opacity-100 transition-opacity" />
+        </div>
 
         {/* Pending Approvals */}
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
-          <CardContent className="p-6 relative">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-amber-100 text-sm font-medium">Pending Approvals</p>
-                <p className="text-4xl font-bold mt-2">{totalPending}</p>
-                <p className="text-amber-200 text-sm mt-1">Needs verification</p>
-              </div>
-              <div className="p-3 bg-white/20 rounded-xl">
-                <Target className="h-6 w-6" />
-              </div>
+        <div className="relative p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-[#F59E0B]/40 transition-all shadow-xl group">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">PENDING REVIEW</span>
+            <div className="p-2.5 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B]">
+              <Clock className="w-4 h-4" />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="text-4xl sm:text-5xl font-black text-[#F59E0B] font-['Space_Grotesk'] leading-none">
+            {totalPending}
+          </div>
+          <div className="mt-3 flex items-center justify-between text-xs font-mono">
+            <span className="text-[#94A3B8]">Cash: {stats.pendingCash}</span>
+            <span className="text-[#94A3B8]">Online: {stats.pendingOnline}</span>
+          </div>
+          <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#F59E0B] opacity-40 group-hover:opacity-100 transition-opacity" />
+        </div>
 
-        {/* Finance Balance */}
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
-          <CardContent className="p-6 relative">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-emerald-100 text-sm font-medium">Finance Balance</p>
-                <p className="text-4xl font-bold mt-2">Rs. {financeStats.balance.toLocaleString()}</p>
-                <p className="text-emerald-200 text-sm mt-1">Income - Expense</p>
-              </div>
-              <div className="p-3 bg-white/20 rounded-xl">
-                <Wallet className="h-6 w-6" />
+        {/* Financial Treasury Balance */}
+        {hasAccess('/admin/finance') && financeStats && (
+          <div className="relative p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-[#3B82F6]/40 transition-all shadow-xl group">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">TREASURY BALANCE</span>
+              <div className="p-2.5 rounded-xl bg-[#3B82F6]/10 text-[#3B82F6]">
+                <Wallet className="w-4 h-4" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-3xl sm:text-4xl font-black text-[#F8FAFC] font-['Space_Grotesk'] leading-none truncate">
+              Rs. {financeStats.balance.toLocaleString()}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs font-mono">
+              <span className="text-emerald-400">+{financeStats.income.toLocaleString()} In</span>
+              <span className="text-rose-400">-{financeStats.expense.toLocaleString()} Out</span>
+            </div>
+            <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#3B82F6] opacity-40 group-hover:opacity-100 transition-opacity" />
+          </div>
+        )}
 
-        {/* Inventory */}
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-500 to-pink-600 text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
-          <CardContent className="p-6 relative">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-purple-100 text-sm font-medium">Inventory</p>
-                <p className="text-4xl font-bold mt-2">{inventoryStats.totalItems}</p>
-                <p className="text-purple-200 text-sm mt-1">{inventoryStats.activeLoans} active loans</p>
-              </div>
-              <div className="p-3 bg-white/20 rounded-xl">
-                <Package className="h-6 w-6" />
+        {/* Equipment & Inventory */}
+        {hasAccess('/admin/inventory') && inventoryStats && (
+          <div className="relative p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-[#FFD700]/40 transition-all shadow-xl group">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">EQUIPMENT ASSETS</span>
+              <div className="p-2.5 rounded-xl bg-[#FFD700]/10 text-[#FFD700]">
+                <Package className="w-4 h-4" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-4xl sm:text-5xl font-black text-[#F8FAFC] font-['Space_Grotesk'] leading-none">
+              {inventoryStats.totalItems}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs font-mono">
+              <span className="text-[#12E2C4] font-bold">{inventoryStats.totalStock} Units</span>
+              <span className={inventoryStats.lowStock > 0 ? 'text-amber-400 font-bold' : 'text-[#94A3B8]'}>
+                {inventoryStats.lowStock} Low Stock
+              </span>
+            </div>
+            <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#FFD700] opacity-40 group-hover:opacity-100 transition-opacity" />
+          </div>
+        )}
       </div>
 
-      {/* Quick Access Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Registrations Card */}
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow group">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-500 transition-colors">
-                <Users className="h-5 w-5 text-blue-600 group-hover:text-white transition-colors" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Registrations</CardTitle>
-                <CardDescription>Manage participants</CardDescription>
-              </div>
+      {/* Live & Completed Matches Sync Panel */}
+      {matchSummary && (
+        <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <OlympicRingsIcon className="w-6 h-3.5" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[#F8FAFC]">
+                Match Center — Live, Scheduled &amp; Completed
+              </h2>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="text-center p-3 bg-emerald-50 rounded-lg">
-                <p className="text-2xl font-bold text-emerald-600">{stats.paid}</p>
-                <p className="text-xs text-slate-500">Verified</p>
-              </div>
-              <div className="text-center p-3 bg-amber-50 rounded-lg">
-                <p className="text-2xl font-bold text-amber-600">{totalPending}</p>
-                <p className="text-xs text-slate-500">Pending</p>
-              </div>
-              <div className="text-center p-3 bg-rose-50 rounded-lg">
-                <p className="text-2xl font-bold text-rose-600">{stats.rejected}</p>
-                <p className="text-xs text-slate-500">Rejected</p>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+              <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                Ongoing: {matchSummary.inProgress}
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                Scheduled: {matchSummary.scheduled}
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                Completed: {matchSummary.completed}
+              </span>
             </div>
-            <Link href="/admin/registrations">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                View All Registrations
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Finance Card */}
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow group">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-500 transition-colors">
-                <Wallet className="h-5 w-5 text-emerald-600 group-hover:text-white transition-colors" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Finance</CardTitle>
-                <CardDescription>Income & Expenses</CardDescription>
-              </div>
+          {recentMatches.length === 0 ? (
+            <div className="p-5 rounded-2xl bg-[#080D1C] border border-white/[0.06] text-xs font-mono text-[#94A3B8] text-center">
+              No matches scheduled yet. Coordinators &amp; HOC fixtures will sync here in real time.
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="text-center p-3 bg-emerald-50 rounded-lg">
-                <p className="text-xl font-bold text-emerald-600">Rs. {financeStats.income.toLocaleString()}</p>
-                <p className="text-xs text-slate-500">Income</p>
-              </div>
-              <div className="text-center p-3 bg-rose-50 rounded-lg">
-                <p className="text-xl font-bold text-rose-600">Rs. {financeStats.expense.toLocaleString()}</p>
-                <p className="text-xs text-slate-500">Expense</p>
-              </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {recentMatches.map((m) => (
+                <div
+                  key={m.id}
+                  className="p-4 rounded-2xl bg-[#080D1C] border border-white/[0.06] hover:border-[#12E2C4]/30 transition-all space-y-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-mono font-bold text-[#12E2C4] truncate">
+                      {m.game_name} • {m.gender === 'girls' ? 'Girls' : 'Boys'} • {m.round_name}
+                    </span>
+                    {statusBadge(m.status)}
+                  </div>
+                  <div className="text-sm font-bold text-[#F8FAFC] flex items-center gap-2">
+                    <span className="truncate">{m.player1_name}</span>
+                    <span className="text-[11px] font-mono text-[#94A3B8] shrink-0">vs</span>
+                    <span className="truncate">{m.player2_name}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-[#94A3B8]">
+                    <span>
+                      {m.scheduled_date || 'TBD'} {m.scheduled_time ? `• ${m.scheduled_time}` : ''}
+                      {m.venue ? ` • ${m.venue}` : ''}
+                    </span>
+                    {m.winner_name && (
+                      <span className="text-emerald-400 font-bold">
+                        Winner: {m.winner_name}
+                        {m.score_summary ? ` (${m.score_summary})` : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            <Link href="/admin/finance">
-              <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
-                View Finance
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+          )}
+        </div>
+      )}
 
-        {/* Inventory Card */}
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow group">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-500 transition-colors">
-                <Package className="h-5 w-5 text-purple-600 group-hover:text-white transition-colors" />
+      {/* Analytics & System Health Row */}
+      {(topGames.length > 0 || systemHealth) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {topGames.length > 0 && (
+            <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-[#F8FAFC] flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-[#12E2C4]" />
+                  Top Registered Games
+                </h2>
+                <span className="text-xs font-mono text-[#94A3B8]">
+                  Boys: {stats.boys} • Girls: {stats.girls}
+                </span>
               </div>
-              <div>
-                <CardTitle className="text-lg">Inventory</CardTitle>
-                <CardDescription>Equipment & Loans</CardDescription>
+              <div className="space-y-2.5">
+                {topGames.slice(0, 6).map((g) => {
+                  const max = topGames[0]?.count || 1;
+                  const pct = Math.max(8, Math.round((g.count / max) * 100));
+                  return (
+                    <div key={g.name} className="space-y-1">
+                      <div className="flex justify-between text-xs font-mono">
+                        <span className="text-[#E2E8F0] truncate">{g.name}</span>
+                        <span className="text-[#12E2C4] font-bold">{g.count}</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-[#080D1C] overflow-hidden">
+                        <div className="h-full bg-[#12E2C4] rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="text-center p-3 bg-purple-50 rounded-lg">
-                <p className="text-2xl font-bold text-purple-600">{inventoryStats.totalItems}</p>
-                <p className="text-xs text-slate-500">Total Items</p>
+          )}
+
+          {systemHealth && (
+            <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-[#F8FAFC] flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  System Health
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 uppercase">
+                  {systemHealth.status}
+                </span>
               </div>
-              <div className="text-center p-3 bg-amber-50 rounded-lg">
-                <p className="text-2xl font-bold text-amber-600">{inventoryStats.activeLoans}</p>
-                <p className="text-xs text-slate-500">Active Loans</p>
+              <div className="grid grid-cols-2 gap-3 font-mono text-xs">
+                <div className="p-4 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-[#94A3B8]">Active Staff Accounts</p>
+                  <p className="text-2xl font-black text-[#F8FAFC] mt-1">{systemHealth.activeUsers}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-[#94A3B8]">Live Fixtures Scheduled</p>
+                  <p className="text-2xl font-black text-[#12E2C4] mt-1">{systemHealth.totalMatches}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-[#94A3B8]">Active Sessions</p>
+                  <p className="text-xl font-black text-sky-400 mt-1">{systemHealth.activeSessions}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-[#94A3B8]">Unsynced Paid Regs</p>
+                  <p className={`text-xl font-black mt-1 ${systemHealth.unsyncedPaidRegistrations > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {systemHealth.unsyncedPaidRegistrations}
+                  </p>
+                </div>
               </div>
             </div>
-            <Link href="/admin/inventory">
-              <Button className="w-full bg-purple-600 hover:bg-purple-700">
-                View Inventory
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+          )}
+        </div>
+      )}
+
+      {/* Module Navigation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Registrations Management Module */}
+        {hasAccess('/admin/registrations') && (
+          <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
+                    Registrations &amp; Verification
+                  </h3>
+                  <p className="text-xs font-mono text-[#94A3B8]">Participant review &amp; audit logs</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center font-mono text-xs mb-4">
+                <div className="p-3 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-lg font-bold text-[#12E2C4]">{stats.paid}</p>
+                  <p className="text-[10px] text-[#94A3B8]">Paid</p>
+                </div>
+                <div className="p-3 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-lg font-bold text-amber-400">{totalPending}</p>
+                  <p className="text-[10px] text-[#94A3B8]">Pending</p>
+                </div>
+                <div className="p-3 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-lg font-bold text-rose-400">{stats.rejected}</p>
+                  <p className="text-[10px] text-[#94A3B8]">Rejected</p>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/admin/registrations"
+              className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F8FAFC] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
+            >
+              <span>MANAGE ALL REGISTRATIONS</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        {/* Coordinator Portal Module */}
+        {hasAccess('/admin/coordinator') && (
+          <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 rounded-xl bg-[#12E2C4]/10 text-[#12E2C4]">
+                  <Medal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
+                    Coordinator Portal
+                  </h3>
+                  <p className="text-xs font-mono text-[#94A3B8]">Players, match timings &amp; results</p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#080D1C] border border-white/[0.06] text-xs font-mono text-[#94A3B8] space-y-1 mb-4">
+                <div className="flex justify-between">
+                  <span>Match Scheduler:</span>
+                  <span className="text-[#12E2C4] font-bold">Active</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>HOC Live Sync:</span>
+                  <span className="text-white font-bold">Enabled</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/admin/coordinator"
+              className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F8FAFC] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
+            >
+              <span>OPEN COORDINATOR PORTAL</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
+
+        {/* Finance Ledger Module */}
+        {hasAccess('/admin/finance') && financeStats && (
+          <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
+                    Finance &amp; Treasury
+                  </h3>
+                  <p className="text-xs font-mono text-[#94A3B8]">Incomes, expenses &amp; sync</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-center font-mono text-xs mb-4">
+                <div className="p-3 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-sm font-bold text-emerald-400">Rs. {financeStats.income.toLocaleString()}</p>
+                  <p className="text-[10px] text-[#94A3B8]">Income</p>
+                </div>
+                <div className="p-3 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-sm font-bold text-rose-400">Rs. {financeStats.expense.toLocaleString()}</p>
+                  <p className="text-[10px] text-[#94A3B8]">Expense</p>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/admin/finance"
+              className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F8FAFC] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
+            >
+              <span>ACCESS FINANCE LEDGER</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
+
+        {/* Head of Competition (HOC) Module */}
+        {hasAccess('/admin/hoc') && (
+          <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B]">
+                  <OlympicRingsIcon className="w-6 h-3.5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
+                    HOC Tournament Brackets
+                  </h3>
+                  <p className="text-xs font-mono text-[#94A3B8]">Match fixtures, sport groups &amp; oversight</p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#080D1C] border border-white/[0.06] text-xs font-mono text-[#94A3B8] space-y-1 mb-4">
+                <div className="flex justify-between">
+                  <span>Active Format:</span>
+                  <span className="text-[#12E2C4] font-bold">Knockout &amp; Groups</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>PDF Generator:</span>
+                  <span className="text-white font-bold">Available</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/admin/hoc"
+              className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F8FAFC] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
+            >
+              <span>HOC FIXTURE ENGINE</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

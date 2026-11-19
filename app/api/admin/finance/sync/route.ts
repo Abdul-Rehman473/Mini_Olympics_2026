@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAdminSession } from '@/lib/auth';
+import { getAdminSession, hasPagePermission } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { cookies } from 'next/headers';
 
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['super_admin', 'finance_admin'].includes(session.role)) {
+    if (!hasPagePermission(session, '/admin/finance', 'edit')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -47,15 +47,26 @@ export async function POST(request: NextRequest) {
           ) VALUES (
             ${financeId}, 'income', 'registration', ${finalAmount}, 
             ${'Registration #' + reg.registration_number + ' - ' + reg.name},
-            ${reg.id}, 'registration', ${paymentMethod}, 'sync',
+            ${reg.id}, 'registration', ${paymentMethod}, ${session.username},
             ${recordDate}, NOW(), NOW()
           )
+          ON CONFLICT (reference_id, reference_type) WHERE reference_id IS NOT NULL DO NOTHING
         `;
         syncedCount++;
       } catch (err: any) {
         errors.push(`Registration ${reg.registration_number}: ${err.message}`);
       }
     }
+
+    const { logAudit, getClientIp } = await import('@/lib/audit');
+    await logAudit({
+      actorUserId: session.adminUserId,
+      actorUsername: session.username,
+      action: 'finance.sync',
+      targetType: 'finance_records',
+      after: { synced: syncedCount, total: paidRegistrations.length },
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({ 
       success: true, 

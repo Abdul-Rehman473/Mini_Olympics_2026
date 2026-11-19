@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAdminSession } from '@/lib/auth';
+import { getAdminSession, hasPagePermission } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
 // Force dynamic rendering – never cache export in production
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Helper function to escape CSV values
+// Helper function to escape CSV values and neutralize spreadsheet formula injection
 function escapeCsvValue(value: any): string {
   if (value === null || value === undefined) {
     return '';
   }
-  const stringValue = String(value);
-  // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+  let stringValue = String(value);
+  if (/^[=+\-@\t\r]/.test(stringValue)) {
+    stringValue = `'${stringValue}`;
+  }
   if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
     return `"${stringValue.replace(/"/g, '""')}"`;
   }
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (!['super_admin', 'admin', 'registration_admin'].includes(session.role)) {
+    if (!hasPagePermission(session, '/admin/registrations', 'view')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

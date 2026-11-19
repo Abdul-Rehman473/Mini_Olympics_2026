@@ -3,35 +3,28 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import AdminSidebar from '@/components/admin/sidebar';
-
-// Define which pages each role can access
-const rolePermissions: Record<string, string[]> = {
-  super_admin: ['/admin/dashboard', '/admin/registrations', '/admin/inventory', '/admin/finance', '/admin/super', '/admin/hoc', '/admin/email', '/admin/settings', '/admin/esports'],
-  registration_admin: ['/admin/registrations'],
-  inventory_admin: ['/admin/inventory'],
-  hoc_admin: ['/admin/super', '/admin/hoc'],
-  finance_admin: ['/admin/finance'],
-};
-
-// Get the default redirect page for each role
-const roleDefaultPage: Record<string, string> = {
-  super_admin: '/admin/dashboard',
-  registration_admin: '/admin/registrations',
-  inventory_admin: '/admin/inventory',
-  hoc_admin: '/admin/hoc',
-  finance_admin: '/admin/finance',
-};
+import { ToastProvider } from '@/components/ui/toast';
+import { AdminSessionProvider, AdminSessionClient } from '@/lib/admin-session-context';
+import { ShieldAlert } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [authenticated, setAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState<string>('');
-  const [username, setUsername] = useState<string>('');
+  const [sessionState, setSessionState] = useState<AdminSessionClient>({
+    role: 'sub_admin',
+    username: '',
+    displayName: '',
+    permissions: [],
+    permissionDetails: {},
+    assignedGames: [],
+    assignedGender: 'both',
+    impersonatedBy: null,
+  });
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [exitingImpersonation, setExitingImpersonation] = useState(false);
 
-  // Skip layout for login page
   const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
@@ -40,22 +33,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    fetch('/api/admin/verify')
+    setAccessDenied(false);
+
+    fetch('/api/admin/verify', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.authenticated) {
-          // Legacy sessions may return role 'admin' when admin_sessions has no role column
-          const role = data.role || 'super_admin';
+          const role = data.role || 'sub_admin';
           const effectiveRole = role === 'admin' ? 'super_admin' : role;
-          setUserRole(effectiveRole);
-          setUsername(data.username || 'Admin');
+          const allowedPages: string[] = Array.isArray(data.permissions) ? data.permissions : [];
 
-          const allowedPages = rolePermissions[effectiveRole] || [];
-          const hasAccess = allowedPages.some(page => pathname.startsWith(page));
+          setSessionState({
+            role: effectiveRole,
+            username: data.username || '',
+            displayName: data.displayName || data.username || 'Admin',
+            permissions: allowedPages,
+            permissionDetails: data.permissionDetails || {},
+            assignedGames: Array.isArray(data.assignedGames) ? data.assignedGames : [],
+            assignedGender: data.assignedGender || 'both',
+            impersonatedBy: data.impersonatedBy || null,
+          });
+
+          const hasAccess =
+            effectiveRole === 'super_admin' ||
+            allowedPages.some((page) => pathname.startsWith(page)) ||
+            (pathname.startsWith('/admin/super') && allowedPages.includes('/admin/hoc'));
 
           if (!hasAccess) {
-            const defaultPage = roleDefaultPage[effectiveRole] || '/admin/dashboard';
-            router.push(defaultPage);
+            const defaultPage = data.defaultPage || allowedPages[0] || '/admin/login';
+            if (defaultPage && defaultPage !== pathname) {
+              router.push(defaultPage);
+            }
             setAccessDenied(true);
           } else {
             setAuthenticated(true);
@@ -73,20 +81,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/admin/login');
   };
 
-  // Login page doesn't use sidebar layout
+  const handleExitImpersonation = async () => {
+    setExitingImpersonation(true);
+    try {
+      const res = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stop: true }),
+      });
+      if (res.ok) {
+        window.location.href = '/admin/permissions';
+      }
+    } finally {
+      setExitingImpersonation(false);
+    }
+  };
+
   if (isLoginPage) {
-    return <>{children}</>;
+    return <ToastProvider>{children}</ToastProvider>;
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
+      <div className="min-h-screen flex items-center justify-center bg-[#080D1C]">
         <div className="text-center">
           <div className="relative">
-            <div className="w-20 h-20 border-4 border-blue-400/30 rounded-full animate-pulse"></div>
-            <div className="w-20 h-20 border-4 border-t-blue-400 rounded-full animate-spin absolute inset-0"></div>
+            <div className="w-16 h-16 border-2 border-white/10 rounded-full animate-pulse"></div>
+            <div className="w-16 h-16 border-2 border-t-[#12E2C4] rounded-full animate-spin absolute inset-0"></div>
           </div>
-          <p className="text-blue-200 mt-6 text-lg font-medium">Loading...</p>
+          <p className="text-[#94A3B8] font-mono mt-6 text-xs uppercase tracking-widest">AUTHENTICATING TERMINAL...</p>
         </div>
       </div>
     );
@@ -97,11 +120,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
-      <AdminSidebar userRole={userRole} username={username} onLogout={handleLogout} />
-      <main className="flex-1 lg:ml-0 min-h-screen overflow-x-hidden">
-        {children}
-      </main>
-    </div>
+    <ToastProvider>
+      <AdminSessionProvider value={sessionState}>
+        <div className="flex min-h-screen bg-[#080D1C] text-[#F8FAFC]">
+          <AdminSidebar
+            userRole={sessionState.role}
+            username={sessionState.displayName}
+            permissions={sessionState.permissions}
+            onLogout={handleLogout}
+          />
+          <main className="flex-1 lg:ml-0 min-h-screen overflow-x-hidden bg-[#080D1C] flex flex-col">
+            {sessionState.impersonatedBy && (
+              <div className="bg-amber-500/15 border-b border-amber-500/40 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-200">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 text-amber-400 shrink-0" />
+                  <span>
+                    Impersonating <strong>{sessionState.displayName}</strong> ({sessionState.role}) — Super Admin:{' '}
+                    <strong>{sessionState.impersonatedBy}</strong> (logged)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleExitImpersonation}
+                  disabled={exitingImpersonation}
+                  className="px-3 py-1 rounded bg-amber-500 text-[#080D1C] font-semibold hover:bg-amber-400 transition-colors"
+                >
+                  {exitingImpersonation ? 'Returning...' : 'Exit Impersonation'}
+                </button>
+              </div>
+            )}
+            <div className="flex-1">{children}</div>
+          </main>
+        </div>
+      </AdminSessionProvider>
+    </ToastProvider>
   );
 }

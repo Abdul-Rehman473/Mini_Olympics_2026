@@ -1,18 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -21,32 +12,30 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
+import { useAdminSession, canEditPage } from '@/lib/admin-session-context';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 import {
   Package,
   Plus,
-  Pencil,
-  Trash2,
-  UserCheck,
-  RotateCcw,
-  AlertTriangle,
   Search,
+  Edit,
+  Trash2,
+  AlertTriangle,
+  RefreshCw,
   Loader2,
-  Check,
-  Boxes,
-  TrendingUp,
-  CheckCircle,
-  XCircle,
-  ArrowRightLeft,
-  Save,
-  X,
-  FileSpreadsheet,
+  MapPin,
+  Layers,
+  CheckCircle2,
+  Lock,
 } from 'lucide-react';
 
 type InventoryItem = {
@@ -58,1091 +47,583 @@ type InventoryItem = {
   unit: string;
   min_quantity: number;
   location: string | null;
-  is_active: boolean;
-  activeLoans: number;
-  loanedQty: number;
-  created_at: string;
-};
-
-type Loan = {
-  id: string;
-  item_id: string;
-  item_name: string;
-  item_category: string;
-  borrower_name: string;
-  borrower_roll: string | null;
-  borrower_phone: string;
-  quantity: number;
-  loan_date: string;
-  expected_return_date: string | null;
-  actual_return_date: string | null;
-  status: string;
-  notes: string | null;
-  loaned_by: string;
-};
-
-type NewItemRow = {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  quantity: number;
-  unit: string;
-  minQuantity: number;
-  location: string;
+  is_active?: boolean;
 };
 
 const CATEGORIES = [
-  { value: 'sports', label: 'Sports Equipment' },
+  { value: 'sports_equipment', label: 'Sports Equipment' },
   { value: 'electronics', label: 'Electronics' },
   { value: 'furniture', label: 'Furniture' },
-  { value: 'stationery', label: 'Stationery' },
-  { value: 'general', label: 'General' },
+  { value: 'awards', label: 'Medals & Awards' },
+  { value: 'banners', label: 'Banners & Signage' },
+  { value: 'general', label: 'General Supplies' },
 ];
 
-const createEmptyRow = (): NewItemRow => ({
-  id: Math.random().toString(36).substr(2, 9),
-  name: '',
-  description: '',
-  category: 'sports',
-  quantity: 1,
-  unit: 'pcs',
-  minQuantity: 1,
-  location: '',
-});
+function getCategoryLabel(val: string) {
+  return CATEGORIES.find((c) => c.value === val)?.label || val.replace(/_/g, ' ');
+}
 
 export default function InventoryPage() {
+  const toast = useToast();
+  const adminSession = useAdminSession();
+  const canEdit = canEditPage(adminSession, '/admin/inventory');
+
   const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'items' | 'add' | 'loans'>('items');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  // Sheet view for adding items
-  const [newItems, setNewItems] = useState<NewItemRow[]>([createEmptyRow(), createEmptyRow(), createEmptyRow()]);
-  const [savingItems, setSavingItems] = useState(false);
-
-  // Dialog states
-  const [loanDialogOpen, setLoanDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  // Add / Edit Modal
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [saving, setSaving] = useState(false);
-
-  // Edit form state
-  const [editForm, setEditForm] = useState({
+  const [form, setForm] = useState({
     name: '',
-    description: '',
-    category: 'sports',
-    quantity: 1,
+    category: 'sports_equipment',
+    quantity: '1',
     unit: 'pcs',
-    minQuantity: 1,
+    minQuantity: '2',
     location: '',
+    description: '',
   });
 
-  const [loanForm, setLoanForm] = useState({
-    itemId: '',
-    borrowerName: '',
-    borrowerRoll: '',
-    borrowerPhone: '',
-    quantity: 1,
-    notes: '',
-  });
+  // Delete Confirm
+  const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
 
   useEffect(() => {
-    loadData();
+    loadItems();
   }, []);
 
-  const loadData = async () => {
+  const loadItems = async () => {
     setLoading(true);
     try {
-      const [itemsRes, loansRes] = await Promise.all([
-        fetch('/api/admin/inventory', { cache: 'no-store' }),
-        fetch('/api/admin/inventory/loans?status=active', { cache: 'no-store' }),
-      ]);
-
-      const itemsData = await itemsRes.json();
-      const loansData = await loansRes.json();
-
-      if (itemsData.success) setItems(itemsData.data || []);
-      if (loansData.success) setLoans(loansData.data || []);
-    } catch (error) {
-      console.error('Load error:', error);
+      const res = await fetch('/api/admin/inventory?_t=' + Date.now(), { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success) {
+        setItems(data.data || []);
+      } else {
+        toast.error(data.error || 'Failed to load inventory');
+      }
+    } catch {
+      toast.error('Failed to load inventory');
     } finally {
       setLoading(false);
     }
   };
 
-  // Sheet row handlers
-  const updateNewItem = (index: number, field: keyof NewItemRow, value: string | number) => {
-    setNewItems(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
+  const filteredItems = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return items.filter((item) => {
+      if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
+      if (!q) return true;
+      return (
+        item.name.toLowerCase().includes(q) ||
+        (item.location || '').toLowerCase().includes(q) ||
+        (item.description || '').toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q)
+      );
     });
+  }, [items, searchTerm, categoryFilter]);
+
+  const stats = useMemo(() => {
+    const totalItems = items.length;
+    const totalUnits = items.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+    const lowStock = items.filter((i) => Number(i.quantity) <= Number(i.min_quantity || 0)).length;
+    const healthyStock = totalItems - lowStock;
+    return { totalItems, totalUnits, lowStock, healthyStock };
+  }, [items]);
+
+  const openAddModal = () => {
+    setEditingItem(null);
+    setForm({
+      name: '',
+      category: 'sports_equipment',
+      quantity: '1',
+      unit: 'pcs',
+      minQuantity: '2',
+      location: '',
+      description: '',
+    });
+    setDialogOpen(true);
   };
 
-  const addMoreRows = () => {
-    setNewItems(prev => [...prev, createEmptyRow(), createEmptyRow(), createEmptyRow()]);
-  };
-
-  const removeRow = (index: number) => {
-    if (newItems.length <= 1) return;
-    setNewItems(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSaveAllItems = async () => {
-    const validItems = newItems.filter(item => item.name.trim() !== '');
-    if (validItems.length === 0) {
-      alert('Please add at least one item with a name');
-      return;
-    }
-
-    setSavingItems(true);
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const item of validItems) {
-      try {
-        const res = await fetch('/api/admin/inventory', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: item.name,
-            description: item.description || null,
-            category: item.category,
-            quantity: Number(item.quantity),
-            unit: item.unit,
-            minQuantity: Number(item.minQuantity),
-            location: item.location || null,
-          }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          successCount++;
-        } else {
-          errorCount++;
-        }
-      } catch (e) {
-        errorCount++;
-      }
-    }
-
-    setSavingItems(false);
-    
-    if (successCount > 0) {
-      alert(`Added ${successCount} item(s) successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
-      setNewItems([createEmptyRow(), createEmptyRow(), createEmptyRow()]);
-      setActiveTab('items');
-      loadData();
-    } else {
-      alert('Failed to add items');
-    }
-  };
-
-  const openEditDialog = (item: InventoryItem) => {
+  const openEditModal = (item: InventoryItem) => {
     setEditingItem(item);
-    setEditForm({
+    setForm({
       name: item.name,
-      description: item.description || '',
-      category: item.category,
-      quantity: item.quantity,
-      unit: item.unit,
-      minQuantity: item.min_quantity,
+      category: item.category || 'general',
+      quantity: String(item.quantity ?? 0),
+      unit: item.unit || 'pcs',
+      minQuantity: String(item.min_quantity ?? 0),
       location: item.location || '',
+      description: item.description || '',
     });
-    setEditDialogOpen(true);
+    setDialogOpen(true);
   };
 
-  const handleUpdateItem = async () => {
-    if (!editingItem || !editForm.name) {
-      alert('Name is required');
+  const handleSave = async () => {
+    if (!canEdit) return;
+    if (!form.name.trim()) {
+      toast.error('Item name is required');
       return;
     }
 
     setSaving(true);
     try {
+      const payload = {
+        ...(editingItem ? { id: editingItem.id } : {}),
+        name: form.name.trim(),
+        category: form.category,
+        quantity: Math.max(0, Number(form.quantity) || 0),
+        unit: form.unit.trim() || 'pcs',
+        minQuantity: Math.max(0, Number(form.minQuantity) || 0),
+        location: form.location.trim() || null,
+        description: form.description.trim() || null,
+      };
+
       const res = await fetch('/api/admin/inventory', {
-        method: 'PUT',
+        method: editingItem ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingItem.id,
-          name: editForm.name,
-          description: editForm.description || null,
-          category: editForm.category,
-          quantity: Number(editForm.quantity),
-          unit: editForm.unit,
-          minQuantity: Number(editForm.minQuantity),
-          location: editForm.location || null,
-        }),
+        body: JSON.stringify(payload),
       });
-
       const data = await res.json();
-      if (data.success) {
-        setEditDialogOpen(false);
-        loadData();
+      if (res.ok && data.success) {
+        toast.success(editingItem ? 'Item updated' : 'Item added to inventory');
+        setDialogOpen(false);
+        await loadItems();
       } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
+        toast.error(data.error || 'Failed to save item');
       }
+    } catch {
+      toast.error('Failed to save item');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteItem = async (item: InventoryItem) => {
-    if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
-
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
     try {
-      const res = await fetch(`/api/admin/inventory?id=${item.id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        loadData();
-      } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      alert('Failed to delete');
-    }
-  };
-
-  const openLoanDialog = (item?: InventoryItem) => {
-    setLoanForm({
-      itemId: item?.id || '',
-      borrowerName: '',
-      borrowerRoll: '',
-      borrowerPhone: '',
-      quantity: 1,
-      notes: '',
-    });
-    setLoanDialogOpen(true);
-  };
-
-  const handleCreateLoan = async () => {
-    if (!loanForm.itemId || !loanForm.borrowerName || !loanForm.borrowerPhone) {
-      alert('Item, borrower name, and phone are required');
-      return;
-    }
-
-    const selectedItem = items.find(i => i.id === loanForm.itemId);
-    const available = selectedItem ? selectedItem.quantity - selectedItem.loanedQty : 0;
-    
-    if (loanForm.quantity > available) {
-      alert(`Only ${available} available for loan`);
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const res = await fetch('/api/admin/inventory/loans', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loanForm),
+      const res = await fetch(`/api/admin/inventory?id=${encodeURIComponent(deleteTarget.id)}`, {
+        method: 'DELETE',
       });
-
       const data = await res.json();
-      if (data.success) {
-        setLoanDialogOpen(false);
-        loadData();
+      if (res.ok && data.success) {
+        toast.success(`Deleted "${deleteTarget.name}"`);
+        setDeleteTarget(null);
+        await loadItems();
       } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
+        toast.error(data.error || 'Failed to delete item');
       }
-    } finally {
-      setSaving(false);
+    } catch {
+      toast.error('Failed to delete item');
     }
-  };
-
-  const handleReturnLoan = async (loan: Loan) => {
-    if (!confirm(`Mark "${loan.item_name}" returned from ${loan.borrower_name}?`)) return;
-
-    try {
-      const res = await fetch('/api/admin/inventory/loans', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: loan.id, status: 'returned' }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        loadData();
-      } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      alert('Failed to return');
-    }
-  };
-
-  // Filtered items
-  const filteredItems = items.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (item.description || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
-
-  // Stats
-  const totalItems = items.length;
-  const totalStock = items.reduce((sum, i) => sum + i.quantity, 0);
-  const totalLoaned = items.reduce((sum, i) => sum + i.loanedQty, 0);
-  const totalAvailable = totalStock - totalLoaned;
-  const lowStockItems = items.filter((i) => (i.quantity - i.loanedQty) <= i.min_quantity).length;
-
-  const getCategoryLabel = (cat: string) => {
-    return CATEGORIES.find(c => c.value === cat)?.label || cat;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-[#12E2C4] mx-auto" />
+          <p className="text-xs font-mono text-[#94A3B8] tracking-widest uppercase">
+            LOADING EQUIPMENT INVENTORY...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 lg:p-6 pt-16 lg:pt-6 bg-slate-50 min-h-screen">
+    <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-7xl mx-auto space-y-8 text-[#F8FAFC]">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-lg">
-            <Package className="h-5 w-5 text-white" />
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/[0.08]">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#131B38] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
+            <OlympicRingsIcon className="w-5 h-3" />
+            <span>// EQUIPMENT &amp; STOCK DESK</span>
           </div>
-          Inventory Management
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">Track equipment and manage loans</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        <Card className="border-0 shadow-sm bg-blue-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Boxes className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Items</span>
-            </div>
-            <p className="text-xl font-bold mt-1">{totalItems}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-emerald-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Total Stock</span>
-            </div>
-            <p className="text-xl font-bold mt-1">{totalStock}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-teal-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Available</span>
-            </div>
-            <p className="text-xl font-bold mt-1">{totalAvailable}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-amber-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <ArrowRightLeft className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">On Loan</span>
-            </div>
-            <p className="text-xl font-bold mt-1">{totalLoaned}</p>
-          </CardContent>
-        </Card>
-
-        <Card className={`border-0 shadow-sm ${lowStockItems > 0 ? 'bg-rose-500' : 'bg-slate-500'} text-white`}>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Low Stock</span>
-            </div>
-            <p className="text-xl font-bold mt-1">{lowStockItems}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex flex-col lg:flex-row gap-3 mb-4">
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            onClick={() => setActiveTab('items')}
-            variant={activeTab === 'items' ? 'default' : 'outline'}
-            className={activeTab === 'items' ? 'bg-amber-500 hover:bg-amber-600' : ''}
-          >
-            <Package className="h-4 w-4 mr-1" />
-            Items ({items.length})
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setActiveTab('add')}
-            variant={activeTab === 'add' ? 'default' : 'outline'}
-            className={activeTab === 'add' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}
-          >
-            <FileSpreadsheet className="h-4 w-4 mr-1" />
-            Add Items
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setActiveTab('loans')}
-            variant={activeTab === 'loans' ? 'default' : 'outline'}
-            className={activeTab === 'loans' ? 'bg-amber-500 hover:bg-amber-600' : ''}
-          >
-            <UserCheck className="h-4 w-4 mr-1" />
-            Active Loans ({loans.length})
-          </Button>
+          <h1 className="text-3xl sm:text-4xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight">
+            INVENTORY DASHBOARD
+          </h1>
+          <p className="text-xs font-mono text-[#94A3B8] mt-1">
+            SIMPLE SPORTS EQUIPMENT &amp; SUPPLIES STOCK TRACKER
+          </p>
         </div>
-        
-        {activeTab === 'items' && (
-          <div className="flex flex-1 gap-2 lg:justify-end">
-            <div className="relative flex-1 lg:max-w-xs">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-9 text-sm"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-36 h-9 text-sm">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-        
-        {activeTab === 'loans' && (
-          <div className="flex flex-1 lg:justify-end">
-            <Button size="sm" onClick={() => openLoanDialog()} className="bg-amber-500 hover:bg-amber-600">
-              <Plus className="h-4 w-4 mr-1" />
-              New Loan
+
+        <div className="flex flex-wrap items-center gap-2">
+          {!canEdit && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono uppercase">
+              <Lock className="w-3.5 h-3.5" /> Read-Only
+            </span>
+          )}
+          <Button
+            onClick={loadItems}
+            variant="outline"
+            className="rounded-xl text-xs font-mono border-white/[0.12] bg-[#131B38] text-[#F8FAFC] hover:bg-white/[0.08]"
+          >
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+            Refresh
+          </Button>
+          {canEdit && (
+            <Button
+              onClick={openAddModal}
+              className="rounded-xl text-xs font-mono font-black tracking-wider bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#0B1124] uppercase"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Add Equipment
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Items Tab */}
-      {activeTab === 'items' && (
-        <>
-        {/* Desktop Table */}
-        <Card className="border-0 shadow-lg overflow-hidden hidden lg:block">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-800 hover:bg-slate-800">
-                  <TableHead className="text-white font-semibold w-12">S#</TableHead>
-                  <TableHead className="text-white font-semibold">Item Name</TableHead>
-                  <TableHead className="text-white font-semibold">Category</TableHead>
-                  <TableHead className="text-white font-semibold text-center">Total</TableHead>
-                  <TableHead className="text-white font-semibold text-center">Available</TableHead>
-                  <TableHead className="text-white font-semibold text-center">On Loan</TableHead>
-                  <TableHead className="text-white font-semibold">Location</TableHead>
-                  <TableHead className="text-white font-semibold">Status</TableHead>
-                  <TableHead className="text-white font-semibold text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-slate-400">
-                      <Package className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                      No items found. Go to "Add Items" tab to add inventory.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredItems.map((item, index) => {
-                    const available = item.quantity - item.loanedQty;
-                    const isLowStock = available <= item.min_quantity;
-                    
-                    return (
-                      <TableRow key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                        <TableCell className="font-medium text-slate-500">{index + 1}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium text-slate-800">{item.name}</p>
-                            {item.description && (
-                              <p className="text-xs text-slate-400 truncate max-w-xs">{item.description}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-600">
-                            {getCategoryLabel(item.category)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center font-semibold text-slate-700">
-                          {item.quantity} <span className="text-xs text-slate-400 font-normal">{item.unit}</span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className={`font-semibold ${available > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
-                            {available}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className={`font-semibold ${item.loanedQty > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-                            {item.loanedQty}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-500">
-                          {item.location || '-'}
-                        </TableCell>
-                        <TableCell>
-                          {isLowStock ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-100 text-rose-700 rounded text-xs font-medium">
-                              <AlertTriangle className="h-3 w-3" />
-                              Low Stock
-                            </span>
-                          ) : available === 0 ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-medium">
-                              <XCircle className="h-3 w-3" />
-                              All Loaned
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-medium">
-                              <CheckCircle className="h-3 w-3" />
-                              Available
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center gap-1">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              onClick={() => openLoanDialog(item)} 
-                              className="h-7 px-2 text-amber-600"
-                              disabled={available === 0}
-                            >
-                              <UserCheck className="h-3 w-3 mr-1" />
-                              Loan
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => openEditDialog(item)} className="h-7 w-7 p-0">
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item)} className="h-7 w-7 p-0 text-red-500">
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+      {/* 4 Clean Dark KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-5 rounded-2xl bg-[#131B38] border border-white/[0.08]">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono text-[#94A3B8] uppercase">Total Items</span>
+            <Package className="w-4 h-4 text-[#12E2C4]" />
           </div>
-          
-          {/* Table Footer */}
-          {filteredItems.length > 0 && (
-            <div className="bg-slate-100 px-4 py-3 flex flex-wrap gap-4 justify-between items-center border-t">
-              <div className="text-sm text-slate-600">
-                Showing <span className="font-semibold">{filteredItems.length}</span> items
-              </div>
-              <div className="flex gap-6 text-sm">
-                <div>
-                  <span className="text-slate-500">Total:</span>{' '}
-                  <span className="font-semibold">{totalStock}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Available:</span>{' '}
-                  <span className="font-semibold text-emerald-600">{totalAvailable}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">On Loan:</span>{' '}
-                  <span className="font-semibold text-amber-600">{totalLoaned}</span>
-                </div>
-              </div>
-            </div>
+          <p className="text-3xl font-black font-['Space_Grotesk'] text-[#F8FAFC] mt-2">{stats.totalItems}</p>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-[#131B38] border border-white/[0.08]">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono text-[#94A3B8] uppercase">Total Units</span>
+            <Layers className="w-4 h-4 text-sky-400" />
+          </div>
+          <p className="text-3xl font-black font-['Space_Grotesk'] text-sky-400 mt-2">{stats.totalUnits}</p>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-[#131B38] border border-white/[0.08]">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono text-[#94A3B8] uppercase">In Stock</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          </div>
+          <p className="text-3xl font-black font-['Space_Grotesk'] text-emerald-400 mt-2">{stats.healthyStock}</p>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-[#131B38] border border-amber-500/25">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono text-amber-300 uppercase">Low Stock</span>
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+          </div>
+          <p className="text-3xl font-black font-['Space_Grotesk'] text-amber-400 mt-2">{stats.lowStock}</p>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search equipment name, location, or notes..."
+            className="pl-10 bg-[#131B38] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl"
+          />
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-full sm:w-56 bg-[#131B38] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#131B38] border-white/[0.15] text-[#F8FAFC]">
+            <SelectItem value="all">All Categories</SelectItem>
+            {CATEGORIES.map((c) => (
+              <SelectItem key={c.value} value={c.value}>
+                {c.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Equipment List */}
+      {filteredItems.length === 0 ? (
+        <div className="p-12 rounded-3xl bg-[#131B38] border border-white/[0.08] text-center space-y-3">
+          <Package className="w-10 h-10 text-[#94A3B8] mx-auto opacity-60" />
+          <p className="text-sm font-mono text-[#94A3B8]">
+            {items.length === 0
+              ? 'No equipment items added yet.'
+              : 'No equipment matches your search or category filter.'}
+          </p>
+          {canEdit && items.length === 0 && (
+            <Button
+              onClick={openAddModal}
+              className="rounded-xl text-xs font-mono font-bold bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#0B1124]"
+            >
+              <Plus className="w-4 h-4 mr-1.5" /> Add First Item
+            </Button>
           )}
-        </Card>
-        
-        {/* Mobile Cards View */}
-        <div className="lg:hidden space-y-3">
-          {filteredItems.length === 0 ? (
-            <Card className="border-0 shadow-lg">
-              <CardContent className="py-12 text-center text-slate-400">
-                <Package className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                No items found. Go to "Add Items" tab to add inventory.
-              </CardContent>
-            </Card>
-          ) : (
-            filteredItems.map((item, index) => {
-              const available = item.quantity - item.loanedQty;
-              const isLowStock = available <= item.min_quantity;
-              
-              return (
-                <Card key={item.id} className="border-0 shadow-md overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <p className="font-semibold text-slate-800">{item.name}</p>
-                        <span className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-600">
+        </div>
+      ) : (
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block rounded-2xl bg-[#131B38] border border-white/[0.08] overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#182244] border-b border-white/[0.08] text-[11px] font-mono uppercase text-[#94A3B8]">
+                  <th className="py-3.5 px-5">Equipment</th>
+                  <th className="py-3.5 px-4">Category</th>
+                  <th className="py-3.5 px-4">Stock</th>
+                  <th className="py-3.5 px-4">Location</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  {canEdit && <th className="py-3.5 px-5 text-right">Actions</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.06] text-sm">
+                {filteredItems.map((item) => {
+                  const isLow = Number(item.quantity) <= Number(item.min_quantity || 0);
+                  return (
+                    <tr key={item.id} className="hover:bg-white/[0.03] transition-colors">
+                      <td className="py-4 px-5">
+                        <div className="font-semibold text-[#F8FAFC]">{item.name}</div>
+                        {item.description && (
+                          <div className="text-xs text-[#94A3B8] mt-0.5 line-clamp-1">{item.description}</div>
+                        )}
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="px-2.5 py-1 rounded-lg bg-[#0B1124] border border-white/[0.08] text-xs font-mono text-[#94A3B8]">
                           {getCategoryLabel(item.category)}
                         </span>
-                      </div>
-                      {isLowStock ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-100 text-rose-700 rounded text-xs font-medium">
-                          <AlertTriangle className="h-3 w-3" /> Low
-                        </span>
-                      ) : available === 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-medium">
-                          <XCircle className="h-3 w-3" /> Loaned
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-medium">
-                          <CheckCircle className="h-3 w-3" /> OK
-                        </span>
+                      </td>
+                      <td className="py-4 px-4 font-mono">
+                        <span className="font-bold text-[#F8FAFC]">{item.quantity}</span>{' '}
+                        <span className="text-xs text-[#94A3B8]">{item.unit || 'pcs'}</span>
+                      </td>
+                      <td className="py-4 px-4 text-xs font-mono text-[#94A3B8]">
+                        {item.location ? (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-[#12E2C4]" />
+                            {item.location}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="py-4 px-4">
+                        {isLow ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            <AlertTriangle className="w-3 h-3" /> Low Stock
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            <CheckCircle2 className="w-3 h-3" /> In Stock
+                          </span>
+                        )}
+                      </td>
+                      {canEdit && (
+                        <td className="py-4 px-5 text-right space-x-1.5 whitespace-nowrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditModal(item)}
+                            className="h-8 px-2.5 bg-[#0B1124] border-white/[0.12] text-[#F8FAFC] hover:bg-white/[0.08]"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setDeleteTarget(item)}
+                            className="h-8 px-2.5 bg-[#0B1124] border-white/[0.12] text-red-400 hover:bg-red-500/15"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </td>
                       )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="grid grid-cols-1 gap-3 md:hidden">
+            {filteredItems.map((item) => {
+              const isLow = Number(item.quantity) <= Number(item.min_quantity || 0);
+              return (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-2xl bg-[#131B38] border border-white/[0.08] space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-bold text-[#F8FAFC]">{item.name}</h3>
+                      <p className="text-xs font-mono text-[#94A3B8]">{getCategoryLabel(item.category)}</p>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                      <div className="bg-slate-100 rounded p-2">
-                        <p className="text-xs text-slate-500">Total</p>
-                        <p className="font-bold text-slate-700">{item.quantity}</p>
-                      </div>
-                      <div className="bg-emerald-50 rounded p-2">
-                        <p className="text-xs text-emerald-600">Available</p>
-                        <p className="font-bold text-emerald-600">{available}</p>
-                      </div>
-                      <div className="bg-amber-50 rounded p-2">
-                        <p className="text-xs text-amber-600">On Loan</p>
-                        <p className="font-bold text-amber-600">{item.loanedQty}</p>
-                      </div>
+                    {isLow ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                        Low Stock
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        In Stock
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-mono text-[#94A3B8] pt-2 border-t border-white/[0.06]">
+                    <span>
+                      Stock: <strong className="text-[#F8FAFC]">{item.quantity} {item.unit || 'pcs'}</strong>
+                    </span>
+                    <span>{item.location || 'No location'}</span>
+                  </div>
+
+                  {canEdit && (
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditModal(item)}
+                        className="h-8 px-3 text-xs bg-[#0B1124] border-white/[0.12] text-[#F8FAFC]"
+                      >
+                        <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setDeleteTarget(item)}
+                        className="h-8 px-3 text-xs bg-[#0B1124] border-white/[0.12] text-red-400"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                      </Button>
                     </div>
-                    <div className="flex items-center justify-between pt-3 border-t">
-                      <span className="text-xs text-slate-500">{item.location || 'No location'}</span>
-                      <div className="flex gap-1">
-                        <Button size="sm" onClick={() => openLoanDialog(item)} className="h-8 bg-amber-500 hover:bg-amber-600 text-xs">
-                          <ArrowRightLeft className="h-3 w-3 mr-1" /> Loan
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => openEditDialog(item)} className="h-8 w-8 p-0">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item)} className="h-8 w-8 p-0 text-red-500">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
               );
-            })
-          )}
-          
-          {/* Mobile Summary */}
-          {filteredItems.length > 0 && (
-            <Card className="border-0 shadow-md bg-slate-100">
-              <CardContent className="p-4 flex justify-between text-sm">
-                <span><span className="text-slate-500">Total:</span> <span className="font-bold">{totalStock}</span></span>
-                <span><span className="text-emerald-600">Available:</span> <span className="font-bold text-emerald-600">{totalAvailable}</span></span>
-                <span><span className="text-amber-600">Loaned:</span> <span className="font-bold text-amber-600">{totalLoaned}</span></span>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+            })}
+          </div>
         </>
       )}
 
-      {/* Add Items Tab - Spreadsheet View */}
-      {activeTab === 'add' && (
-        <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3">
-            <h2 className="text-white font-semibold flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5" />
-              Add Multiple Items
-            </h2>
-            <p className="text-emerald-100 text-sm">Fill in the rows below and click Save All to add items</p>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-100">
-                  <TableHead className="w-12 font-semibold">#</TableHead>
-                  <TableHead className="font-semibold min-w-[180px]">Item Name *</TableHead>
-                  <TableHead className="font-semibold min-w-[150px]">Description</TableHead>
-                  <TableHead className="font-semibold min-w-[140px]">Category</TableHead>
-                  <TableHead className="font-semibold w-20 text-center">Qty</TableHead>
-                  <TableHead className="font-semibold w-20 text-center">Unit</TableHead>
-                  <TableHead className="font-semibold w-20 text-center">Min Qty</TableHead>
-                  <TableHead className="font-semibold min-w-[120px]">Location</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {newItems.map((item, index) => (
-                  <TableRow key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                    <TableCell className="font-medium text-slate-400">{index + 1}</TableCell>
-                    <TableCell>
-                      <Input
-                        value={item.name}
-                        onChange={(e) => updateNewItem(index, 'name', e.target.value)}
-                        placeholder="e.g., Football"
-                        className="h-8 text-sm border-slate-200 focus:border-emerald-500"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        value={item.description}
-                        onChange={(e) => updateNewItem(index, 'description', e.target.value)}
-                        placeholder="Optional"
-                        className="h-8 text-sm border-slate-200"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Select value={item.category} onValueChange={(v) => updateNewItem(index, 'category', v)}>
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CATEGORIES.map((c) => (
-                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={item.quantity}
-                        onChange={(e) => updateNewItem(index, 'quantity', Number(e.target.value))}
-                        className="h-8 text-sm text-center border-slate-200"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        value={item.unit}
-                        onChange={(e) => updateNewItem(index, 'unit', e.target.value)}
-                        placeholder="pcs"
-                        className="h-8 text-sm text-center border-slate-200"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={item.minQuantity}
-                        onChange={(e) => updateNewItem(index, 'minQuantity', Number(e.target.value))}
-                        className="h-8 text-sm text-center border-slate-200"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        value={item.location}
-                        onChange={(e) => updateNewItem(index, 'location', e.target.value)}
-                        placeholder="Store Room"
-                        className="h-8 text-sm border-slate-200"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        onClick={() => removeRow(index)} 
-                        className="h-7 w-7 p-0 text-slate-400 hover:text-red-500"
-                        disabled={newItems.length <= 1}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          
-          {/* Footer Actions */}
-          <div className="bg-slate-50 px-4 py-4 flex flex-wrap gap-3 justify-between items-center border-t">
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={addMoreRows}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add More Rows
-              </Button>
-              <span className="text-sm text-slate-500 self-center">
-                {newItems.filter(i => i.name.trim()).length} item(s) to save
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => setNewItems([createEmptyRow(), createEmptyRow(), createEmptyRow()])}
-              >
-                Clear All
-              </Button>
-              <Button 
-                size="sm" 
-                onClick={handleSaveAllItems} 
-                disabled={savingItems || newItems.every(i => !i.name.trim())}
-                className="bg-emerald-500 hover:bg-emerald-600"
-              >
-                {savingItems ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
-                Save All Items
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Loans Tab */}
-      {activeTab === 'loans' && (
-        <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-800 hover:bg-slate-800">
-                  <TableHead className="text-white font-semibold w-12">S#</TableHead>
-                  <TableHead className="text-white font-semibold">Item</TableHead>
-                  <TableHead className="text-white font-semibold text-center">Qty</TableHead>
-                  <TableHead className="text-white font-semibold">Borrower</TableHead>
-                  <TableHead className="text-white font-semibold">Phone</TableHead>
-                  <TableHead className="text-white font-semibold">Roll#</TableHead>
-                  <TableHead className="text-white font-semibold">Date</TableHead>
-                  <TableHead className="text-white font-semibold">Notes</TableHead>
-                  <TableHead className="text-white font-semibold text-center">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loans.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-slate-400">
-                      <UserCheck className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                      No active loans
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  loans.map((loan, index) => (
-                    <TableRow key={loan.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                      <TableCell className="font-medium text-slate-500">{index + 1}</TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-slate-800">{loan.item_name}</p>
-                          <p className="text-xs text-slate-400">{getCategoryLabel(loan.item_category)}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center font-semibold text-amber-600">{loan.quantity}</TableCell>
-                      <TableCell className="font-medium">{loan.borrower_name}</TableCell>
-                      <TableCell className="text-sm">{loan.borrower_phone}</TableCell>
-                      <TableCell className="text-sm text-slate-500">{loan.borrower_roll || '-'}</TableCell>
-                      <TableCell className="text-sm">{new Date(loan.loan_date).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-sm text-slate-500 max-w-xs truncate">{loan.notes || '-'}</TableCell>
-                      <TableCell>
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleReturnLoan(loan)} 
-                          className="bg-emerald-500 hover:bg-emerald-600 h-7 px-2"
-                        >
-                          <RotateCcw className="h-3 w-3 mr-1" />
-                          Return
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
-      )}
-
-      {/* Edit Item Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
+      {/* Add / Edit Equipment Modal */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md bg-[#0B1124] border-white/15 text-[#F8FAFC]">
           <DialogHeader>
-            <DialogTitle>Edit Item</DialogTitle>
-            <DialogDescription>Update inventory item details</DialogDescription>
+            <DialogTitle className="flex items-center gap-2 text-[#F8FAFC]">
+              <Package className="w-5 h-5 text-[#12E2C4]" />
+              {editingItem ? 'Edit Equipment Item' : 'Add Equipment Item'}
+            </DialogTitle>
+            <DialogDescription className="text-[#94A3B8]">
+              Track sports equipment quantities and storage locations.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Item Name *</Label>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-mono text-[#94A3B8]">Item Name *</Label>
               <Input
-                className="h-9"
-                value={editForm.name}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                placeholder="e.g., Football, Cricket Bat"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs">Description</Label>
-              <Input
-                className="h-9"
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                placeholder="Optional details"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="e.g. Badminton Shuttlecocks"
+                className="bg-[#131B38] border-white/15 text-[#F8FAFC]"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Category</Label>
-                <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
-                  <SelectTrigger className="h-9">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-mono text-[#94A3B8]">Category</Label>
+                <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                  <SelectTrigger className="bg-[#131B38] border-white/15 text-[#F8FAFC]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-[#131B38] border-white/15 text-[#F8FAFC]">
                     {CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Location</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-mono text-[#94A3B8]">Location</Label>
                 <Input
-                  className="h-9"
-                  value={editForm.location}
-                  onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                  placeholder="Store Room"
+                  value={form.location}
+                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  placeholder="Sports Room / Hall"
+                  className="bg-[#131B38] border-white/15 text-[#F8FAFC]"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Quantity *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-mono text-[#94A3B8]">Quantity *</Label>
                 <Input
-                  className="h-9"
                   type="number"
-                  min="0"
-                  value={editForm.quantity}
-                  onChange={(e) => setEditForm({ ...editForm, quantity: Number(e.target.value) })}
+                  min={0}
+                  value={form.quantity}
+                  onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                  className="bg-[#131B38] border-white/15 text-[#F8FAFC]"
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Unit</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-mono text-[#94A3B8]">Unit</Label>
                 <Input
-                  className="h-9"
-                  value={editForm.unit}
-                  onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })}
-                  placeholder="pcs"
+                  value={form.unit}
+                  onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                  placeholder="pcs / box"
+                  className="bg-[#131B38] border-white/15 text-[#F8FAFC]"
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Min Qty</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-mono text-[#94A3B8]">Min Alert</Label>
                 <Input
-                  className="h-9"
                   type="number"
-                  min="0"
-                  value={editForm.minQuantity}
-                  onChange={(e) => setEditForm({ ...editForm, minQuantity: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button size="sm" onClick={handleUpdateItem} disabled={saving} className="bg-amber-500 hover:bg-amber-600">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
-              Update
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Loan Dialog */}
-      <Dialog open={loanDialogOpen} onOpenChange={setLoanDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Issue Loan</DialogTitle>
-            <DialogDescription>
-              Record item being loaned out
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Select Item *</Label>
-              <Select value={loanForm.itemId} onValueChange={(v) => setLoanForm({ ...loanForm, itemId: v })}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Choose item to loan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {items.filter((i) => i.quantity - i.loanedQty > 0).map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name} ({item.quantity - item.loanedQty} available)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Borrower Name *</Label>
-                <Input
-                  className="h-9"
-                  value={loanForm.borrowerName}
-                  onChange={(e) => setLoanForm({ ...loanForm, borrowerName: e.target.value })}
-                  placeholder="Full name"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Roll Number</Label>
-                <Input
-                  className="h-9"
-                  value={loanForm.borrowerRoll}
-                  onChange={(e) => setLoanForm({ ...loanForm, borrowerRoll: e.target.value })}
-                  placeholder="Optional"
+                  min={0}
+                  value={form.minQuantity}
+                  onChange={(e) => setForm({ ...form, minQuantity: e.target.value })}
+                  className="bg-[#131B38] border-white/15 text-[#F8FAFC]"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Phone Number *</Label>
-                <Input
-                  className="h-9"
-                  value={loanForm.borrowerPhone}
-                  onChange={(e) => setLoanForm({ ...loanForm, borrowerPhone: e.target.value })}
-                  placeholder="03001234567"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Quantity</Label>
-                <Input
-                  className="h-9"
-                  type="number"
-                  min="1"
-                  value={loanForm.quantity}
-                  onChange={(e) => setLoanForm({ ...loanForm, quantity: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs">Notes</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-mono text-[#94A3B8]">Notes (Optional)</Label>
               <Input
-                className="h-9"
-                value={loanForm.notes}
-                onChange={(e) => setLoanForm({ ...loanForm, notes: e.target.value })}
-                placeholder="Optional notes"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Condition, brand, or assignment notes"
+                className="bg-[#131B38] border-white/15 text-[#F8FAFC]"
               />
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setLoanDialogOpen(false)}>Cancel</Button>
-            <Button size="sm" onClick={handleCreateLoan} disabled={saving} className="bg-amber-500 hover:bg-amber-600">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4 mr-1" />}
-              Issue Loan
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              className="border-white/15 bg-white/5 text-[#F8FAFC]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-[#12E2C4] hover:bg-[#0FC9AE] text-[#0B1124] font-bold"
+            >
+              {saving ? 'Saving...' : editingItem ? 'Update Item' : 'Add Item'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onCancel={() => setDeleteTarget(null)}
+        title="Delete Equipment Item?"
+        description={
+          deleteTarget
+            ? `Remove "${deleteTarget.name}" (${deleteTarget.quantity} ${deleteTarget.unit || 'pcs'}) from inventory?`
+            : ''
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

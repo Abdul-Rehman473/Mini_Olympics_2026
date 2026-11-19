@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { Medal, Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { Lock, User, ArrowLeft, ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,13 +31,11 @@ export default function AdminLoginPage() {
 
       const data = await response.json();
       if (data.success) {
-        // Redirect to role-specific page
         router.push(data.redirectTo || '/admin/dashboard');
       } else {
         setError(data.error || 'Login failed');
       }
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch {
       setError('Login failed. Please try again.');
     } finally {
       setLoading(false);
@@ -44,107 +43,135 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900"></div>
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%239C92AC%22 fill-opacity=%220.05%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
-      
-      {/* Floating Decorations */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/5 rounded-full blur-3xl"></div>
+    <div className="min-h-screen bg-[#080D1C] text-[#F8FAFC] flex flex-col justify-between py-10 px-4 sm:px-6 relative overflow-hidden">
+      {/* Stadium Floodlight Glows */}
+      <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[780px] h-[420px] bg-[#12E2C4]/10 rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute bottom-10 left-1/4 w-[500px] h-[300px] bg-[#F59E0B]/10 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-1/3 right-1/5 w-[400px] h-[260px] bg-[#3B82F6]/10 rounded-full blur-[140px] pointer-events-none" />
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center py-12 px-4">
-        {/* Logo */}
-        <div className="mb-8 text-center stagger-fade-in">
-          <div className="inline-flex p-4 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl shadow-2xl shadow-amber-500/30 mb-4">
-            <Medal className="h-10 w-10 text-white" />
+      {/* Top Back Link */}
+      <div className="max-w-lg w-full mx-auto relative z-10">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-xs font-mono text-[#94A3B8] hover:text-[#12E2C4] transition-colors uppercase tracking-wider"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Return to Public Portal</span>
+        </Link>
+      </div>
+
+      {/* Main Mini Olympics Portal Card */}
+      <div className="max-w-lg w-full mx-auto relative z-10 my-auto">
+        <div className="rounded-3xl bg-[#131B38]/95 border border-white/[0.1] shadow-[0_25px_80px_rgba(0,0,0,0.65)] overflow-hidden backdrop-blur-xl">
+          {/* Olympic Multi-Ring Accent Bar */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-[#0081C8] via-[#FCB131] via-[#12E2C4] to-[#EE334E]" />
+
+          {/* Dual-Logo Stadium Header: Mini Olympics (Left) + Welcome Title (Center) + FOC Logo (Right) */}
+          <div className="px-6 sm:px-8 pt-7 pb-6 bg-gradient-to-b from-[#182244]/90 to-[#131B38] border-b border-white/[0.08]">
+            <div className="flex items-center justify-between gap-4">
+              {/* Left: Mini Olympics Rings Logo */}
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#0B1124] border border-white/[0.12] flex items-center justify-center p-2 shadow-lg shrink-0">
+                <OlympicRingsIcon className="w-11 h-6 sm:w-12 sm:h-7" />
+              </div>
+
+              {/* Center: Welcome Header */}
+              <div className="text-center flex-1 min-w-0">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#12E2C4]/10 border border-[#12E2C4]/25 text-[10px] font-mono text-[#12E2C4] uppercase tracking-widest mb-1.5">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Official Portal</span>
+                </div>
+                <h1 className="text-lg sm:text-xl font-black uppercase font-['Space_Grotesk'] tracking-tight text-[#F8FAFC] leading-tight">
+                  Welcome to Mini Olympics 2026
+                </h1>
+                <p className="text-[11px] font-mono text-[#94A3B8] uppercase tracking-wider mt-1">
+                  FCIT Sports Society • Control Center
+                </p>
+              </div>
+
+              {/* Right: FOC Logo */}
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#0B1124] border border-white/[0.12] flex items-center justify-center p-2 shadow-lg shrink-0">
+                <img
+                  src="/images/foc-logo.png"
+                  alt="FOC Sports Society Logo"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            </div>
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Mini Olympics</h1>
-          <p className="text-blue-200/70 text-sm mt-1">Admin Portal</p>
-        </div>
 
-        {/* Login Card */}
-        <Card className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/10 shadow-2xl stagger-fade-in">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-2xl font-bold text-white">Welcome Back</CardTitle>
-            <CardDescription className="text-blue-200/70">Sign in to access the dashboard</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
+          {/* Sign-In Form */}
+          <div className="p-6 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="username" className="text-blue-100 text-sm font-medium"> Email / Username </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-300/50" />
+              <div>
+                <Label className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">
+                  Username or Email
+                </Label>
+                <div className="relative mt-1.5">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                   <Input
-                    id="username"
-                    type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter your staff or coordinator username"
                     required
+                    autoFocus
                     autoComplete="username"
-                    placeholder="Enter your username or email"
-                    className="pl-11 h-12 bg-white/5 border-white/10 text-white placeholder:text-blue-200/40 focus:bg-white/10 focus:border-blue-400/50 transition-all"
+                    className="pl-10 h-11 bg-[#080D1C] border-white/[0.12] text-sm font-mono text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]"
                   />
                 </div>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-blue-100 text-sm font-medium">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-300/50" />
+
+              <div>
+                <Label className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">
+                  Security Password
+                </Label>
+                <div className="relative mt-1.5">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
                   <Input
-                    id="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
                     required
                     autoComplete="current-password"
-                    placeholder="Enter your password"
-                    className="pl-11 h-12 bg-white/5 border-white/10 text-white placeholder:text-blue-200/40 focus:bg-white/10 focus:border-blue-400/50 transition-all"
+                    className="pl-10 pr-10 h-11 bg-[#080D1C] border-white/[0.12] text-sm font-mono text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label="Toggle password visibility"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F8FAFC]"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
-              
+
               {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl backdrop-blur-sm">
-                  <p className="text-sm text-red-300 text-center">{error}</p>
+                <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 font-mono text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{error}</span>
                 </div>
               )}
-              
-              <Button 
-                type="submit" 
-                className="w-full h-12 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg shadow-blue-500/25 btn-shine transition-all" 
+
+              <Button
+                type="submit"
                 disabled={loading}
+                className="w-full h-12 rounded-xl text-xs font-mono font-black tracking-widest text-[#0B1124] bg-gradient-to-r from-[#12E2C4] to-[#0FC9AE] hover:from-[#18F0D2] hover:to-[#12E2C4] uppercase transition-all shadow-xl shadow-[#12E2C4]/20"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign In'
-                )}
+                {loading ? 'AUTHENTICATING...' : 'SIGN IN TO CONTROL CENTER →'}
               </Button>
             </form>
-            
-            <div className="mt-6 text-center">
-              <Link 
-                href="/" 
-                className="inline-flex items-center text-sm text-blue-200/70 hover:text-blue-100 transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1.5" />
-                Back to Home
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Footer */}
-        <p className="mt-8 text-blue-200/40 text-xs stagger-fade-in">
-          FCIT Sports Society © {new Date().getFullYear()}
-        </p>
+            <div className="mt-6 pt-4 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-[#94A3B8]/80">
+              <span>Role-Based Access • Admin, HOC &amp; Coordinators</span>
+              <span className="text-[#F59E0B]">2026 Season</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-lg w-full mx-auto relative z-10 text-center text-xs font-mono text-[#94A3B8]/60">
+        PUCIT OLD CAMPUS • LAHORE • MINI OLYMPICS 2026
       </div>
     </div>
   );

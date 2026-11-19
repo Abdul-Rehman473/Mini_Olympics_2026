@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useAdminSession, canEditPage } from '@/lib/admin-session-context';
+import { OlympicRingsIcon } from '@/components/olympic-rings-icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +45,7 @@ import {
   Check,
   ArrowUpCircle,
   ArrowDownCircle,
+  Lock,
   Scale,
   Users,
   Clock,
@@ -57,6 +60,8 @@ import {
   Hash,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 
 type FinanceRecord = {
   id: string;
@@ -114,6 +119,18 @@ const PAYMENT_METHODS = [
 ];
 
 export default function FinancePage() {
+  const toast = useToast();
+  const adminSession = useAdminSession();
+  const canEdit = canEditPage(adminSession, '/admin/finance');
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [records, setRecords] = useState<FinanceRecord[]>([]);
   const [summary, setSummary] = useState<Summary>({ totalIncome: 0, totalExpense: 0, balance: 0 });
   const [registrationStats, setRegistrationStats] = useState<RegistrationStats>({
@@ -215,7 +232,7 @@ export default function FinancePage() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
+        toast.error('File size must be less than 5MB');
         return;
       }
       const reader = new FileReader();
@@ -438,7 +455,7 @@ export default function FinancePage() {
       
     } catch (error) {
       console.error('PDF generation error:', error);
-      alert('Failed to generate PDF');
+      toast.error('Failed to generate PDF');
     } finally {
       setDownloading(false);
     }
@@ -449,7 +466,7 @@ export default function FinancePage() {
     const recordsWithReceipts = filteredRecords.filter(r => r.attachments?.length > 0 && r.attachments[0].file_url);
     
     if (recordsWithReceipts.length === 0) {
-      alert('No receipts to export');
+      toast.error('No receipts to export');
       return;
     }
 
@@ -598,7 +615,7 @@ export default function FinancePage() {
       
     } catch (error) {
       console.error('Receipt PDF generation error:', error);
-      alert('Failed to generate receipts PDF');
+      toast.error('Failed to generate receipts PDF');
     } finally {
       setDownloadingReceipts(false);
     }
@@ -606,7 +623,7 @@ export default function FinancePage() {
 
   const handleSave = async () => {
     if (!form.category || !form.amount) {
-      alert('Category and amount are required');
+      toast.error('Category and amount are required');
       return;
     }
 
@@ -632,50 +649,59 @@ export default function FinancePage() {
 
       const data = await res.json();
       if (data.success) {
+        toast.success(editingRecord ? 'Record updated' : 'Record saved');
         setDialogOpen(false);
         loadData();
       } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
+        toast.error(data.error || 'Failed to save finance record');
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (record: FinanceRecord) => {
-    if (!confirm(`Delete this ${record.record_type} record?`)) return;
-
-    try {
-      const res = await fetch(`/api/admin/finance?id=${record.id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        loadData();
-      } else {
-        alert('Failed: ' + (data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      alert('Failed to delete');
-    }
+  const handleDelete = (record: FinanceRecord) => {
+    setConfirmState({
+      open: true,
+      title: `Delete this ${record.record_type} record?`,
+      description: 'This financial ledger entry will be permanently removed.',
+      confirmLabel: 'Delete Record',
+      destructive: true,
+      onConfirm: async () => {
+        const res = await fetch(`/api/admin/finance?id=${record.id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          toast.success('Record deleted');
+          loadData();
+        } else {
+          toast.error(data.error || 'Failed to delete record');
+        }
+      },
+    });
   };
 
-  const handleSync = async () => {
-    if (!confirm('This will import all paid registrations as income records. Continue?')) return;
-    
-    setSyncing(true);
-    try {
-      const res = await fetch('/api/admin/finance/sync', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        alert(`Synced ${data.synced} registrations to finance records.`);
-        loadData();
-      } else {
-        alert('Sync failed: ' + (data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      alert('Sync failed');
-    } finally {
-      setSyncing(false);
-    }
+  const handleSync = () => {
+    setConfirmState({
+      open: true,
+      title: 'Sync paid registrations to Finance?',
+      description: 'This will idempotently import any paid registrations missing from the finance ledger.',
+      confirmLabel: 'Sync Registrations',
+      onConfirm: async () => {
+        setSyncing(true);
+        try {
+          const res = await fetch('/api/admin/finance/sync', { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Synced ${data.synced} registrations to finance records.`);
+            loadData();
+          } else {
+            toast.error(data.error || 'Sync failed');
+          }
+        } finally {
+          setSyncing(false);
+        }
+      },
+    });
   };
 
   const filteredRecords = records.filter((r) => {
@@ -703,149 +729,130 @@ export default function FinancePage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 pt-16 lg:pt-6 bg-slate-50 min-h-screen">
+    <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-7xl mx-auto text-[#F8FAFC]">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl shadow-lg">
-            <Wallet className="h-5 w-5 text-white" />
+      <div className="mb-6 pb-6 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#131B38] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
+            <OlympicRingsIcon className="w-5 h-3" />
+            <span>// TREASURY &amp; LEDGER</span>
           </div>
-          Finance Management
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">Track income, expenses, and generate reports</p>
+          <h1 className="text-3xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight flex items-center gap-3">
+            Finance Management
+          </h1>
+          <p className="text-[#94A3B8] text-xs font-mono mt-1">Track income, expenses, and generate reports</p>
+        </div>
+        {!canEdit && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono uppercase">
+            <Lock className="w-3.5 h-3.5" /> Read-Only Access
+          </span>
+        )}
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
-        {/* Registration Stats */}
-        <Card className="border-0 shadow-sm bg-purple-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Registrations</span>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card className="bg-[#131B38] border border-white/[0.08] text-[#F8FAFC]">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between text-xs font-mono text-[#94A3B8]">
+              <span>REGISTRATIONS</span>
+              <Users className="h-4 w-4 text-purple-400" />
             </div>
-            <p className="text-xl font-bold mt-1">{registrationStats.totalRegistrations}</p>
+            <p className="text-2xl font-black mt-1.5">{registrationStats.totalRegistrations}</p>
+            <p className="text-[11px] font-mono text-[#94A3B8] mt-1">
+              <span className="text-emerald-400">{registrationStats.verifiedRegistrations} Paid</span> •{' '}
+              <span className="text-amber-400">{registrationStats.pendingRegistrations} Pending</span>
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm bg-emerald-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Verified</span>
+        <Card className="bg-[#131B38] border border-emerald-500/25 text-[#F8FAFC]">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between text-xs font-mono text-[#94A3B8]">
+              <span>TOTAL INCOME</span>
+              <TrendingUp className="h-4 w-4 text-emerald-400" />
             </div>
-            <p className="text-xl font-bold mt-1">{registrationStats.verifiedRegistrations}</p>
+            <p className="text-2xl font-black text-emerald-400 mt-1.5">Rs. {summary.totalIncome.toLocaleString()}</p>
+            <p className="text-[11px] font-mono text-[#94A3B8] mt-1">
+              Reg Collected: Rs. {registrationStats.totalCollected.toLocaleString()}
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm bg-amber-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Pending</span>
+        <Card className="bg-[#131B38] border border-rose-500/25 text-[#F8FAFC]">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between text-xs font-mono text-[#94A3B8]">
+              <span>TOTAL EXPENSES</span>
+              <TrendingDown className="h-4 w-4 text-rose-400" />
             </div>
-            <p className="text-xl font-bold mt-1">{registrationStats.pendingRegistrations}</p>
+            <p className="text-2xl font-black text-rose-400 mt-1.5">Rs. {summary.totalExpense.toLocaleString()}</p>
+            <p className="text-[11px] font-mono text-[#94A3B8] mt-1">{filteredRecords.length} ledger records</p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm bg-teal-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Collected</span>
+        <Card className="bg-[#131B38] border border-[#12E2C4]/30 text-[#F8FAFC]">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between text-xs font-mono text-[#94A3B8]">
+              <span>NET BALANCE</span>
+              <Scale className="h-4 w-4 text-[#12E2C4]" />
             </div>
-            <p className="text-lg font-bold mt-1">₨{(registrationStats.totalCollected / 1000).toFixed(1)}k</p>
-          </CardContent>
-        </Card>
-
-        {/* Finance Summary */}
-        <Card className="border-0 shadow-sm bg-green-600 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Income</span>
-            </div>
-            <p className="text-lg font-bold mt-1">₨{(summary.totalIncome / 1000).toFixed(1)}k</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-rose-500 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <TrendingDown className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Expenses</span>
-            </div>
-            <p className="text-lg font-bold mt-1">₨{(summary.totalExpense / 1000).toFixed(1)}k</p>
-          </CardContent>
-        </Card>
-
-        <Card className={`border-0 shadow-sm ${summary.balance >= 0 ? 'bg-blue-600' : 'bg-orange-500'} text-white`}>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Scale className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Balance</span>
-            </div>
-            <p className="text-lg font-bold mt-1">₨{(summary.balance / 1000).toFixed(1)}k</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-slate-600 text-white">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 opacity-80" />
-              <span className="text-xs opacity-80">Records</span>
-            </div>
-            <p className="text-xl font-bold mt-1">{filteredRecords.length}</p>
+            <p className={`text-2xl font-black mt-1.5 ${summary.balance >= 0 ? 'text-[#12E2C4]' : 'text-amber-400'}`}>
+              Rs. {summary.balance.toLocaleString()}
+            </p>
+            <p className="text-[11px] font-mono text-[#94A3B8] mt-1">Treasury Net Position</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Actions & Filters */}
-      <div className="flex flex-col lg:flex-row gap-3 mb-4">
+      <div className="flex flex-col lg:flex-row gap-3 mb-5">
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => openCreateDialog('income')} className="bg-emerald-500 hover:bg-emerald-600">
-            <ArrowUpCircle className="h-4 w-4 mr-1" />
-            Income
-          </Button>
-          <Button size="sm" onClick={() => openCreateDialog('expense')} className="bg-rose-500 hover:bg-rose-600">
-            <ArrowDownCircle className="h-4 w-4 mr-1" />
-            Expense
-          </Button>
-          <Button size="sm" onClick={handleSync} disabled={syncing} variant="outline">
-            {syncing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-            Sync
-          </Button>
-          <Button size="sm" onClick={handleDownloadReport} disabled={downloading} variant="outline" className="text-blue-600 border-blue-300">
+          {canEdit && (
+            <>
+              <Button size="sm" onClick={() => openCreateDialog('income')} className="bg-emerald-500 hover:bg-emerald-600 text-[#080D1C] font-bold">
+                <ArrowUpCircle className="h-4 w-4 mr-1" />
+                Income
+              </Button>
+              <Button size="sm" onClick={() => openCreateDialog('expense')} className="bg-rose-500 hover:bg-rose-600 text-white font-bold">
+                <ArrowDownCircle className="h-4 w-4 mr-1" />
+                Expense
+              </Button>
+              <Button size="sm" onClick={handleSync} disabled={syncing} variant="outline" className="bg-[#131B38] border-white/15 text-[#F8FAFC] hover:bg-white/10">
+                {syncing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+                Sync
+              </Button>
+            </>
+          )}
+          <Button size="sm" onClick={handleDownloadReport} disabled={downloading} variant="outline" className="bg-[#131B38] text-sky-300 border-sky-500/30 hover:bg-sky-500/10">
             {downloading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileSpreadsheet className="h-4 w-4 mr-1" />}
             Report
           </Button>
-          <Button 
-            size="sm" 
-            onClick={handleExportReceiptsPDF} 
-            disabled={downloadingReceipts || filteredRecords.filter(r => r.attachments?.length > 0).length === 0} 
-            variant="outline" 
-            className="text-purple-600 border-purple-300"
+          <Button
+            size="sm"
+            onClick={handleExportReceiptsPDF}
+            disabled={downloadingReceipts || filteredRecords.filter(r => r.attachments?.length > 0).length === 0}
+            variant="outline"
+            className="bg-[#131B38] text-purple-300 border-purple-500/30 hover:bg-purple-500/10"
           >
             {downloadingReceipts ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ImageIcon className="h-4 w-4 mr-1" />}
             Export Receipts ({filteredRecords.filter(r => r.attachments?.length > 0 && r.attachments[0].file_url).length})
           </Button>
         </div>
-        
+
         <div className="flex flex-1 gap-2 lg:justify-end">
           <div className="relative flex-1 lg:max-w-xs">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
             <Input
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-9 text-sm"
+              className="pl-8 h-9 text-sm bg-[#131B38] border-white/15 text-[#F8FAFC]"
             />
           </div>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-28 h-9 text-sm">
+            <SelectTrigger className="w-28 h-9 text-sm bg-[#131B38] border-white/15 text-[#F8FAFC]">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-[#131B38] border-white/15 text-[#F8FAFC]">
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="income">Income</SelectItem>
               <SelectItem value="expense">Expense</SelectItem>
@@ -855,115 +862,117 @@ export default function FinancePage() {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-32 h-9 text-sm"
+            className="w-32 h-9 text-sm bg-[#131B38] border-white/15 text-[#F8FAFC]"
           />
           <Input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-32 h-9 text-sm"
+            className="w-32 h-9 text-sm bg-[#131B38] border-white/15 text-[#F8FAFC]"
           />
         </div>
       </div>
 
       {/* Records Table - Desktop */}
-      <Card className="border-0 shadow-lg overflow-hidden hidden lg:block">
+      <Card className="bg-[#131B38] border border-white/[0.08] shadow-xl overflow-hidden hidden lg:block">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-800 hover:bg-slate-800">
-                <TableHead className="text-white font-semibold w-12">S#</TableHead>
-                <TableHead className="text-white font-semibold">Date</TableHead>
-                <TableHead className="text-white font-semibold">Type</TableHead>
-                <TableHead className="text-white font-semibold">Category</TableHead>
-                <TableHead className="text-white font-semibold">Description</TableHead>
-                <TableHead className="text-white font-semibold">Payment</TableHead>
-                <TableHead className="text-white font-semibold text-right">Amount</TableHead>
-                <TableHead className="text-white font-semibold">Receipt</TableHead>
-                <TableHead className="text-white font-semibold text-center">Actions</TableHead>
+              <TableRow className="bg-[#182244] hover:bg-[#182244] border-b border-white/[0.08]">
+                <TableHead className="text-[#94A3B8] font-mono text-xs uppercase w-12">S#</TableHead>
+                <TableHead className="text-[#94A3B8] font-mono text-xs uppercase">Date</TableHead>
+                <TableHead className="text-[#94A3B8] font-mono text-xs uppercase">Type</TableHead>
+                <TableHead className="text-[#94A3B8] font-mono text-xs uppercase">Category</TableHead>
+                <TableHead className="text-[#94A3B8] font-mono text-xs uppercase">Description</TableHead>
+                <TableHead className="text-[#94A3B8] font-mono text-xs uppercase">Payment</TableHead>
+                <TableHead className="text-[#94A3B8] font-mono text-xs uppercase text-right">Amount</TableHead>
+                <TableHead className="text-[#94A3B8] font-mono text-xs uppercase">Receipt</TableHead>
+                {canEdit && <TableHead className="text-[#94A3B8] font-mono text-xs uppercase text-center">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRecords.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12 text-slate-400">
+                  <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-12 text-[#94A3B8]">
                     <FileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
                     No records found
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredRecords.map((record, index) => (
-                  <TableRow key={record.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                    <TableCell className="font-medium text-slate-500">{index + 1}</TableCell>
-                    <TableCell className="text-sm">{new Date(record.record_date).toLocaleDateString()}</TableCell>
+                  <TableRow key={record.id} className="border-b border-white/[0.06] hover:bg-white/[0.03]">
+                    <TableCell className="font-mono text-xs text-[#94A3B8]">{index + 1}</TableCell>
+                    <TableCell className="text-sm text-[#F8FAFC]">{new Date(record.record_date).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                        record.record_type === 'income' 
-                          ? 'bg-emerald-100 text-emerald-700' 
-                          : 'bg-rose-100 text-rose-700'
+                        record.record_type === 'income'
+                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
                       }`}>
                         {record.record_type === 'income' ? <ArrowUpCircle className="h-3 w-3" /> : <ArrowDownCircle className="h-3 w-3" />}
                         {record.record_type === 'income' ? 'Income' : 'Expense'}
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm">{getCategoryLabel(record.category, record.record_type)}</TableCell>
-                    <TableCell className="text-sm text-slate-600 max-w-xs truncate">{record.description || '-'}</TableCell>
-                    <TableCell className="text-sm">{getPaymentLabel(record.payment_method)}</TableCell>
-                    <TableCell className={`text-right font-semibold ${
-                      record.record_type === 'income' ? 'text-emerald-600' : 'text-rose-600'
+                    <TableCell className="text-sm text-[#F8FAFC]">{getCategoryLabel(record.category, record.record_type)}</TableCell>
+                    <TableCell className="text-sm text-[#94A3B8] max-w-xs truncate">{record.description || '-'}</TableCell>
+                    <TableCell className="text-sm text-[#94A3B8]">{getPaymentLabel(record.payment_method)}</TableCell>
+                    <TableCell className={`text-right font-semibold font-mono ${
+                      record.record_type === 'income' ? 'text-emerald-400' : 'text-rose-400'
                     }`}>
                       {record.record_type === 'income' ? '+' : '-'}Rs. {Number(record.amount).toLocaleString()}
                     </TableCell>
                     <TableCell>
                       {record.attachments?.length > 0 && record.attachments[0].file_url ? (
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-7 px-2 text-blue-600"
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[#12E2C4] hover:bg-[#12E2C4]/10"
                           onClick={() => setPreviewImage(record.attachments[0].file_url)}
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           View
                         </Button>
                       ) : (
-                        <span className="text-slate-300 text-sm">-</span>
+                        <span className="text-[#94A3B8]/50 text-sm">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-center gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => openEditDialog(record)} className="h-7 w-7 p-0">
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(record)} className="h-7 w-7 p-0 text-red-500 hover:text-red-700">
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {canEdit && (
+                      <TableCell>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => openEditDialog(record)} className="h-7 w-7 p-0 text-[#F8FAFC] hover:bg-white/10">
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleDelete(record)} className="h-7 w-7 p-0 text-rose-400 hover:bg-rose-500/15">
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
         </div>
-        
+
         {/* Table Footer Summary */}
         {filteredRecords.length > 0 && (
-          <div className="bg-slate-100 px-4 py-3 flex flex-wrap gap-4 justify-between items-center border-t">
-            <div className="text-sm text-slate-600">
-              Showing <span className="font-semibold">{filteredRecords.length}</span> records
+          <div className="bg-[#182244] px-4 py-3 flex flex-wrap gap-4 justify-between items-center border-t border-white/[0.08]">
+            <div className="text-xs font-mono text-[#94A3B8]">
+              Showing <span className="font-semibold text-[#F8FAFC]">{filteredRecords.length}</span> records
             </div>
-            <div className="flex gap-6 text-sm">
+            <div className="flex gap-6 text-xs font-mono">
               <div>
-                <span className="text-slate-500">Total Income:</span>{' '}
-                <span className="font-semibold text-emerald-600">Rs. {summary.totalIncome.toLocaleString()}</span>
+                <span className="text-[#94A3B8]">Total Income:</span>{' '}
+                <span className="font-semibold text-emerald-400">Rs. {summary.totalIncome.toLocaleString()}</span>
               </div>
               <div>
-                <span className="text-slate-500">Total Expenses:</span>{' '}
-                <span className="font-semibold text-rose-600">Rs. {summary.totalExpense.toLocaleString()}</span>
+                <span className="text-[#94A3B8]">Total Expenses:</span>{' '}
+                <span className="font-semibold text-rose-400">Rs. {summary.totalExpense.toLocaleString()}</span>
               </div>
               <div>
-                <span className="text-slate-500">Balance:</span>{' '}
-                <span className={`font-semibold ${summary.balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                <span className="text-[#94A3B8]">Balance:</span>{' '}
+                <span className={`font-semibold ${summary.balance >= 0 ? 'text-[#12E2C4]' : 'text-amber-400'}`}>
                   Rs. {summary.balance.toLocaleString()}
                 </span>
               </div>
@@ -975,83 +984,85 @@ export default function FinancePage() {
       {/* Mobile Cards View */}
       <div className="lg:hidden space-y-3">
         {filteredRecords.length === 0 ? (
-          <Card className="border-0 shadow-lg">
-            <CardContent className="py-12 text-center text-slate-400">
+          <Card className="bg-[#131B38] border border-white/[0.08]">
+            <CardContent className="py-12 text-center text-[#94A3B8]">
               <FileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
               No records found
             </CardContent>
           </Card>
         ) : (
-          filteredRecords.map((record, index) => (
-            <Card key={record.id} className={`border-0 shadow-md overflow-hidden ${
+          filteredRecords.map((record) => (
+            <Card key={record.id} className={`bg-[#131B38] border border-white/[0.08] text-[#F8FAFC] overflow-hidden ${
               record.record_type === 'income' ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-rose-500'
             }`}>
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                      record.record_type === 'income' 
-                        ? 'bg-emerald-100 text-emerald-700' 
-                        : 'bg-rose-100 text-rose-700'
+                      record.record_type === 'income'
+                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
                     }`}>
                       {record.record_type === 'income' ? <ArrowUpCircle className="h-3 w-3" /> : <ArrowDownCircle className="h-3 w-3" />}
                       {record.record_type === 'income' ? 'Income' : 'Expense'}
                     </span>
-                    <p className="text-xs text-slate-500 mt-1">{new Date(record.record_date).toLocaleDateString()}</p>
+                    <p className="text-xs text-[#94A3B8] mt-1">{new Date(record.record_date).toLocaleDateString()}</p>
                   </div>
-                  <p className={`text-lg font-bold ${
-                    record.record_type === 'income' ? 'text-emerald-600' : 'text-rose-600'
+                  <p className={`text-lg font-bold font-mono ${
+                    record.record_type === 'income' ? 'text-emerald-400' : 'text-rose-400'
                   }`}>
                     {record.record_type === 'income' ? '+' : '-'}Rs. {Number(record.amount).toLocaleString()}
                   </p>
                 </div>
                 <div className="space-y-1 text-sm">
-                  <p><span className="text-slate-500">Category:</span> <span className="font-medium">{getCategoryLabel(record.category, record.record_type)}</span></p>
-                  {record.description && <p className="text-slate-600 truncate">{record.description}</p>}
-                  <p><span className="text-slate-500">Payment:</span> {getPaymentLabel(record.payment_method)}</p>
+                  <p><span className="text-[#94A3B8]">Category:</span> <span className="font-medium text-[#F8FAFC]">{getCategoryLabel(record.category, record.record_type)}</span></p>
+                  {record.description && <p className="text-[#94A3B8] truncate">{record.description}</p>}
+                  <p><span className="text-[#94A3B8]">Payment:</span> {getPaymentLabel(record.payment_method)}</p>
                 </div>
-                <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.08]">
                   <div className="flex gap-2">
                     {record.attachments?.length > 0 && record.attachments[0].file_url && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="h-8 text-blue-600"
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-[#12E2C4] border-white/15 bg-[#0B1124]"
                         onClick={() => setPreviewImage(record.attachments[0].file_url)}
                       >
                         <Eye className="h-3 w-3 mr-1" /> Receipt
                       </Button>
                     )}
                   </div>
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => openEditDialog(record)} className="h-8 w-8 p-0">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDelete(record)} className="h-8 w-8 p-0 text-red-500">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {canEdit && (
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => openEditDialog(record)} className="h-8 w-8 p-0 text-[#F8FAFC]">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(record)} className="h-8 w-8 p-0 text-rose-400">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           ))
         )}
-        
+
         {/* Mobile Summary Footer */}
         {filteredRecords.length > 0 && (
-          <Card className="border-0 shadow-md bg-slate-100">
-            <CardContent className="p-4 space-y-2 text-sm">
+          <Card className="bg-[#182244] border border-white/[0.08] text-[#F8FAFC]">
+            <CardContent className="p-4 space-y-2 text-xs font-mono">
               <div className="flex justify-between">
-                <span className="text-slate-500">Total Records:</span>
+                <span className="text-[#94A3B8]">Total Records:</span>
                 <span className="font-semibold">{filteredRecords.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Income:</span>
-                <span className="font-semibold text-emerald-600">Rs. {summary.totalIncome.toLocaleString()}</span>
+                <span className="text-[#94A3B8]">Income:</span>
+                <span className="font-semibold text-emerald-400">Rs. {summary.totalIncome.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Expenses:</span>
-                <span className="font-semibold text-rose-600">Rs. {summary.totalExpense.toLocaleString()}</span>
+                <span className="text-[#94A3B8]">Expenses:</span>
+                <span className="font-semibold text-rose-400">Rs. {summary.totalExpense.toLocaleString()}</span>
               </div>
               <div className="flex justify-between pt-2 border-t">
                 <span className="text-slate-600 font-medium">Balance:</span>
@@ -1231,6 +1242,27 @@ export default function FinancePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {confirmState && (
+        <ConfirmDialog
+          open={confirmState.open}
+          title={confirmState.title}
+          description={confirmState.description}
+          confirmLabel={confirmState.confirmLabel}
+          destructive={confirmState.destructive}
+          loading={confirmBusy}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={async () => {
+            setConfirmBusy(true);
+            try {
+              await confirmState.onConfirm();
+              setConfirmState(null);
+            } finally {
+              setConfirmBusy(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
