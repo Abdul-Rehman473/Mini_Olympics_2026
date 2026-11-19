@@ -60,8 +60,8 @@ export default function EsportsSettingsPage() {
     return (
       <div className="min-h-[70vh] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-[#D5F05B] mx-auto" />
-          <p className="text-xs font-mono text-[#A4A5AA] tracking-widest uppercase">
+          <Loader2 className="h-8 w-8 animate-spin text-[#12E2C4] mx-auto" />
+          <p className="text-xs font-mono text-[#94A3B8] tracking-widest uppercase">
             LOADING ESPORTS SETTINGS...
           </p>
         </div>
@@ -72,39 +72,39 @@ export default function EsportsSettingsPage() {
   return (
     <div className="p-6 lg:p-10 pt-20 lg:pt-10 max-w-3xl mx-auto space-y-8">
       <div className="pb-6 border-b border-white/[0.08]">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#14161C] border border-white/[0.08] text-xs font-mono text-[#D5F05B] uppercase tracking-wider mb-2">
-          <Gamepad2 className="w-3.5 h-3.5 text-[#F15A29]" />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#131B38] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
+          <Gamepad2 className="w-3.5 h-3.5 text-[#F59E0B]" />
           <span>ESPORTS ARENA CONTROLS</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-[#F4F1EA] uppercase font-['Space_Grotesk'] tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight">
           ESPORTS SETTINGS
         </h1>
-        <p className="text-xs font-mono text-[#A4A5AA] mt-1">
+        <p className="text-xs font-mono text-[#94A3B8] mt-1">
           Manage esports registration status and public arena announcements.
         </p>
       </div>
 
-      <div className="p-6 sm:p-8 rounded-3xl bg-[#14161C] border border-white/[0.08] shadow-2xl space-y-6">
-        <div className="p-4 rounded-2xl bg-[#0A0B0E] border border-white/[0.08]">
+      <div className="p-6 sm:p-8 rounded-3xl bg-[#131B38] border border-white/[0.08] shadow-2xl space-y-6">
+        <div className="p-4 rounded-2xl bg-[#080D1C] border border-white/[0.08]">
           <Label htmlFor="esports-open" className="flex items-center gap-3 cursor-pointer">
             <input
               id="esports-open"
               type="checkbox"
               checked={isOpen}
               onChange={(e) => setIsOpen(e.target.checked)}
-              className="h-4 w-4 accent-[#D5F05B] rounded"
+              className="h-4 w-4 accent-[#12E2C4] rounded"
             />
-            <span className="text-sm font-bold text-[#F4F1EA] font-['Space_Grotesk'] uppercase">
+            <span className="text-sm font-bold text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
               Esports Registration Open
             </span>
           </Label>
-          <p className="text-xs font-mono text-[#A4A5AA] mt-1.5 pl-7">
+          <p className="text-xs font-mono text-[#94A3B8] mt-1.5 pl-7">
             When unchecked, esports registration will be disabled.
           </p>
         </div>
 
         <div>
-          <Label htmlFor="announcement" className="text-xs font-mono text-[#A4A5AA] uppercase">
+          <Label htmlFor="announcement" className="text-xs font-mono text-[#94A3B8] uppercase">
             Announcement Message
           </Label>
           <Input
@@ -112,9 +112,9 @@ export default function EsportsSettingsPage() {
             value={announcement}
             onChange={(e) => setAnnouncement(e.target.value)}
             placeholder="Optional announcement for esports"
-            className="mt-2 bg-[#0A0B0E] border-white/[0.1] text-sm text-[#F4F1EA] rounded-xl focus:border-[#D5F05B]"
+            className="mt-2 bg-[#080D1C] border-white/[0.1] text-sm text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]"
           />
-          <p className="text-xs font-mono text-[#A4A5AA]/80 mt-1.5">
+          <p className="text-xs font-mono text-[#94A3B8]/80 mt-1.5">
             This message will be displayed to esports registrants.
           </p>
         </div>
@@ -124,7 +124,7 @@ export default function EsportsSettingsPage() {
             role="status"
             className={`p-3.5 rounded-xl border font-mono text-xs flex items-center gap-2 ${
               feedback.type === 'success'
-                ? 'bg-[#D5F05B]/10 border-[#D5F05B]/30 text-[#D5F05B]'
+                ? 'bg-[#12E2C4]/10 border-[#12E2C4]/30 text-[#12E2C4]'
                 : 'bg-red-500/10 border-red-500/30 text-red-400'
             }`}
           >
@@ -140,7 +140,7 @@ export default function EsportsSettingsPage() {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="w-full py-3.5 rounded-xl text-xs font-mono font-black tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] uppercase shadow-lg shadow-[#D5F05B]/20"
+          className="w-full py-3.5 rounded-xl text-xs font-mono font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase shadow-lg shadow-[#12E2C4]/20"
         >
           <Save className="h-4 w-4 mr-2" />
           {saving ? 'SAVING SETTINGS...' : 'SAVE ESPORTS SETTINGS'}

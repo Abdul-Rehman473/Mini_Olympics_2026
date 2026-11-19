@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { ensureAuthAndPermissionsSchema, normalizeRole, resolveUserPermissions } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 
@@ -93,6 +94,9 @@ export async function POST(request: NextRequest) {
       if (!accepted) {
         return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
       }
+      if (user?.is_active === false) {
+        return NextResponse.json({ error: 'Account is deactivated. Contact Super Admin.' }, { status: 403 });
+      }
     } else {
       const adminUsername = (process.env.ADMIN_USERNAME ?? '').trim();
       const adminPassword = (process.env.ADMIN_PASSWORD ?? '').trim();
@@ -129,30 +133,29 @@ export async function POST(request: NextRequest) {
       `;
     }
 
-    // Get user role for redirect
-    let userRole = 'super_admin';
     try {
-      const userRow = await sql`SELECT role FROM admin_users WHERE username = ${username} LIMIT 1`;
+      await ensureAuthAndPermissionsSchema();
+    } catch {}
+
+    // Get user role and id for session + redirect
+    let userRole = 'super_admin';
+    let userId: string | null = null;
+    try {
+      const userRow = await sql`SELECT id, role FROM admin_users WHERE username = ${username} LIMIT 1`;
+      userId = (userRow as any)[0]?.id || null;
       userRole = (userRow as any)[0]?.role || 'super_admin';
     } catch {}
 
-    // Define default redirect page based on role
-    const roleDefaultPage: Record<string, string> = {
-      super_admin: '/admin/dashboard',
-      registration_admin: '/admin/registrations',
-      inventory_admin: '/admin/inventory',
-      hoc_admin: '/admin/hoc',
-      finance_admin: '/admin/finance',
-    };
-
-    const redirectTo = roleDefaultPage[userRole] || '/admin/dashboard';
+    const normalizedRole = normalizeRole(userRole);
+    const { defaultPage } = await resolveUserPermissions(userId, normalizedRole);
+    const redirectTo = defaultPage || '/admin/dashboard';
 
     // Set cookie in response
     const response = NextResponse.json({
       success: true,
       message: 'Login successful',
       sessionToken,
-      role: userRole,
+      role: normalizedRole,
       redirectTo,
     });
     

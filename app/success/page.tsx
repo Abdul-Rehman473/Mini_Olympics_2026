@@ -72,33 +72,33 @@ function SuccessContent() {
   }, [registrationId, slipId, registrationNumber]);
 
   return (
-    <div className="min-h-screen bg-[#101114] text-[#F4F1EA] py-12 px-4 sm:px-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[#0B1124] text-[#F8FAFC] py-12 px-4 sm:px-6 relative overflow-hidden">
       {/* Floodlight Glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-[#D5F05B]/10 rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-[#12E2C4]/10 rounded-full blur-[160px] pointer-events-none" />
 
       <div className="relative max-w-2xl mx-auto z-10">
         {/* Success Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex p-4 rounded-3xl bg-[#161820] border border-[#D5F05B]/30 shadow-2xl shadow-[#D5F05B]/20 mb-4">
-            <CheckCircle2 className="w-12 h-12 text-[#D5F05B]" />
+          <div className="inline-flex p-4 rounded-3xl bg-[#131B38] border border-[#12E2C4]/30 shadow-2xl shadow-[#12E2C4]/20 mb-4">
+            <CheckCircle2 className="w-12 h-12 text-[#12E2C4]" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-[#F4F1EA] uppercase font-['Space_Grotesk'] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight">
             REGISTRATION SUBMITTED!
           </h1>
-          <p className="text-xs sm:text-sm font-mono text-[#A4A5AA] mt-1.5 uppercase tracking-wider">
+          <p className="text-xs sm:text-sm font-mono text-[#94A3B8] mt-1.5 uppercase tracking-wider">
             MINI OLYMPICS 2026 • OFFICIAL ENTRY CONFIRMATION
           </p>
         </div>
 
         {/* Main Card */}
-        <div className="rounded-3xl bg-[#161820] border border-white/[0.08] shadow-2xl overflow-hidden">
+        <div className="rounded-3xl bg-[#131B38] border border-white/[0.08] shadow-2xl overflow-hidden">
           {/* Ticket Number Banner */}
           {registrationNumber && (
-            <div className="p-8 text-center bg-gradient-to-b from-[#1C202A] to-[#161820] border-b border-white/[0.08]">
-              <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest text-[#D5F05B] uppercase mb-1">
-                <Medal className="w-4 h-4 text-[#D5F05B]" />
+            <div className="p-8 text-center bg-gradient-to-b from-[#182244] to-[#131B38] border-b border-white/[0.08]">
+              <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest text-[#12E2C4] uppercase mb-1">
+                <Medal className="w-4 h-4 text-[#12E2C4]" />
                 <span>OFFICIAL TICKET NUMBER</span>
-                <Medal className="w-4 h-4 text-[#D5F05B]" />
+                <Medal className="w-4 h-4 text-[#12E2C4]" />
               </div>
               <p className="text-5xl sm:text-6xl font-black text-white font-mono tracking-tight">
                 #{registrationNumber}
@@ -109,15 +109,15 @@ function SuccessContent() {
           <div className="p-6 sm:p-8 space-y-6">
             {/* Registration ID & Total */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-[#101114] border border-white/[0.06] font-mono text-xs">
-                <span className="text-[#A4A5AA] block mb-1">REGISTRATION ID</span>
-                <span className="font-bold text-[#F4F1EA] text-sm break-all">{registrationId}</span>
+              <div className="p-4 rounded-2xl bg-[#0B1124] border border-white/[0.06] font-mono text-xs">
+                <span className="text-[#94A3B8] block mb-1">REGISTRATION ID</span>
+                <span className="font-bold text-[#F8FAFC] text-sm break-all">{registrationId}</span>
               </div>
 
               {total && (
-                <div className="p-4 rounded-2xl bg-[#101114] border border-[#D5F05B]/30 font-mono text-xs">
-                  <span className="text-[#A4A5AA] block mb-1">TOTAL AMOUNT</span>
-                  <span className="font-black text-lg text-[#D5F05B]">
+                <div className="p-4 rounded-2xl bg-[#0B1124] border border-[#12E2C4]/30 font-mono text-xs">
+                  <span className="text-[#94A3B8] block mb-1">TOTAL AMOUNT</span>
+                  <span className="font-black text-lg text-[#12E2C4]">
                     Rs. {parseFloat(total).toLocaleString()}
                   </span>
                 </div>
@@ -126,21 +126,21 @@ function SuccessContent() {
 
             {/* Cash Slip Section */}
             {method === 'cash' && slipId && (
-              <div className="p-6 rounded-2xl bg-[#1F1E16] border border-[#F15A29]/40 space-y-4">
+              <div className="p-6 rounded-2xl bg-[#1F1E16] border border-[#F59E0B]/40 space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-[#F15A29]/20 text-[#F15A29]">
+                  <div className="p-2 rounded-xl bg-[#F59E0B]/20 text-[#F59E0B]">
                     <FileText className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm sm:text-base font-['Space_Grotesk'] uppercase text-[#F4F1EA]">
+                    <h3 className="font-bold text-sm sm:text-base font-['Space_Grotesk'] uppercase text-[#F8FAFC]">
                       Cash Desk Slip ID
                     </h3>
-                    <p className="text-xs font-mono text-[#A4A5AA]">Present this slip at the FCIT Sports Society Desk</p>
+                    <p className="text-xs font-mono text-[#94A3B8]">Present this slip at the FCIT Sports Society Desk</p>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-[#101114] border border-white/[0.08] text-center font-mono">
-                  <span className="text-2xl sm:text-3xl font-black text-[#F15A29] tracking-wider">
+                <div className="p-4 rounded-xl bg-[#0B1124] border border-white/[0.08] text-center font-mono">
+                  <span className="text-2xl sm:text-3xl font-black text-[#F59E0B] tracking-wider">
                     {slipId}
                   </span>
                 </div>
@@ -170,7 +170,7 @@ function SuccessContent() {
                       printWindow.print();
                     }
                   }}
-                  className="w-full py-3 rounded-xl text-xs font-mono font-bold text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] uppercase"
+                  className="w-full py-3 rounded-xl text-xs font-mono font-bold text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Print / Save Cash Slip
@@ -180,45 +180,45 @@ function SuccessContent() {
 
             {/* Online Transfer Reference */}
             {method === 'online' && slipId && (
-              <div className="p-6 rounded-2xl bg-[#141824] border border-[#00E5FF]/30 space-y-4 font-mono">
+              <div className="p-6 rounded-2xl bg-[#141824] border border-[#3B82F6]/30 space-y-4 font-mono">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-[#00E5FF]/20 text-[#00E5FF]">
+                  <div className="p-2 rounded-xl bg-[#3B82F6]/20 text-[#3B82F6]">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm sm:text-base font-['Space_Grotesk'] uppercase text-[#F4F1EA]">
+                    <h3 className="font-bold text-sm sm:text-base font-['Space_Grotesk'] uppercase text-[#F8FAFC]">
                       Online Payment Under Review
                     </h3>
-                    <p className="text-xs text-[#A4A5AA]">Reference ID: {slipId}</p>
+                    <p className="text-xs text-[#94A3B8]">Reference ID: {slipId}</p>
                   </div>
                 </div>
 
                 {transactionId && (
-                  <div className="p-3 rounded-xl bg-[#101114] border border-white/[0.06] text-xs">
-                    <span className="text-[#A4A5AA]">Transaction ID: </span>
+                  <div className="p-3 rounded-xl bg-[#0B1124] border border-white/[0.06] text-xs">
+                    <span className="text-[#94A3B8]">Transaction ID: </span>
                     <span className="font-bold text-white">{transactionId}</span>
                   </div>
                 )}
 
-                <p className="text-xs text-[#A4A5AA] leading-relaxed">
+                <p className="text-xs text-[#94A3B8] leading-relaxed">
                   Your payment receipt has been uploaded and queued for admin verification. You will receive an automated confirmation email once verified.
                 </p>
               </div>
             )}
 
             {/* WhatsApp Group Links */}
-            <div className="p-6 rounded-2xl bg-[#101114] border border-white/[0.08] space-y-4">
+            <div className="p-6 rounded-2xl bg-[#0B1124] border border-white/[0.08] space-y-4">
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#D5F05B]" />
-                <h3 className="font-bold text-sm sm:text-base font-['Space_Grotesk'] uppercase text-[#F4F1EA]">
+                <Users className="w-5 h-5 text-[#12E2C4]" />
+                <h3 className="font-bold text-sm sm:text-base font-['Space_Grotesk'] uppercase text-[#F8FAFC]">
                   Official WhatsApp Sport Groups
                 </h3>
               </div>
 
               {groupLoading ? (
-                <div className="text-center py-4 text-xs font-mono text-[#A4A5AA]">Loading group links...</div>
+                <div className="text-center py-4 text-xs font-mono text-[#94A3B8]">Loading group links...</div>
               ) : groupInfo.length === 0 ? (
-                <p className="text-xs font-mono text-[#A4A5AA]">
+                <p className="text-xs font-mono text-[#94A3B8]">
                   Group links are being scheduled. Keep your ticket #{registrationNumber} handy for announcements.
                 </p>
               ) : (
@@ -226,13 +226,13 @@ function SuccessContent() {
                   {groupInfo.map((g) => (
                     <div
                       key={g.gameName}
-                      className="p-3.5 rounded-xl bg-[#161820] border border-white/[0.06] flex items-center justify-between gap-3"
+                      className="p-3.5 rounded-xl bg-[#131B38] border border-white/[0.06] flex items-center justify-between gap-3"
                     >
                       <div>
-                        <div className="font-bold text-xs sm:text-sm text-[#F4F1EA] font-['Space_Grotesk']">
+                        <div className="font-bold text-xs sm:text-sm text-[#F8FAFC] font-['Space_Grotesk']">
                           {g.groupTitle || g.gameName}
                         </div>
-                        <div className="text-[10px] font-mono text-[#A4A5AA]">{g.gameName}</div>
+                        <div className="text-[10px] font-mono text-[#94A3B8]">{g.gameName}</div>
                       </div>
 
                       {g.groupUrl && (
@@ -244,7 +244,7 @@ function SuccessContent() {
                             }
                             window.open(g.groupUrl, '_blank');
                           }}
-                          className="px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] transition-all inline-flex items-center gap-1.5"
+                          className="px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-all inline-flex items-center gap-1.5"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>JOIN GROUP</span>
@@ -260,13 +260,13 @@ function SuccessContent() {
             <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-white/[0.08]">
               <Link
                 href="/"
-                className="w-full sm:w-1/2 py-3 rounded-xl text-xs font-mono font-bold text-center text-[#F4F1EA] bg-white/[0.06] hover:bg-white/[0.1] transition-colors uppercase"
+                className="w-full sm:w-1/2 py-3 rounded-xl text-xs font-mono font-bold text-center text-[#F8FAFC] bg-white/[0.06] hover:bg-white/[0.1] transition-colors uppercase"
               >
                 RETURN HOME
               </Link>
               <Link
                 href="/register"
-                className="w-full sm:w-1/2 py-3 rounded-xl text-xs font-mono font-bold text-center text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] transition-colors uppercase"
+                className="w-full sm:w-1/2 py-3 rounded-xl text-xs font-mono font-bold text-center text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-colors uppercase"
               >
                 REGISTER ANOTHER ATHLETE
               </Link>
@@ -282,8 +282,8 @@ export default function SuccessPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#101114] flex items-center justify-center">
-          <div className="w-10 h-10 border-2 border-[#D5F05B] border-t-transparent rounded-full animate-spin" />
+        <div className="min-h-screen bg-[#0B1124] flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-[#12E2C4] border-t-transparent rounded-full animate-spin" />
         </div>
       }
     >

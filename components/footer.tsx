@@ -33,33 +33,33 @@ export default function Footer() {
   const isStandaloneDirectory = pathname?.startsWith('/games');
 
   return (
-    <footer className="relative w-full bg-[#0A0B0E] border-t border-white/[0.08] overflow-hidden mt-auto">
+    <footer className="relative w-full bg-[#080D1C] border-t border-white/[0.08] overflow-hidden mt-auto">
       {/* 1. Dramatic Finale Section (omitted on standalone /games directory) */}
       {!isStandaloneDirectory && (
       <div className="relative py-24 sm:py-32 px-4 sm:px-6 lg:px-8 border-b border-white/[0.08] overflow-hidden">
         {/* Stadium Floodlight Glows */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-r from-[#F15A29]/15 via-[#D5F05B]/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-r from-[#F59E0B]/15 via-[#12E2C4]/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
 
         <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#181B22] border border-white/[0.1] text-xs font-mono text-[#D5F05B] tracking-widest uppercase mb-6 shadow-xl">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#182244] border border-white/[0.1] text-xs font-mono text-[#12E2C4] tracking-widest uppercase mb-6 shadow-xl">
             <span>✦ MINI OLYMPICS 2026 ✦ THE PODIUM AWAITS</span>
           </div>
 
-          <h2 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight text-[#F4F1EA] uppercase font-['Space_Grotesk'] leading-[0.92] mb-6">
+          <h2 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight text-[#F8FAFC] uppercase font-['Space_Grotesk'] leading-[0.92] mb-6">
             READY TO MAKE<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F15A29] via-[#ff8a50] to-[#D5F05B]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F59E0B] via-[#FBBF24] to-[#12E2C4]">
               HISTORY?
             </span>
           </h2>
 
-          <p className="max-w-xl mx-auto text-base sm:text-xl font-mono text-[#A4A5AA] tracking-wider uppercase mb-10">
+          <p className="max-w-xl mx-auto text-base sm:text-xl font-mono text-[#94A3B8] tracking-wider uppercase mb-10">
             YOUR GAME. YOUR TEAM. YOUR MOMENT.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <Link
               href="/register"
-              className="group relative inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl text-base sm:text-lg font-black tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] transition-all duration-300 uppercase shadow-2xl shadow-[#D5F05B]/30 hover:shadow-[#D5F05B]/50 hover:-translate-y-1 font-['Space_Grotesk']"
+              className="group relative inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl text-base sm:text-lg font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-all duration-300 uppercase shadow-2xl shadow-[#12E2C4]/30 hover:shadow-[#12E2C4]/50 hover:-translate-y-1 font-['Space_Grotesk']"
             >
               <span>REGISTER FOR MINI OLYMPICS 2026</span>
               <ArrowUpRight className="w-5 h-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
@@ -67,9 +67,9 @@ export default function Footer() {
 
             <Link
               href="/verify-cash"
-              className="inline-flex items-center justify-center gap-2 px-7 py-5 rounded-2xl text-sm font-bold tracking-wider text-[#F4F1EA] bg-[#16181F] hover:bg-[#20232B] border border-white/[0.1] transition-all uppercase font-mono"
+              className="inline-flex items-center justify-center gap-2 px-7 py-5 rounded-2xl text-sm font-bold tracking-wider text-[#F8FAFC] bg-[#131B38] hover:bg-[#1E2A52] border border-white/[0.1] transition-all uppercase font-mono"
             >
-              <ShieldCheck className="w-4 h-4 text-[#F15A29]" />
+              <ShieldCheck className="w-4 h-4 text-[#F59E0B]" />
               <span>VERIFY REGISTRATION SLIP</span>
             </Link>
           </div>
@@ -83,22 +83,22 @@ export default function Footer() {
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F15A29] via-[#D5F05B] to-[#101114] p-[1.5px]">
-                <div className="w-full h-full bg-[#101114] rounded-[10px] flex items-center justify-center">
-                  <Trophy className="w-5 h-5 text-[#D5F05B]" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F59E0B] via-[#12E2C4] to-[#0B1124] p-[1.5px]">
+                <div className="w-full h-full bg-[#0B1124] rounded-[10px] flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-[#12E2C4]" />
                 </div>
               </div>
               <div>
-                <span className="font-black text-xl tracking-wider text-[#F4F1EA] font-['Space_Grotesk'] uppercase block">
+                <span className="font-black text-xl tracking-wider text-[#F8FAFC] font-['Space_Grotesk'] uppercase block">
                   MINI OLYMPICS 2026
                 </span>
-                <span className="text-xs font-mono text-[#A4A5AA] tracking-widest uppercase">
+                <span className="text-xs font-mono text-[#94A3B8] tracking-widest uppercase">
                   FCIT SPORTS SOCIETY • PUCIT
                 </span>
               </div>
             </div>
 
-            <p className="text-xs sm:text-sm text-[#A4A5AA] max-w-md leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm text-[#94A3B8] max-w-md leading-relaxed font-normal">
               Punjab University College of Information Technology (Old Campus), Lahore. Promoting collegiate athletic excellence, camaraderie, and championship spirit since inception.
             </p>
 
@@ -107,7 +107,7 @@ export default function Footer() {
                 href="https://facebook.com/PucitSSOldCampus/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] flex items-center justify-center text-[#A4A5AA] hover:text-[#D5F05B] transition-colors"
+                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] flex items-center justify-center text-[#94A3B8] hover:text-[#12E2C4] transition-colors"
                 title="Facebook"
               >
                 <IconFacebook />
@@ -116,7 +116,7 @@ export default function Footer() {
                 href="https://instagram.com/fcit_oc_sports"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] flex items-center justify-center text-[#A4A5AA] hover:text-[#D5F05B] transition-colors"
+                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] flex items-center justify-center text-[#94A3B8] hover:text-[#12E2C4] transition-colors"
                 title="Instagram"
               >
                 <IconInstagram />
@@ -125,14 +125,14 @@ export default function Footer() {
                 href="https://linkedin.com/company/fcit-sports-society-oc/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] flex items-center justify-center text-[#A4A5AA] hover:text-[#D5F05B] transition-colors"
+                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] flex items-center justify-center text-[#94A3B8] hover:text-[#12E2C4] transition-colors"
                 title="LinkedIn"
               >
                 <IconLinkedIn />
               </a>
               <a
                 href="mailto:sports.oc@pucit.edu.pk"
-                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] flex items-center justify-center text-[#A4A5AA] hover:text-[#D5F05B] transition-colors"
+                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] flex items-center justify-center text-[#94A3B8] hover:text-[#12E2C4] transition-colors"
                 title="Email"
               >
                 <Mail className="w-4 h-4" />
@@ -142,27 +142,27 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div className="space-y-3 font-mono text-xs">
-            <span className="text-[#D5F05B] font-bold tracking-widest uppercase block mb-4">
+            <span className="text-[#12E2C4] font-bold tracking-widest uppercase block mb-4">
               // QUICK LINKS
             </span>
-            <ul className="space-y-2.5 text-[#A4A5AA]">
+            <ul className="space-y-2.5 text-[#94A3B8]">
               <li>
-                <Link href="/games" className="hover:text-[#F4F1EA] transition-colors">
+                <Link href="/games" className="hover:text-[#F8FAFC] transition-colors">
                   All 49 Disciplines
                 </Link>
               </li>
               <li>
-                <a href="/#stats" className="hover:text-[#F4F1EA] transition-colors">
+                <a href="/#stats" className="hover:text-[#F8FAFC] transition-colors">
                   Tournament Metrics
                 </a>
               </li>
               <li>
-                <a href="/#why" className="hover:text-[#F4F1EA] transition-colors">
+                <a href="/#why" className="hover:text-[#F8FAFC] transition-colors">
                   Why Compete
                 </a>
               </li>
               <li>
-                <Link href="/verify-cash" className="hover:text-[#F4F1EA] transition-colors">
+                <Link href="/verify-cash" className="hover:text-[#F8FAFC] transition-colors">
                   Verify Registration Pass
                 </Link>
               </li>
@@ -171,23 +171,23 @@ export default function Footer() {
 
           {/* Administration & Legal */}
           <div className="space-y-3 font-mono text-xs">
-            <span className="text-[#F15A29] font-bold tracking-widest uppercase block mb-4">
+            <span className="text-[#F59E0B] font-bold tracking-widest uppercase block mb-4">
               // GOVERNANCE
             </span>
-            <ul className="space-y-2.5 text-[#A4A5AA]">
+            <ul className="space-y-2.5 text-[#94A3B8]">
               <li>
-                <Link href="/admin/login" className="hover:text-[#F4F1EA] transition-colors flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#F15A29]" />
+                <Link href="/admin/login" className="hover:text-[#F8FAFC] transition-colors flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#F59E0B]" />
                   <span>Admin Terminal</span>
                 </Link>
               </li>
               <li>
-                <a href="https://pucit.edu.pk" target="_blank" rel="noopener noreferrer" className="hover:text-[#F4F1EA] transition-colors">
+                <a href="https://pucit.edu.pk" target="_blank" rel="noopener noreferrer" className="hover:text-[#F8FAFC] transition-colors">
                   PUCIT Official Portal
                 </a>
               </li>
               <li>
-                <span className="text-[#A4A5AA]/70 block pt-1">
+                <span className="text-[#94A3B8]/70 block pt-1">
                   Inquiries: sports.oc@pucit.edu.pk
                 </span>
               </li>
@@ -196,7 +196,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-[#A4A5AA]">
+        <div className="mt-12 pt-8 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-[#94A3B8]">
           <p>© 2026 FCIT Sports Society • PUCIT Lahore. All rights reserved.</p>
           <p className="flex items-center gap-1.5">
             Designed for athletic champions at Old Campus.

@@ -40,14 +40,35 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [financeStats, setFinanceStats] = useState({ income: 0, expense: 0, balance: 0 });
   const [inventoryStats, setInventoryStats] = useState({ totalItems: 0, activeLoans: 0 });
+  const [allowedPages, setAllowedPages] = useState<string[] | null>(null);
 
   useEffect(() => {
     loadDashboardData();
   }, []);
 
+  const hasAccess = (pageKey: string) =>
+    allowedPages === null || allowedPages.includes(pageKey);
+
   const loadDashboardData = async () => {
     setLoading(true);
     try {
+      let userPages: string[] | null = null;
+      try {
+        const verifyRes = await fetch('/api/admin/verify', { cache: 'no-store' });
+        const verifyData = await verifyRes.json();
+        if (verifyData.authenticated) {
+          userPages =
+            verifyData.role === 'super_admin' || verifyData.role === 'admin'
+              ? null
+              : Array.isArray(verifyData.permissions)
+                ? verifyData.permissions
+                : [];
+          setAllowedPages(userPages);
+        }
+      } catch {}
+
+      const canLoad = (pageKey: string) => userPages === null || userPages.includes(pageKey);
+
       // Load registration stats
       const statsRes = await fetch('/api/stats?' + new URLSearchParams({ _t: Date.now().toString() }), { cache: 'no-store' });
       const statsData = await statsRes.json();
@@ -55,38 +76,42 @@ export default function AdminDashboard() {
         setStats(statsData.data);
       }
 
-      // Load finance stats
-      try {
-        const financeRes = await fetch('/api/admin/finance', { cache: 'no-store' });
-        const financeData = await financeRes.json();
-        if (financeData.success && financeData.summary) {
-          setFinanceStats({
-            income: financeData.summary.totalIncome || 0,
-            expense: financeData.summary.totalExpense || 0,
-            balance: financeData.summary.balance || 0,
-          });
-        }
-      } catch {}
+      // Load finance stats if permitted
+      if (canLoad('/admin/finance')) {
+        try {
+          const financeRes = await fetch('/api/admin/finance', { cache: 'no-store' });
+          const financeData = await financeRes.json();
+          if (financeData.success && financeData.summary) {
+            setFinanceStats({
+              income: financeData.summary.totalIncome || 0,
+              expense: financeData.summary.totalExpense || 0,
+              balance: financeData.summary.balance || 0,
+            });
+          }
+        } catch {}
+      }
 
-      // Load inventory stats
-      try {
-        const invRes = await fetch('/api/admin/inventory', { cache: 'no-store' });
-        const invData = await invRes.json();
-        if (invData.success) {
-          setInventoryStats({
-            totalItems: invData.data?.length || 0,
-            activeLoans: 0,
-          });
-        }
-        const loansRes = await fetch('/api/admin/inventory/loans', { cache: 'no-store' });
-        const loansData = await loansRes.json();
-        if (loansData.success) {
-          setInventoryStats((prev) => ({
-            ...prev,
-            activeLoans: loansData.data?.filter((l: any) => l.status === 'active')?.length || 0,
-          }));
-        }
-      } catch {}
+      // Load inventory stats if permitted
+      if (canLoad('/admin/inventory')) {
+        try {
+          const invRes = await fetch('/api/admin/inventory', { cache: 'no-store' });
+          const invData = await invRes.json();
+          if (invData.success) {
+            setInventoryStats({
+              totalItems: invData.data?.length || 0,
+              activeLoans: 0,
+            });
+          }
+          const loansRes = await fetch('/api/admin/inventory/loans', { cache: 'no-store' });
+          const loansData = await loansRes.json();
+          if (loansData.success) {
+            setInventoryStats((prev) => ({
+              ...prev,
+              activeLoans: loansData.data?.filter((l: any) => l.status === 'active')?.length || 0,
+            }));
+          }
+        } catch {}
+      }
     } finally {
       setLoading(false);
     }
@@ -96,8 +121,8 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-[70vh] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-[#D5F05B] mx-auto" />
-          <p className="text-xs font-mono text-[#A4A5AA] tracking-widest uppercase">
+          <Loader2 className="h-8 w-8 animate-spin text-[#12E2C4] mx-auto" />
+          <p className="text-xs font-mono text-[#94A3B8] tracking-widest uppercase">
             LOADING TOURNAMENT DASHBOARD METRICS...
           </p>
         </div>
@@ -112,13 +137,13 @@ export default function AdminDashboard() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/[0.08]">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#14161C] border border-white/[0.08] text-xs font-mono text-[#D5F05B] uppercase tracking-wider mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#131B38] border border-white/[0.08] text-xs font-mono text-[#12E2C4] uppercase tracking-wider mb-2">
             <span>// TOURNAMENT COMMAND CENTER</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-[#F4F1EA] uppercase font-['Space_Grotesk'] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-black text-[#F8FAFC] uppercase font-['Space_Grotesk'] tracking-tight">
             OPERATIONS DASHBOARD
           </h1>
-          <p className="text-xs font-mono text-[#A4A5AA] mt-1">
+          <p className="text-xs font-mono text-[#94A3B8] mt-1">
             MINI OLYMPICS 2026 • REAL-TIME REGISTRATION & LOGISTICS OVERVIEW
           </p>
         </div>
@@ -126,7 +151,7 @@ export default function AdminDashboard() {
         <div className="flex items-center gap-2">
           <Link
             href="/verify-cash"
-            className="px-4 py-2.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] uppercase transition-all inline-flex items-center gap-1.5"
+            className="px-4 py-2.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase transition-all inline-flex items-center gap-1.5"
           >
             <ShieldCheck className="w-4 h-4" />
             <span>OPEN VERIFICATION DESK</span>
@@ -137,191 +162,239 @@ export default function AdminDashboard() {
       {/* 4 Hero KPI Blocks */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Registrations */}
-        <div className="relative p-6 rounded-3xl bg-[#14161C] border border-white/[0.08] hover:border-[#D5F05B]/40 transition-all shadow-xl group">
+        <div className="relative p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-[#12E2C4]/40 transition-all shadow-xl group">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono text-[#A4A5AA] uppercase tracking-wider">TOTAL REGISTRATIONS</span>
-            <div className="p-2.5 rounded-xl bg-[#D5F05B]/10 text-[#D5F05B]">
+            <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">TOTAL REGISTRATIONS</span>
+            <div className="p-2.5 rounded-xl bg-[#12E2C4]/10 text-[#12E2C4]">
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-4xl sm:text-5xl font-black text-[#F4F1EA] font-['Space_Grotesk'] leading-none">
+          <div className="text-4xl sm:text-5xl font-black text-[#F8FAFC] font-['Space_Grotesk'] leading-none">
             {stats.total}
           </div>
           <div className="mt-3 flex items-center justify-between text-xs font-mono">
-            <span className="text-[#D5F05B] font-bold">{stats.paid} Verified</span>
-            <span className="text-[#A4A5AA]">{totalPending} Pending</span>
+            <span className="text-[#12E2C4] font-bold">{stats.paid} Verified</span>
+            <span className="text-[#94A3B8]">{totalPending} Pending</span>
           </div>
-          <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#D5F05B] opacity-40 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#12E2C4] opacity-40 group-hover:opacity-100 transition-opacity" />
         </div>
 
         {/* Pending Approvals */}
-        <div className="relative p-6 rounded-3xl bg-[#14161C] border border-white/[0.08] hover:border-[#F15A29]/40 transition-all shadow-xl group">
+        <div className="relative p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-[#F59E0B]/40 transition-all shadow-xl group">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono text-[#A4A5AA] uppercase tracking-wider">PENDING REVIEW</span>
-            <div className="p-2.5 rounded-xl bg-[#F15A29]/10 text-[#F15A29]">
+            <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">PENDING REVIEW</span>
+            <div className="p-2.5 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B]">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-4xl sm:text-5xl font-black text-[#F15A29] font-['Space_Grotesk'] leading-none">
+          <div className="text-4xl sm:text-5xl font-black text-[#F59E0B] font-['Space_Grotesk'] leading-none">
             {totalPending}
           </div>
           <div className="mt-3 flex items-center justify-between text-xs font-mono">
-            <span className="text-[#A4A5AA]">Cash: {stats.pendingCash}</span>
-            <span className="text-[#A4A5AA]">Online: {stats.pendingOnline}</span>
+            <span className="text-[#94A3B8]">Cash: {stats.pendingCash}</span>
+            <span className="text-[#94A3B8]">Online: {stats.pendingOnline}</span>
           </div>
-          <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#F15A29] opacity-40 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#F59E0B] opacity-40 group-hover:opacity-100 transition-opacity" />
         </div>
 
         {/* Financial Treasury Balance */}
-        <div className="relative p-6 rounded-3xl bg-[#14161C] border border-white/[0.08] hover:border-[#00E5FF]/40 transition-all shadow-xl group">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono text-[#A4A5AA] uppercase tracking-wider">TREASURY BALANCE</span>
-            <div className="p-2.5 rounded-xl bg-[#00E5FF]/10 text-[#00E5FF]">
-              <Wallet className="w-4 h-4" />
+        {hasAccess('/admin/finance') && (
+          <div className="relative p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-[#3B82F6]/40 transition-all shadow-xl group">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">TREASURY BALANCE</span>
+              <div className="p-2.5 rounded-xl bg-[#3B82F6]/10 text-[#3B82F6]">
+                <Wallet className="w-4 h-4" />
+              </div>
             </div>
+            <div className="text-3xl sm:text-4xl font-black text-[#F8FAFC] font-['Space_Grotesk'] leading-none truncate">
+              Rs. {financeStats.balance.toLocaleString()}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs font-mono">
+              <span className="text-emerald-400">+{financeStats.income.toLocaleString()} In</span>
+              <span className="text-rose-400">-{financeStats.expense.toLocaleString()} Out</span>
+            </div>
+            <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#3B82F6] opacity-40 group-hover:opacity-100 transition-opacity" />
           </div>
-          <div className="text-3xl sm:text-4xl font-black text-[#F4F1EA] font-['Space_Grotesk'] leading-none truncate">
-            Rs. {financeStats.balance.toLocaleString()}
-          </div>
-          <div className="mt-3 flex items-center justify-between text-xs font-mono">
-            <span className="text-emerald-400">+{financeStats.income.toLocaleString()} In</span>
-            <span className="text-rose-400">-{financeStats.expense.toLocaleString()} Out</span>
-          </div>
-          <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#00E5FF] opacity-40 group-hover:opacity-100 transition-opacity" />
-        </div>
+        )}
 
         {/* Equipment & Inventory */}
-        <div className="relative p-6 rounded-3xl bg-[#14161C] border border-white/[0.08] hover:border-[#FFD700]/40 transition-all shadow-xl group">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono text-[#A4A5AA] uppercase tracking-wider">EQUIPMENT ASSETS</span>
-            <div className="p-2.5 rounded-xl bg-[#FFD700]/10 text-[#FFD700]">
-              <Package className="w-4 h-4" />
+        {hasAccess('/admin/inventory') && (
+          <div className="relative p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] hover:border-[#FFD700]/40 transition-all shadow-xl group">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">EQUIPMENT ASSETS</span>
+              <div className="p-2.5 rounded-xl bg-[#FFD700]/10 text-[#FFD700]">
+                <Package className="w-4 h-4" />
+              </div>
             </div>
+            <div className="text-4xl sm:text-5xl font-black text-[#F8FAFC] font-['Space_Grotesk'] leading-none">
+              {inventoryStats.totalItems}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs font-mono">
+              <span className="text-[#FFD700] font-bold">{inventoryStats.activeLoans} Active Loans</span>
+              <span className="text-[#94A3B8]">Tracked</span>
+            </div>
+            <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#FFD700] opacity-40 group-hover:opacity-100 transition-opacity" />
           </div>
-          <div className="text-4xl sm:text-5xl font-black text-[#F4F1EA] font-['Space_Grotesk'] leading-none">
-            {inventoryStats.totalItems}
-          </div>
-          <div className="mt-3 flex items-center justify-between text-xs font-mono">
-            <span className="text-[#FFD700] font-bold">{inventoryStats.activeLoans} Active Loans</span>
-            <span className="text-[#A4A5AA]">Tracked</span>
-          </div>
-          <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-[#FFD700] opacity-40 group-hover:opacity-100 transition-opacity" />
-        </div>
+        )}
       </div>
 
       {/* Module Navigation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Registrations Management Module */}
-        <div className="p-6 rounded-3xl bg-[#14161C] border border-white/[0.08] flex flex-col justify-between space-y-6">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
-                <Users className="w-5 h-5" />
+        {hasAccess('/admin/registrations') && (
+          <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
+                    Registrations & Verification
+                  </h3>
+                  <p className="text-xs font-mono text-[#94A3B8]">Participant review & audit logs</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-base text-[#F4F1EA] font-['Space_Grotesk'] uppercase">
-                  Registrations & Verification
-                </h3>
-                <p className="text-xs font-mono text-[#A4A5AA]">Participant review & audit logs</p>
+
+              <div className="grid grid-cols-3 gap-2 text-center font-mono text-xs mb-4">
+                <div className="p-3 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-lg font-bold text-[#12E2C4]">{stats.paid}</p>
+                  <p className="text-[10px] text-[#94A3B8]">Paid</p>
+                </div>
+                <div className="p-3 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-lg font-bold text-amber-400">{totalPending}</p>
+                  <p className="text-[10px] text-[#94A3B8]">Pending</p>
+                </div>
+                <div className="p-3 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-lg font-bold text-rose-400">{stats.rejected}</p>
+                  <p className="text-[10px] text-[#94A3B8]">Rejected</p>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center font-mono text-xs mb-4">
-              <div className="p-3 rounded-xl bg-[#0A0B0E] border border-white/[0.06]">
-                <p className="text-lg font-bold text-[#D5F05B]">{stats.paid}</p>
-                <p className="text-[10px] text-[#A4A5AA]">Paid</p>
-              </div>
-              <div className="p-3 rounded-xl bg-[#0A0B0E] border border-white/[0.06]">
-                <p className="text-lg font-bold text-amber-400">{totalPending}</p>
-                <p className="text-[10px] text-[#A4A5AA]">Pending</p>
-              </div>
-              <div className="p-3 rounded-xl bg-[#0A0B0E] border border-white/[0.06]">
-                <p className="text-lg font-bold text-rose-400">{stats.rejected}</p>
-                <p className="text-[10px] text-[#A4A5AA]">Rejected</p>
-              </div>
-            </div>
+            <Link
+              href="/admin/registrations"
+              className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F8FAFC] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
+            >
+              <span>MANAGE ALL REGISTRATIONS</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
+        )}
 
-          <Link
-            href="/admin/registrations"
-            className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F4F1EA] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
-          >
-            <span>MANAGE ALL REGISTRATIONS</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
+        {/* Coordinator Portal Module */}
+        {hasAccess('/admin/coordinator') && (
+          <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 rounded-xl bg-[#12E2C4]/10 text-[#12E2C4]">
+                  <Medal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
+                    Coordinator Portal
+                  </h3>
+                  <p className="text-xs font-mono text-[#94A3B8]">Players, match timings & results</p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#080D1C] border border-white/[0.06] text-xs font-mono text-[#94A3B8] space-y-1 mb-4">
+                <div className="flex justify-between">
+                  <span>Match Scheduler:</span>
+                  <span className="text-[#12E2C4] font-bold">Active</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>HOC Live Sync:</span>
+                  <span className="text-white font-bold">Enabled</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/admin/coordinator"
+              className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F8FAFC] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
+            >
+              <span>OPEN COORDINATOR PORTAL</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
 
         {/* Finance Ledger Module */}
-        <div className="p-6 rounded-3xl bg-[#14161C] border border-white/[0.08] flex flex-col justify-between space-y-6">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400">
-                <Wallet className="w-5 h-5" />
+        {hasAccess('/admin/finance') && (
+          <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
+                    Finance & Treasury
+                  </h3>
+                  <p className="text-xs font-mono text-[#94A3B8]">Incomes, expenses & sync</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-base text-[#F4F1EA] font-['Space_Grotesk'] uppercase">
-                  Finance & Treasury
-                </h3>
-                <p className="text-xs font-mono text-[#A4A5AA]">Incomes, expenses & sync</p>
+
+              <div className="grid grid-cols-2 gap-2 text-center font-mono text-xs mb-4">
+                <div className="p-3 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-sm font-bold text-emerald-400">Rs. {financeStats.income.toLocaleString()}</p>
+                  <p className="text-[10px] text-[#94A3B8]">Income</p>
+                </div>
+                <div className="p-3 rounded-xl bg-[#080D1C] border border-white/[0.06]">
+                  <p className="text-sm font-bold text-rose-400">Rs. {financeStats.expense.toLocaleString()}</p>
+                  <p className="text-[10px] text-[#94A3B8]">Expense</p>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-center font-mono text-xs mb-4">
-              <div className="p-3 rounded-xl bg-[#0A0B0E] border border-white/[0.06]">
-                <p className="text-sm font-bold text-emerald-400">Rs. {financeStats.income.toLocaleString()}</p>
-                <p className="text-[10px] text-[#A4A5AA]">Income</p>
-              </div>
-              <div className="p-3 rounded-xl bg-[#0A0B0E] border border-white/[0.06]">
-                <p className="text-sm font-bold text-rose-400">Rs. {financeStats.expense.toLocaleString()}</p>
-                <p className="text-[10px] text-[#A4A5AA]">Expense</p>
-              </div>
-            </div>
+            <Link
+              href="/admin/finance"
+              className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F8FAFC] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
+            >
+              <span>ACCESS FINANCE LEDGER</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
-
-          <Link
-            href="/admin/finance"
-            className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F4F1EA] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
-          >
-            <span>ACCESS FINANCE LEDGER</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
+        )}
 
         {/* Head of Competition (HOC) Module */}
-        <div className="p-6 rounded-3xl bg-[#14161C] border border-white/[0.08] flex flex-col justify-between space-y-6">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-xl bg-[#F15A29]/10 text-[#F15A29]">
-                <Trophy className="w-5 h-5" />
+        {hasAccess('/admin/hoc') && (
+          <div className="p-6 rounded-3xl bg-[#131B38] border border-white/[0.08] flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B]">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
+                    HOC Tournament Brackets
+                  </h3>
+                  <p className="text-xs font-mono text-[#94A3B8]">Match fixtures & referee sheets</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-base text-[#F4F1EA] font-['Space_Grotesk'] uppercase">
-                  HOC Tournament Brackets
-                </h3>
-                <p className="text-xs font-mono text-[#A4A5AA]">Match fixtures & referee sheets</p>
+
+              <div className="p-4 rounded-xl bg-[#080D1C] border border-white/[0.06] text-xs font-mono text-[#94A3B8] space-y-1 mb-4">
+                <div className="flex justify-between">
+                  <span>Active Format:</span>
+                  <span className="text-[#12E2C4] font-bold">Knockout & Groups</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>PDF Generator:</span>
+                  <span className="text-white font-bold">Available</span>
+                </div>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#0A0B0E] border border-white/[0.06] text-xs font-mono text-[#A4A5AA] space-y-1 mb-4">
-              <div className="flex justify-between">
-                <span>Active Format:</span>
-                <span className="text-[#D5F05B] font-bold">Knockout & Groups</span>
-              </div>
-              <div className="flex justify-between">
-                <span>PDF Generator:</span>
-                <span className="text-white font-bold">Available</span>
-              </div>
-            </div>
+            <Link
+              href="/admin/hoc"
+              className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F8FAFC] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
+            >
+              <span>HOC FIXTURE ENGINE</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
-
-          <Link
-            href="/admin/hoc"
-            className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-center text-[#F4F1EA] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition-all flex items-center justify-center gap-2 uppercase"
-          >
-            <span>HOC FIXTURE ENGINE</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
+        )}
       </div>
     </div>
   );

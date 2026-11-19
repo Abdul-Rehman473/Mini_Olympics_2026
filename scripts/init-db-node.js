@@ -81,12 +81,81 @@ async function initDatabase() {
         sql: `CREATE TABLE IF NOT EXISTS admin_users (
           id TEXT PRIMARY KEY,
           username TEXT NOT NULL UNIQUE,
+          display_name TEXT,
           password_hash TEXT NOT NULL,
           role TEXT NOT NULL DEFAULT 'admin',
+          assigned_games TEXT,
+          assigned_gender TEXT DEFAULT 'both',
+          created_by TEXT,
+          is_active BOOLEAN DEFAULT true NOT NULL,
           created_at TIMESTAMP DEFAULT NOW() NOT NULL,
           updated_at TIMESTAMP DEFAULT NOW() NOT NULL
         )`,
         desc: 'Creating admin_users table'
+      },
+      {
+        sql: `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS display_name TEXT`,
+        desc: 'Adding admin_users.display_name column'
+      },
+      {
+        sql: `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS assigned_games TEXT`,
+        desc: 'Adding admin_users.assigned_games column'
+      },
+      {
+        sql: `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS assigned_gender TEXT DEFAULT 'both'`,
+        desc: 'Adding admin_users.assigned_gender column'
+      },
+      {
+        sql: `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS created_by TEXT`,
+        desc: 'Adding admin_users.created_by column'
+      },
+      {
+        sql: `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true NOT NULL`,
+        desc: 'Adding admin_users.is_active column'
+      },
+      {
+        sql: `CREATE TABLE IF NOT EXISTS permissions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+          page_key TEXT NOT NULL,
+          can_view BOOLEAN DEFAULT true NOT NULL,
+          can_edit BOOLEAN DEFAULT false NOT NULL,
+          can_delegate BOOLEAN DEFAULT false NOT NULL,
+          granted_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          UNIQUE(user_id, page_key)
+        )`,
+        desc: 'Creating permissions table'
+      },
+      {
+        sql: `CREATE TABLE IF NOT EXISTS coordinator_matches (
+          id TEXT PRIMARY KEY,
+          game_name VARCHAR(100) NOT NULL,
+          gender VARCHAR(10) NOT NULL CHECK (gender IN ('boys', 'girls')),
+          round_name VARCHAR(100) NOT NULL DEFAULT 'Round 1',
+          match_number INTEGER NOT NULL DEFAULT 1,
+          player1_name VARCHAR(255) NOT NULL,
+          player1_reg_id TEXT,
+          player1_roll VARCHAR(50),
+          player1_contact VARCHAR(30),
+          player2_name VARCHAR(255) NOT NULL,
+          player2_reg_id TEXT,
+          player2_roll VARCHAR(50),
+          player2_contact VARCHAR(30),
+          scheduled_date VARCHAR(50),
+          scheduled_time VARCHAR(120),
+          venue VARCHAR(150),
+          status VARCHAR(30) NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled', 'walkover')),
+          winner_name VARCHAR(255),
+          score_summary VARCHAR(255),
+          notes TEXT,
+          coordinator_id TEXT,
+          coordinator_username TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        )`,
+        desc: 'Creating coordinator_matches table'
       },
       {
         sql: `CREATE TABLE IF NOT EXISTS sport_groups (
@@ -175,10 +244,15 @@ async function initDatabase() {
           gender VARCHAR(10) NOT NULL CHECK (gender IN ('boys', 'girls', 'both')),
           price DECIMAL(10, 2) NOT NULL,
           players INTEGER,
+          category VARCHAR(50),
           created_at TIMESTAMP DEFAULT NOW() NOT NULL,
           UNIQUE(game_name, gender)
         )`,
         desc: 'Creating games_pricing table'
+      },
+      {
+        sql: `ALTER TABLE games_pricing ADD COLUMN IF NOT EXISTS category VARCHAR(50)`,
+        desc: 'Adding games_pricing.category column'
       }
     ];
 
@@ -187,31 +261,104 @@ async function initDatabase() {
       await executeSQL(stmt.sql, stmt.desc);
     }
 
-    // Insert games pricing (using template literals for better handling)
+    // Insert all 45 official PDF games pricing
     const pricingData = [
-      ['Cricket', 'boys', 2200.00, 11], ['Football', 'boys', 2200.00, 11],
-      ['Double Wicket', 'boys', 500.00, 2], ['Badminton Singles', 'boys', 200.00, 1],
-      ['Badminton Doubles', 'boys', 400.00, 2], ['Table Tennis Singles', 'boys', 200.00, 1],
-      ['Table Tennis Doubles', 'boys', 400.00, 2], ['Foosball Doubles', 'boys', 400.00, 2],
-      ['Ludo Singles', 'boys', 150.00, 1], ['Ludo Doubles', 'boys', 300.00, 2],
-      ['Carrom Singles', 'boys', 150.00, 1], ['Carrom Doubles', 'boys', 250.00, 2],
-      ['Darts Singles', 'boys', 150.00, 1], ['Tug of War', 'boys', 1000.00, 10],
-      ['Jenga', 'boys', 150.00, 1], ['Chess', 'boys', 150.00, 1],
-      ['Arm Wrestling', 'boys', 150.00, 1], ['Pitho Gol Garam', 'boys', 1000.00, 6],
-      ['Uno', 'boys', 100.00, 1], ['Tekken', 'boys', 300.00, 1], ['Fifa', 'boys', 300.00, 1],
-      ['Cricket', 'girls', 1200.00, 5], ['Football', 'girls', 1200.00, 6],
-      ['Badminton Singles', 'girls', 200.00, 1], ['Badminton Doubles', 'girls', 200.00, 2],
-      ['Table Tennis Doubles', 'girls', 400.00, 2], ['Foosball Doubles', 'girls', 400.00, 2],
-      ['Ludo Singles', 'girls', 150.00, 1], ['Ludo Doubles', 'girls', 300.00, 2],
-      ['Carrom Singles', 'girls', 150.00, 1], ['Carrom Doubles', 'girls', 250.00, 2],
-      ['Darts Singles', 'girls', 150.00, 1], ['Tug of War', 'girls', 600.00, 6],
-      ['Jenga', 'girls', 150.00, 1], ['Chess', 'girls', 150.00, 1],
-      ['Tekken', 'girls', 300.00, 1], ['Fifa', 'girls', 300.00, 1]
+  ["Tape Ball Cricket", "boys", 1600, 8, "team"],
+  ["Tape Ball Cricket", "girls", 1200, 5, "team"],
+  ["Football Championship", "boys", 2200, 11, "team"],
+  ["Football Championship", "girls", 1200, 6, "team"],
+  ["Field Hockey", "boys", 1500, 10, "team"],
+  ["Kabaddi Championship", "boys", 500, 7, "team"],
+  ["Kabaddi Championship", "girls", 500, 7, "team"],
+  ["Handball Clash", "boys", 1200, 6, "team"],
+  ["Handball Clash", "girls", 1200, 6, "team"],
+  ["Volleyball Spike", "boys", 1200, 6, "team"],
+  ["Volleyball Spike", "girls", 1200, 6, "team"],
+  ["Ultimate Frisbee", "boys", 250, 1, "team"],
+  ["Ultimate Frisbee", "girls", 250, 1, "team"],
+  ["Pitho Gol Garam", "boys", 1000, 6, "team"],
+  ["Tug of War", "boys", 600, 8, "team"],
+  ["Tug of War", "girls", 600, 8, "team"],
+  ["Double Wicket Cricket", "boys", 500, 2, "team"],
+  ["Basketball (1 vs 1)", "boys", 200, 1, "team"],
+  ["Swimming Sprint", "boys", 300, 1, "team"],
+  ["Badminton Singles", "boys", 200, 1, "racket"],
+  ["Badminton Singles", "girls", 200, 1, "racket"],
+  ["Badminton Doubles", "boys", 400, 2, "racket"],
+  ["Badminton Doubles", "girls", 400, 2, "racket"],
+  ["Table Tennis Singles", "boys", 200, 1, "racket"],
+  ["Table Tennis Singles", "girls", 200, 1, "racket"],
+  ["Table Tennis Doubles", "boys", 400, 2, "racket"],
+  ["Table Tennis Doubles", "girls", 400, 2, "racket"],
+  ["Championship Chess", "boys", 200, 1, "board"],
+  ["Championship Chess", "girls", 200, 1, "board"],
+  ["Ludo Singles", "boys", 200, 1, "board"],
+  ["Ludo Singles", "girls", 200, 1, "board"],
+  ["Ludo Doubles", "boys", 300, 2, "board"],
+  ["Ludo Doubles", "girls", 300, 2, "board"],
+  ["Carrom Singles", "boys", 150, 1, "board"],
+  ["Carrom Singles", "girls", 150, 1, "board"],
+  ["Carrom Doubles", "boys", 250, 2, "board"],
+  ["Carrom Doubles", "girls", 250, 2, "board"],
+  ["Jenga Tower Challenge", "boys", 200, 1, "board"],
+  ["Jenga Tower Challenge", "girls", 200, 1, "board"],
+  ["Uno Championship", "boys", 200, 1, "board"],
+  ["Uno Championship", "girls", 200, 1, "board"],
+  ["Pucket Fast-Track", "boys", 200, 1, "board"],
+  ["Pucket Fast-Track", "girls", 200, 1, "board"],
+  ["100m Sprint Dash", "boys", 200, 1, "race"],
+  ["100m Sprint Dash", "girls", 200, 1, "race"],
+  ["3 Legged Race", "boys", 200, 2, "race"],
+  ["3 Legged Race", "girls", 200, 2, "race"],
+  ["4x100m Baton Relay", "boys", 200, 4, "race"],
+  ["4x100m Baton Relay", "girls", 200, 4, "race"],
+  ["Egg & Spoon Relay", "boys", 150, 2, "race"],
+  ["Egg & Spoon Relay", "girls", 150, 2, "race"],
+  ["Arm Wrestling", "boys", 200, 1, "skill"],
+  ["Arm Wrestling", "girls", 200, 1, "skill"],
+  ["Foosball Singles", "boys", 150, 1, "skill"],
+  ["Foosball Singles", "girls", 150, 1, "skill"],
+  ["Foosball Doubles", "boys", 300, 2, "skill"],
+  ["Foosball Doubles", "girls", 300, 2, "skill"],
+  ["Darts Singles (501)", "boys", 150, 1, "skill"],
+  ["Darts Singles (501)", "girls", 150, 1, "skill"],
+  ["Darts Doubles", "boys", 300, 2, "skill"],
+  ["Darts Doubles", "girls", 300, 2, "skill"],
+  ["1v1 Penalty Shootout", "boys", 200, 1, "skill"],
+  ["1v1 Penalty Shootout", "girls", 200, 1, "skill"],
+  ["Archery Target Shoot", "boys", 200, 1, "skill"],
+  ["Air Rifle Target Shooting", "boys", 150, 1, "skill"],
+  ["Air Rifle Target Shooting", "girls", 150, 1, "skill"],
+  ["Gol Gappay Challenge", "boys", 300, 1, "skill"],
+  ["Gol Gappay Challenge", "girls", 300, 1, "skill"],
+  ["Plank Endurance Test", "boys", 150, 1, "skill"],
+  ["Plank Endurance Test", "girls", 150, 1, "skill"],
+  ["Rope Jump Sprint", "boys", 200, 1, "skill"],
+  ["Rope Jump Sprint", "girls", 200, 1, "skill"],
+  ["Rubik's Speedcubing", "boys", 200, 1, "skill"],
+  ["Rubik's Speedcubing", "girls", 200, 1, "skill"],
+  ["Thula Traditional", "boys", 150, 1, "skill"],
+  ["Red Light Green Light", "boys", 200, 1, "skill"],
+  ["Red Light Green Light", "girls", 200, 1, "skill"],
+  ["Subway Surfers High Score", "boys", 150, 1, "skill"],
+  ["Subway Surfers High Score", "girls", 150, 1, "skill"],
+  ["Blur PC Racing", "boys", 150, 1, "skill"],
+  ["Blur PC Racing", "girls", 150, 1, "skill"],
+  ["Piano Tiles Reflex Test", "boys", 150, 1, "skill"],
+  ["Piano Tiles Reflex Test", "girls", 150, 1, "skill"],
+  ["EA Sports FC / FIFA 24", "boys", 300, 1, "esports"],
+  ["EA Sports FC / FIFA 24", "girls", 300, 1, "esports"],
+  ["Tekken 8 Tournament", "boys", 300, 1, "esports"],
+  ["Tekken 8 Tournament", "girls", 300, 1, "esports"],
+  ["Call of Duty: Mobile", "boys", 150, 1, "esports"],
+  ["Call of Duty: Mobile", "girls", 150, 1, "esports"],
+  ["PUBG Mobile Championship", "boys", 150, 1, "esports"],
+  ["PUBG Mobile Championship", "girls", 150, 1, "esports"]
     ];
 
-    for (const [game, gender, price, players] of pricingData) {
+    for (const [game, gender, price, players, category] of pricingData) {
       try {
-        await sql`INSERT INTO games_pricing (game_name, gender, price, players) VALUES (${game}, ${gender}, ${price}, ${players}) ON CONFLICT (game_name, gender) DO NOTHING`;
+        await sql`INSERT INTO games_pricing (game_name, gender, price, players, category) VALUES (${game}, ${gender}, ${price}, ${players}, ${category}) ON CONFLICT (game_name, gender) DO NOTHING`;
         console.log(`✅ Inserting pricing: ${game} (${gender})`);
       } catch (err) {
         if (err.message && err.message.includes('ON CONFLICT')) {

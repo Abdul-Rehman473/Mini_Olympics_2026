@@ -202,8 +202,8 @@ function VerifyCashContent() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#101114] flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-[#D5F05B] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#0B1124] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-[#12E2C4] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -211,37 +211,37 @@ function VerifyCashContent() {
   // Admin login requirement modal
   if (showLogin && !authenticated) {
     return (
-      <div className="min-h-screen bg-[#101114] text-[#F4F1EA] flex items-center justify-center p-4">
-        <div className="max-w-md w-full p-8 rounded-3xl bg-[#161820] border border-white/[0.08] shadow-2xl">
-          <div className="w-14 h-14 rounded-2xl bg-[#F15A29]/15 border border-[#F15A29]/30 flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-7 h-7 text-[#F15A29]" />
+      <div className="min-h-screen bg-[#0B1124] text-[#F8FAFC] flex items-center justify-center p-4">
+        <div className="max-w-md w-full p-8 rounded-3xl bg-[#131B38] border border-white/[0.08] shadow-2xl">
+          <div className="w-14 h-14 rounded-2xl bg-[#F59E0B]/15 border border-[#F59E0B]/30 flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-7 h-7 text-[#F59E0B]" />
           </div>
           <h2 className="text-2xl font-black text-center font-['Space_Grotesk'] uppercase mb-1">
             VERIFICATION DESK LOGIN
           </h2>
-          <p className="text-xs font-mono text-center text-[#A4A5AA] mb-6">
+          <p className="text-xs font-mono text-center text-[#94A3B8] mb-6">
             Organizer credentials required to verify cash slips.
           </p>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <Label className="text-xs font-mono text-[#A4A5AA] uppercase">Username</Label>
+              <Label className="text-xs font-mono text-[#94A3B8] uppercase">Username</Label>
               <Input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
-                className="mt-1 bg-[#101114] border-white/[0.1] text-xs font-mono text-[#F4F1EA] rounded-xl"
+                className="mt-1 bg-[#0B1124] border-white/[0.1] text-xs font-mono text-[#F8FAFC] rounded-xl"
                 autoFocus
               />
             </div>
             <div>
-              <Label className="text-xs font-mono text-[#A4A5AA] uppercase">Password</Label>
+              <Label className="text-xs font-mono text-[#94A3B8] uppercase">Password</Label>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="mt-1 bg-[#101114] border-white/[0.1] text-xs font-mono text-[#F4F1EA] rounded-xl"
+                className="mt-1 bg-[#0B1124] border-white/[0.1] text-xs font-mono text-[#F8FAFC] rounded-xl"
               />
             </div>
 
@@ -252,14 +252,14 @@ function VerifyCashContent() {
             <Button
               type="submit"
               disabled={loggingIn}
-              className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] uppercase"
+              className="w-full py-3 rounded-xl text-xs font-mono font-bold tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase"
             >
               {loggingIn ? 'VERIFYING...' : 'LOGIN TO CASH DESK'}
             </Button>
           </form>
 
           <div className="mt-6 text-center pt-4 border-t border-white/[0.06]">
-            <Link href="/" className="text-xs font-mono text-[#A4A5AA] hover:text-white">
+            <Link href="/" className="text-xs font-mono text-[#94A3B8] hover:text-white">
               ← Return to Main Portal
             </Link>
           </div>
@@ -281,25 +281,25 @@ function VerifyCashContent() {
   const isPaid = registration?.status === 'paid';
 
   return (
-    <div className="min-h-screen bg-[#101114] text-[#F4F1EA] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#0B1124] text-[#F8FAFC] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.08]">
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#A4A5AA] hover:text-white transition-colors"
+              className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#94A3B8] hover:text-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-[#D5F05B]" />
+                <ShieldCheck className="w-5 h-5 text-[#12E2C4]" />
                 <h1 className="text-xl sm:text-2xl font-black font-['Space_Grotesk'] uppercase tracking-tight">
                   CASH DESK VERIFICATION KIOSK
                 </h1>
               </div>
-              <p className="text-xs font-mono text-[#A4A5AA] mt-0.5">
+              <p className="text-xs font-mono text-[#94A3B8] mt-0.5">
                 MINI OLYMPICS 2026 • REGISTRATION DESK TERMINAL
               </p>
             </div>
@@ -307,7 +307,7 @@ function VerifyCashContent() {
 
           <Link
             href="/admin/registrations"
-            className="text-xs font-mono text-[#D5F05B] hover:underline"
+            className="text-xs font-mono text-[#12E2C4] hover:underline"
           >
             Go to Admin Registrations →
           </Link>
@@ -316,20 +316,20 @@ function VerifyCashContent() {
         {/* Search Bar for Quick Lookup */}
         <form
           onSubmit={handleManualLookup}
-          className="p-4 rounded-2xl bg-[#161820] border border-white/[0.08] flex gap-3 shadow-xl"
+          className="p-4 rounded-2xl bg-[#131B38] border border-white/[0.08] flex gap-3 shadow-xl"
         >
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-[#A4A5AA] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <Input
               value={lookupQuery}
               onChange={(e) => setLookupQuery(e.target.value)}
               placeholder="Scan QR or enter Slip ID (e.g. MO26-CASH-4912) or Ticket #"
-              className="pl-10 bg-[#101114] border-white/[0.1] text-xs font-mono text-[#F4F1EA] rounded-xl focus:border-[#D5F05B]"
+              className="pl-10 bg-[#0B1124] border-white/[0.1] text-xs font-mono text-[#F8FAFC] rounded-xl focus:border-[#12E2C4]"
             />
           </div>
           <Button
             type="submit"
-            className="px-6 rounded-xl text-xs font-mono font-bold tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] uppercase"
+            className="px-6 rounded-xl text-xs font-mono font-bold tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase"
           >
             LOOKUP
           </Button>
@@ -337,8 +337,8 @@ function VerifyCashContent() {
 
         {loading && (
           <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-[#D5F05B] mx-auto mb-2" />
-            <p className="text-xs font-mono text-[#A4A5AA]">FETCHING REGISTRATION RECORD...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-[#12E2C4] mx-auto mb-2" />
+            <p className="text-xs font-mono text-[#94A3B8]">FETCHING REGISTRATION RECORD...</p>
           </div>
         )}
 
@@ -351,15 +351,15 @@ function VerifyCashContent() {
 
         {/* Registration Card */}
         {registration && (
-          <div className="p-6 sm:p-8 rounded-3xl bg-[#161820] border border-white/[0.08] space-y-6 shadow-2xl">
+          <div className="p-6 sm:p-8 rounded-3xl bg-[#131B38] border border-white/[0.08] space-y-6 shadow-2xl">
             {/* Top Status Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.08]">
               <div>
-                <span className="text-xs font-mono text-[#A4A5AA]">TICKET #{registration.registration_number}</span>
-                <h2 className="text-2xl sm:text-3xl font-black text-[#F4F1EA] font-['Space_Grotesk'] uppercase">
+                <span className="text-xs font-mono text-[#94A3B8]">TICKET #{registration.registration_number}</span>
+                <h2 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] font-['Space_Grotesk'] uppercase">
                   {registration.name}
                 </h2>
-                <div className="flex items-center gap-2 text-xs font-mono text-[#D5F05B] mt-1">
+                <div className="flex items-center gap-2 text-xs font-mono text-[#12E2C4] mt-1">
                   <span>{registration.roll_number}</span>
                   <span>•</span>
                   <span className="uppercase">{registration.gender}</span>
@@ -370,7 +370,7 @@ function VerifyCashContent() {
 
               <div>
                 {isPaid ? (
-                  <span className="px-4 py-2 rounded-xl text-xs font-mono font-black tracking-wider uppercase bg-[#D5F05B] text-[#101114] inline-flex items-center gap-1.5">
+                  <span className="px-4 py-2 rounded-xl text-xs font-mono font-black tracking-wider uppercase bg-[#12E2C4] text-[#0B1124] inline-flex items-center gap-1.5">
                     <Check className="w-4 h-4" />
                     STATUS: PAID / VERIFIED
                   </span>
@@ -384,26 +384,26 @@ function VerifyCashContent() {
 
             {/* Slip and Details */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-              <div className="p-4 rounded-2xl bg-[#101114] border border-white/[0.06]">
-                <span className="text-[#A4A5AA] block mb-1">SLIP ID</span>
-                <span className="font-bold text-sm text-[#F15A29]">{registration.slip_id}</span>
+              <div className="p-4 rounded-2xl bg-[#0B1124] border border-white/[0.06]">
+                <span className="text-[#94A3B8] block mb-1">SLIP ID</span>
+                <span className="font-bold text-sm text-[#F59E0B]">{registration.slip_id}</span>
               </div>
-              <div className="p-4 rounded-2xl bg-[#101114] border border-white/[0.06]">
-                <span className="text-[#A4A5AA] block mb-1">METHOD</span>
+              <div className="p-4 rounded-2xl bg-[#0B1124] border border-white/[0.06]">
+                <span className="text-[#94A3B8] block mb-1">METHOD</span>
                 <span className="font-bold text-sm uppercase text-white">{registration.payment_method}</span>
               </div>
-              <div className="p-4 rounded-2xl bg-[#101114] border border-white/[0.06]">
-                <span className="text-[#A4A5AA] block mb-1">REGISTERED AT</span>
+              <div className="p-4 rounded-2xl bg-[#0B1124] border border-white/[0.06]">
+                <span className="text-[#94A3B8] block mb-1">REGISTERED AT</span>
                 <span className="text-white text-xs">{new Date(registration.created_at).toLocaleDateString()}</span>
               </div>
             </div>
 
             {/* Disciplines */}
             <div>
-              <span className="text-xs font-mono text-[#A4A5AA] block mb-2">SELECTED DISCIPLINES ({gamesList.length})</span>
+              <span className="text-xs font-mono text-[#94A3B8] block mb-2">SELECTED DISCIPLINES ({gamesList.length})</span>
               <div className="flex flex-wrap gap-2">
                 {gamesList.map((g) => (
-                  <span key={g} className="px-3 py-1.5 rounded-xl bg-[#101114] border border-white/[0.08] text-xs font-bold text-[#F4F1EA]">
+                  <span key={g} className="px-3 py-1.5 rounded-xl bg-[#0B1124] border border-white/[0.08] text-xs font-bold text-[#F8FAFC]">
                     {g}
                   </span>
                 ))}
@@ -411,27 +411,27 @@ function VerifyCashContent() {
             </div>
 
             {/* Financials & Approval Box */}
-            <div className="p-6 rounded-2xl bg-[#101114] border border-white/[0.08] space-y-4 font-mono text-xs">
+            <div className="p-6 rounded-2xl bg-[#0B1124] border border-white/[0.08] space-y-4 font-mono text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-[#A4A5AA]">System Calculated Total:</span>
+                <span className="text-[#94A3B8]">System Calculated Total:</span>
                 <span className="text-sm font-bold text-white">Rs. {rawTotal.toLocaleString()}</span>
               </div>
 
               {/* Adjust Discount Input */}
               <div className="flex items-center justify-between gap-4 py-2 border-t border-b border-white/[0.06]">
-                <span className="text-[#A4A5AA]">Manual Desk Discount (Rs):</span>
+                <span className="text-[#94A3B8]">Manual Desk Discount (Rs):</span>
                 <Input
                   type="number"
                   value={discount}
                   onChange={(e) => setDiscount(e.target.value)}
                   disabled={isPaid}
-                  className="w-28 bg-[#161820] border-white/[0.1] text-xs font-mono text-right text-[#D5F05B] rounded-lg"
+                  className="w-28 bg-[#131B38] border-white/[0.1] text-xs font-mono text-right text-[#12E2C4] rounded-lg"
                 />
               </div>
 
               <div className="flex justify-between items-center text-sm font-bold">
                 <span className="text-white uppercase">Final Amount Due:</span>
-                <span className="text-2xl font-black text-[#D5F05B]">
+                <span className="text-2xl font-black text-[#12E2C4]">
                   Rs. {finalPayable.toLocaleString()}
                 </span>
               </div>
@@ -441,7 +441,7 @@ function VerifyCashContent() {
                   type="button"
                   onClick={handleApprove}
                   disabled={approving}
-                  className="w-full mt-4 py-4 rounded-xl text-xs font-mono font-black tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] uppercase transition-all shadow-xl shadow-[#D5F05B]/20"
+                  className="w-full mt-4 py-4 rounded-xl text-xs font-mono font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] uppercase transition-all shadow-xl shadow-[#12E2C4]/20"
                 >
                   {approving ? 'VERIFYING IN DATABASE...' : 'CONFIRM CASH RECEIVED & MARK PAID ✦'}
                 </Button>
@@ -458,8 +458,8 @@ export default function VerifyCashPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#101114] flex items-center justify-center">
-          <div className="w-10 h-10 border-2 border-[#D5F05B] border-t-transparent rounded-full animate-spin" />
+        <div className="min-h-screen bg-[#0B1124] flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-[#12E2C4] border-t-transparent rounded-full animate-spin" />
         </div>
       }
     >

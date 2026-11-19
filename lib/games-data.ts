@@ -1,3 +1,5 @@
+import type { GamePrice } from './games-pricing';
+
 export type SportCategory = 
   | 'team' 
   | 'racket' 
@@ -49,18 +51,18 @@ export const GAMES_DATA: GameInfo[] = [
     headline: 'THE FLOODLIT DERBY',
     tagline: 'The flagship campus tournament. High-octane tape ball action under floodlights with official umpires and packed sidelines.',
     division: 'boys_and_girls',
-    playerFormat: '♂ 11 Players | ♀ 5 Players',
+    playerFormat: '♂ 8 Players | ♀ 5 Players',
     matchFormat: '6-OVERS T10 KNOCKOUT',
-    boysPlayers: 11,
+    boysPlayers: 8,
     girlsPlayers: 5,
-    boysFee: 2200,
+    boysFee: 1600,
     girlsFee: 1200,
     isTeam: true,
     featured: true,
     featuredLayout: 'hero',
     rulesOverview: 'Standard 6-over tape ball knockouts. Powerplay rules in overs 1-2. Boundary boundaries and official arbiters strictly regulate play.',
     venueNote: 'Main Campus Cricket Ground',
-    accentColor: '#F15A29',
+    accentColor: '#F59E0B',
     iconKey: 'cricket',
     image: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1200&q=80',
   },
@@ -83,7 +85,7 @@ export const GAMES_DATA: GameInfo[] = [
     featuredLayout: 'tall',
     rulesOverview: 'Knockout format with 15-minute halves. Tied matches proceed directly to a best-of-5 penalty shootout.',
     venueNote: 'FCIT Sports Complex Field',
-    accentColor: '#D5F05B',
+    accentColor: '#12E2C4',
     iconKey: 'football',
     image: '/images/games/football.avif',
   },
@@ -102,7 +104,7 @@ export const GAMES_DATA: GameInfo[] = [
     isTeam: true,
     rulesOverview: '10-a-side regulation match. Official turf stick rules and protective shin guards are strictly mandatory.',
     venueNote: 'Outdoor Synthetic Turf',
-    accentColor: '#00E5FF',
+    accentColor: '#3B82F6',
     iconKey: 'hockey',
     image: 'https://images.unsplash.com/photo-1734158776592-4bf027643b2b?auto=format&fit=crop&w=800&q=80',
   },
@@ -113,11 +115,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Team Sports',
     headline: 'RAW TENDON & POWER',
     tagline: 'Raw power, synchronized defensive chains, and breath-holding raids in the traditional clay court circle.',
-    division: 'boys_only',
-    playerFormat: '7 Players per Team',
+    division: 'boys_and_girls',
+    playerFormat: '♂ 7 Players | ♀ 7 Players',
     matchFormat: '30-SEC RAID TIMER',
     boysPlayers: 7,
-    boysFee: 1000,
+    girlsPlayers: 7,
+    boysFee: 500,
+    girlsFee: 500,
     isTeam: true,
     featured: true,
     featuredLayout: 'wide',
@@ -134,15 +138,17 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Team Sports',
     headline: 'AERIAL TRANSITIONS',
     tagline: 'Continuous fast transitions, wing cuts, and high-velocity jump shots outside the 6-meter crease.',
-    division: 'boys_only',
-    playerFormat: '7 Players per Team',
+    division: 'boys_and_girls',
+    playerFormat: '♂ 6 Players | ♀ 6 Players',
     matchFormat: '2x12 MIN HALVES',
-    boysPlayers: 7,
-    boysFee: 1000,
+    boysPlayers: 6,
+    girlsPlayers: 6,
+    boysFee: 1200,
+    girlsFee: 1200,
     isTeam: true,
     rulesOverview: 'Standard court dimensions with 6m goal crease. Rolling substitutions permitted at stoppage.',
     venueNote: 'Outdoor Multi-Purpose Court',
-    accentColor: '#00F0FF',
+    accentColor: '#3B82F6',
     iconKey: 'handball',
     image: 'https://images.unsplash.com/photo-1553627220-92f0446b6a5f?auto=format&fit=crop&w=800&q=80',
   },
@@ -153,11 +159,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Team Sports',
     headline: 'ABOVE THE NET',
     tagline: 'High-flying spikes, quick middle sets, and relentless defensive digs at the collegiate net.',
-    division: 'boys_only',
-    playerFormat: '8 Players per Team',
+    division: 'boys_and_girls',
+    playerFormat: '♂ 6 Players | ♀ 6 Players',
     matchFormat: 'BEST OF 3 SETS',
-    boysPlayers: 8,
-    boysFee: 1000,
+    boysPlayers: 6,
+    girlsPlayers: 6,
+    boysFee: 1200,
+    girlsFee: 1200,
     isTeam: true,
     rulesOverview: 'Best of 3 sets to 21 points with rally scoring. Official FIVB regulation net height.',
     venueNote: 'Volleyball Court #1',
@@ -172,12 +180,14 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Team Sports',
     headline: 'END-ZONE PRECISION',
     tagline: 'End-to-end aerial strategy, layout catches, and high-speed disc turnover play.',
-    division: 'boys_only',
-    playerFormat: '6 Players per Team',
+    division: 'boys_and_girls',
+    playerFormat: 'Individual / Squad Entry',
     matchFormat: 'FIRST TO 11 GOALS',
-    boysPlayers: 6,
-    boysFee: 800,
-    isTeam: true,
+    boysPlayers: 1,
+    girlsPlayers: 1,
+    boysFee: 250,
+    girlsFee: 250,
+    isTeam: false,
     rulesOverview: 'End zone scoring format. Non-contact self-officiated with tournament field marshals.',
     venueNote: 'North Lawn Arena',
     accentColor: '#38EF7D',
@@ -211,18 +221,18 @@ export const GAMES_DATA: GameInfo[] = [
     headline: 'THE ANCHOR BATTLE',
     tagline: 'Pure collective grit, team synchronized pulling, and unyielding campus dominance.',
     division: 'boys_and_girls',
-    playerFormat: '♂ 10 Players | ♀ 6 Players',
+    playerFormat: '♂ 8 Players | ♀ 8 Players',
     matchFormat: 'BEST OF 3 PULLS',
-    boysPlayers: 10,
-    girlsPlayers: 6,
-    boysFee: 1000,
+    boysPlayers: 8,
+    girlsPlayers: 8,
+    boysFee: 600,
     girlsFee: 600,
     isTeam: true,
     featured: true,
     featuredLayout: 'wide',
     rulesOverview: 'Best of 3 pulls across the 4-meter marker tape. Cleats prohibited for safety.',
     venueNote: 'Central Arena Turf',
-    accentColor: '#F15A29',
+    accentColor: '#F59E0B',
     iconKey: 'tug-of-war',
     image: '/images/games/tug-of-war.avif',
   },
@@ -321,7 +331,7 @@ export const GAMES_DATA: GameInfo[] = [
     boysPlayers: 2,
     girlsPlayers: 2,
     boysFee: 400,
-    girlsFee: 200,
+    girlsFee: 400,
     isTeam: true,
     featured: true,
     featuredLayout: 'hero',
@@ -338,11 +348,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Racket Sports',
     headline: 'HEAVY TOPSPIN',
     tagline: 'Sub-second spins, heavy topspins, and counter-looping showdowns.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 vs 1)',
     matchFormat: '11-POINT KNOCKOUT',
     boysPlayers: 1,
+    girlsPlayers: 1,
     boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     rulesOverview: '11-point games, alternate two serves each, best of 3 sets knockout format.',
     venueNote: 'Student Lounge TT Arena',
@@ -385,14 +397,14 @@ export const GAMES_DATA: GameInfo[] = [
     matchFormat: 'FIDE 10+0 BLITZ',
     boysPlayers: 1,
     girlsPlayers: 1,
-    boysFee: 150,
-    girlsFee: 150,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     featured: true,
     featuredLayout: 'tall',
     rulesOverview: 'FIDE standard blitz rules on digital chess clocks. Touch-move strictly enforced by arbiters.',
     venueNote: 'Library Quiet Hall A',
-    accentColor: '#F4F1EA',
+    accentColor: '#F8FAFC',
     iconKey: 'chess',
     image: 'https://images.unsplash.com/photo-1529699211952-734e80c4d42b?auto=format&fit=crop&w=1000&q=80',
   },
@@ -408,8 +420,8 @@ export const GAMES_DATA: GameInfo[] = [
     matchFormat: 'FIRST TO PARK 4',
     boysPlayers: 1,
     girlsPlayers: 1,
-    boysFee: 150,
-    girlsFee: 150,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     rulesOverview: 'Four tokens per player. Mandatory cut rule. First player to park 4 tokens wins.',
     venueNote: 'Club Room 1',
@@ -492,8 +504,8 @@ export const GAMES_DATA: GameInfo[] = [
     matchFormat: 'ONE-HAND SUDDEN DEATH',
     boysPlayers: 1,
     girlsPlayers: 1,
-    boysFee: 150,
-    girlsFee: 150,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     rulesOverview: 'One-hand-only rule. Block must be placed on top level before next turn starts.',
     venueNote: 'Activity Lounge',
@@ -508,11 +520,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Board & Card',
     headline: 'WILD CARD WARFARE',
     tagline: 'Wild cards, Draw-fours, color shifts, and card-shedding campus warfare.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Player)',
     matchFormat: 'STACKING DRAW RULES',
     boysPlayers: 1,
-    boysFee: 100,
+    girlsPlayers: 1,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     rulesOverview: 'Standard Mattel tournament deck rules. Stacking Draw-twos permitted.',
     venueNote: 'Activity Lounge',
@@ -527,11 +541,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Board & Card',
     headline: 'ELASTIC SLING SPEED',
     tagline: 'Fast-paced wooden puck slinging through the narrow center gate.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 vs 1)',
     matchFormat: 'BEST OF 5 ROUNDS',
     boysPlayers: 1,
-    boysFee: 150,
+    girlsPlayers: 1,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     rulesOverview: 'Clear all pucks from your half of the board using the elastic band launcher.',
     venueNote: 'Activity Lounge',
@@ -548,17 +564,19 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Races & Relays',
     headline: 'FASTEST MAN ON CAMPUS',
     tagline: 'Laser-timed sprint showdown on the Olympic straight track for the championship title.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Runner)',
     matchFormat: 'LASER TIMED HEATS',
     boysPlayers: 1,
-    boysFee: 150,
+    girlsPlayers: 1,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     featured: true,
     featuredLayout: 'tall',
     rulesOverview: 'Laser-timed heats on standard running track. False start results in immediate disqualification.',
     venueNote: 'Olympic Track Straight',
-    accentColor: '#D5F05B',
+    accentColor: '#12E2C4',
     iconKey: 'running',
     image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1000&q=80',
   },
@@ -569,11 +587,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Races & Relays',
     headline: 'BOUND SYNERGY',
     tagline: 'Synchronized running duos bound at the ankle. Coordination is everything.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Duo (2 Runners)',
     matchFormat: '50M TETHERED SPRINT',
     boysPlayers: 2,
+    girlsPlayers: 2,
     boysFee: 200,
+    girlsFee: 200,
     isTeam: true,
     rulesOverview: '50-meter sprint with center ankles securely tethered. Falling requires getting up without untethering.',
     venueNote: 'Main Grass Oval',
@@ -588,11 +608,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Races & Relays',
     headline: 'THE ANCHOR LEG',
     tagline: 'Precision baton transfers, anchor leg heroics, and department bragging rights.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Team of 4 Runners',
     matchFormat: '4x100M OLYMPIC OVAL',
     boysPlayers: 4,
-    boysFee: 400,
+    girlsPlayers: 4,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: true,
     rulesOverview: '4x100m circuit. Baton must be passed strictly within the 20-meter changeover box.',
     venueNote: 'Olympic 400m Track',
@@ -607,11 +629,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Races & Relays',
     headline: 'CALM UNDER PACE',
     tagline: 'Speed balanced with extreme calm. Drop the egg and you restart the leg.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Duo (2 Runners)',
     matchFormat: 'NO-THUMB RESTRICTION',
     boysPlayers: 2,
-    boysFee: 200,
+    girlsPlayers: 2,
+    boysFee: 150,
+    girlsFee: 150,
     isTeam: true,
     rulesOverview: 'Runners must balance the egg on the wooden spoon held in hand (no thumb touching).',
     venueNote: 'Central Walkway',
@@ -628,11 +652,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: 'THE HOOK & TOP-ROLL',
     tagline: 'Top-roll, hook, and raw tendon strength on the official arm-wrestling table.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 vs 1)',
     matchFormat: 'WEIGHT DIVISION BRACKET',
     boysPlayers: 1,
-    boysFee: 150,
+    girlsPlayers: 1,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     rulesOverview: 'Weight classes observed. Referees monitor elbow pad contact and shoulder alignment.',
     venueNote: 'Central Stage Arena',
@@ -647,11 +673,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: 'ROD SPIN BAN',
     tagline: 'Table soccer lightning shots, bank passes, and wall snipes.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 vs 1)',
     matchFormat: 'FIRST TO 7 GOALS',
     boysPlayers: 1,
-    boysFee: 200,
+    girlsPlayers: 1,
+    boysFee: 150,
+    girlsFee: 150,
     isTeam: false,
     rulesOverview: 'First to 7 goals. No 360-degree rod spinning (spinning is foul).',
     venueNote: 'Game Room 2',
@@ -671,8 +699,8 @@ export const GAMES_DATA: GameInfo[] = [
     matchFormat: 'FIRST TO 10 GOALS',
     boysPlayers: 2,
     girlsPlayers: 2,
-    boysFee: 400,
-    girlsFee: 400,
+    boysFee: 300,
+    girlsFee: 300,
     isTeam: true,
     rulesOverview: 'First to 10 goals. Team coordination with defense/offense split.',
     venueNote: 'Game Room 2',
@@ -708,11 +736,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: 'DUAL BOARD ACCURACY',
     tagline: 'Alternate leg throwing with partner strategy on the tournament bristle board.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Doubles (2 Players)',
     matchFormat: 'ALTERNATE THROW 501',
     boysPlayers: 2,
-    boysFee: 250,
+    girlsPlayers: 2,
+    boysFee: 300,
+    girlsFee: 300,
     isTeam: true,
     rulesOverview: 'Alternate throw format. Highest cumulative checkout takes the frame.',
     venueNote: 'Indoor Lounge Zone C',
@@ -727,11 +757,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: 'FROM 12 YARDS',
     tagline: 'Striker versus Goalkeeper psychological duel from 12 yards out.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (Striker vs GK)',
     matchFormat: 'BEST OF 5 KICKS',
     boysPlayers: 1,
-    boysFee: 150,
+    girlsPlayers: 1,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     rulesOverview: 'Best of 5 penalties. Sudden death kicks if tied after 5 rounds.',
     venueNote: 'Penalty Box Arena',
@@ -765,11 +797,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: '10-METER PRECISION',
     tagline: 'Breathing control, trigger squeeeze, and 10-meter precision paper targets.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Shooter)',
     matchFormat: '5 SCORING SHOTS',
     boysPlayers: 1,
-    boysFee: 200,
+    girlsPlayers: 1,
+    boysFee: 150,
+    girlsFee: 150,
     isTeam: false,
     rulesOverview: '.177 caliber air rifle. Bench rest position. 5 shots evaluated by electronic target scan.',
     venueNote: 'Firing Range Zone',
@@ -784,11 +818,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: '3-MINUTE FEAST',
     tagline: 'The ultimate culinary speed test. Down the most spicy gol gappay in 3 minutes.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Competitor)',
     matchFormat: '3-MIN TIMER',
     boysPlayers: 1,
-    boysFee: 250,
+    girlsPlayers: 1,
+    boysFee: 300,
+    girlsFee: 300,
     isTeam: false,
     featured: true,
     featuredLayout: 'standard',
@@ -805,11 +841,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: 'CORE STEEL',
     tagline: 'Core stamina, isometric strength, and mental fortitude against the clock.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Athlete)',
     matchFormat: 'CONTINUOUS TIME',
     boysPlayers: 1,
-    boysFee: 100,
+    girlsPlayers: 1,
+    boysFee: 150,
+    girlsFee: 150,
     isTeam: false,
     rulesOverview: 'Forearm plank posture. Judge issues one warning for hip drop before timer stoppage.',
     venueNote: 'Fitness Center Mat',
@@ -824,11 +862,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: '60-SECOND CADENCE',
     tagline: 'Maximum speed rope revolutions in 60 seconds with double-under bonuses.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Athlete)',
     matchFormat: '60S REVOLUTION COUNT',
     boysPlayers: 1,
-    boysFee: 100,
+    girlsPlayers: 1,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     rulesOverview: '60 seconds continuous skipping. Digital counter sensor rope provided.',
     venueNote: 'Fitness Center Mat',
@@ -843,11 +883,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: 'SUB-15 ALGORITHMS',
     tagline: '3x3x3 algorithm execution, fingertricks, and sub-15 second solutions.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Speedcuber)',
     matchFormat: 'WCA STACKMAT TIMER',
     boysPlayers: 1,
-    boysFee: 150,
+    girlsPlayers: 1,
+    boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     rulesOverview: 'WCA regulation scrambles with 15-second inspection timer on Stackmat timers.',
     venueNote: 'Tech Lounge',
@@ -881,11 +923,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: 'ZERO MOTION SENSOR',
     tagline: 'Sensory reflex obstacle course inspired by viral competitive survival games.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Competitor)',
     matchFormat: 'ELIMINATION COURSE',
     boysPlayers: 1,
+    girlsPlayers: 1,
     boysFee: 200,
+    girlsFee: 200,
     isTeam: false,
     rulesOverview: 'Freeze on red light audio signal. Motion sensors trigger instantaneous elimination.',
     venueNote: 'Indoor Sports Arena',
@@ -900,11 +944,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: 'INFINITE RUN MULTIPLIER',
     tagline: 'Single run infinite runner arcade challenge for the highest multiplier score.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Player)',
     matchFormat: 'SINGLE RUN SCORE',
     boysPlayers: 1,
+    girlsPlayers: 1,
     boysFee: 150,
+    girlsFee: 150,
     isTeam: false,
     rulesOverview: 'Official tournament iPad. Default coin multiplier. Single life per entry.',
     venueNote: 'Gaming Zone Desk',
@@ -919,11 +965,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: 'POWER-UP DRIFTING',
     tagline: 'Power-up tactical racing, bolt shots, shields, and high-speed drifting.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Racer)',
     matchFormat: '8-PLAYER LAN LOBBY',
     boysPlayers: 1,
-    boysFee: 200,
+    girlsPlayers: 1,
+    boysFee: 150,
+    girlsFee: 150,
     isTeam: false,
     rulesOverview: '8-player LAN lobby. 3 races on preset tracks. Points totaled for podium positions.',
     venueNote: 'Computer Lab 3 LAN Arena',
@@ -938,11 +986,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Fun & Skill',
     headline: 'MAX BPM TAPS',
     tagline: 'Insane BPM tile taps without hitting black or missing a beat.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo (1 Player)',
     matchFormat: 'MASTER TEMPO RUN',
     boysPlayers: 1,
-    boysFee: 100,
+    girlsPlayers: 1,
+    boysFee: 150,
+    girlsFee: 150,
     isTeam: false,
     rulesOverview: 'Song played at Master speed setting. Highest tile count logged on official tablet.',
     venueNote: 'Gaming Zone Desk',
@@ -1005,11 +1055,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Esports Arena',
     headline: 'SEARCH & DESTROY',
     tagline: 'Multiplayer Search & Destroy tactical gunplay on competitive tournament rule-sets.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Solo & Squad Formats',
     matchFormat: 'S&D FIRST TO 7',
     boysPlayers: 1,
-    boysFee: 250,
+    girlsPlayers: 1,
+    boysFee: 150,
+    girlsFee: 150,
     isTeam: false,
     rulesOverview: 'S&D first to 7 rounds. Banned operator skills and scorestreaks per competitive COD rules.',
     venueNote: 'Esports Mobile Stage',
@@ -1024,11 +1076,13 @@ export const GAMES_DATA: GameInfo[] = [
     categoryLabel: 'Esports Arena',
     headline: 'SURVIVAL ERANGEL',
     tagline: 'Erangel survival, zone rotations, sniper duels, and the coveted Chicken Dinner.',
-    division: 'boys_only',
+    division: 'boys_and_girls',
     playerFormat: 'Squad / Solo Battle Royale',
     matchFormat: 'CUSTOM ROOM POINT TABLE',
     boysPlayers: 1,
-    boysFee: 300,
+    girlsPlayers: 1,
+    boysFee: 150,
+    girlsFee: 150,
     isTeam: false,
     featured: true,
     featuredLayout: 'wide',
@@ -1039,6 +1093,183 @@ export const GAMES_DATA: GameInfo[] = [
     image: 'https://images.unsplash.com/photo-1685578437686-a3240b85aaee?auto=format&fit=crop&w=1000&q=80',
   },
 ];
+
+
+export const CATEGORY_LABELS: Record<SportCategory, string> = {
+  team: 'Team Sports',
+  race: 'Races & Relays',
+  racket: 'Racket Sports',
+  esports: 'Esports Arena',
+  board: 'Board & Card',
+  skill: 'Fun & Skill',
+};
+
+const DEFAULT_FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80';
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+function normalizeCategory(cat: string | undefined | null, fallbackName: string): SportCategory {
+  if (cat === 'team' || cat === 'race' || cat === 'racket' || cat === 'esports' || cat === 'board' || cat === 'skill') {
+    return cat;
+  }
+  const lower = fallbackName.toLowerCase();
+  if (/(fifa|tekken|cod|call of duty|pubg|esport)/.test(lower)) return 'esports';
+  if (/(badminton|table tennis)/.test(lower)) return 'racket';
+  if (/(100m|relay|3 leg|sprint dash)/.test(lower)) return 'race';
+  if (/(chess|ludo|carrom|jenga|uno|pucket)/.test(lower)) return 'board';
+  if (/(cricket|football|hockey|kabaddi|kabbadi|handball|volley|frisbee|pitho|tug of war|double wicket|basketball|swimming)/.test(lower)) return 'team';
+  return 'skill';
+}
+
+function buildPlayerFormat(boysPlayers?: number, girlsPlayers?: number): string {
+  const b = boysPlayers ?? 1;
+  const g = girlsPlayers ?? 1;
+  if (b <= 1 && g <= 1) return 'Solo (1 Player)';
+  if (b === 2 && g === 2) return 'Doubles (2 Players)';
+  if (boysPlayers && girlsPlayers && boysPlayers !== girlsPlayers) {
+    return `♂ ${boysPlayers} Players | ♀ ${girlsPlayers} Players`;
+  }
+  if (boysPlayers && !girlsPlayers) return `${boysPlayers} Players per Team`;
+  if (girlsPlayers && !boysPlayers) return `${girlsPlayers} Players per Team`;
+  return `${Math.max(b, g)} Players per Team`;
+}
+
+function findCatalogMatch(dbName: string): GameInfo | undefined {
+  const normalized = dbName.trim().toLowerCase();
+  const slug = slugify(dbName);
+  const direct = GAMES_DATA.find((g) => g.name.toLowerCase() === normalized || g.id === slug);
+  if (direct) return direct;
+
+  const reverseAliases: Record<string, string> = {
+    'cricket': 'cricket',
+    'football': 'football',
+    'kabaddi': 'kabaddi',
+    'kabbadi': 'kabaddi',
+    'handball': 'handball',
+    'volley ball': 'volleyball',
+    'volleyball': 'volleyball',
+    'frisbee': 'frisbee',
+    'double wicket': 'double-wicket',
+    'darts singles': 'darts-singles',
+    'dart singles': 'darts-singles',
+    'dart doubles': 'darts-doubles',
+    '100m race': '100m-race',
+    'relay race': 'relay-race',
+    '3 leg race': '3-leg-race',
+    'egg relay race': 'egg-relay-race',
+    'rope jump': 'rope-jump',
+    'plank': 'plank',
+    '1 vs 1 penalty': '1v1-penalty',
+    'rifle shooting': 'rifle-shooting',
+    'squid game': 'squid-game',
+    'pucket': 'pucket',
+    'gol gappay eating challenge': 'gol-gappay-eating',
+    'uno': 'uno',
+    'jenga': 'jenga',
+    'chess': 'chess',
+    "rubik's cube": 'rubiks-cube',
+    'pubg': 'pubg-mobile',
+    'pubg mobile': 'pubg-mobile',
+    'call of duty mobile': 'cod-mobile',
+    'blur (racing)': 'blur-racing',
+    'subway surfer': 'subway-surfers',
+    'piano tiles': 'piano-tiles',
+    'tekken': 'tekken',
+    'fifa': 'fifa',
+  };
+  const targetId = reverseAliases[normalized];
+  if (targetId) return GAMES_DATA.find((g) => g.id === targetId);
+  return GAMES_DATA.find((g) => g.name.toLowerCase().includes(normalized) || normalized.includes(g.name.toLowerCase()));
+}
+
+/**
+ * Merge live database games (`/api/games`) with the 49-game catalog metadata so any
+ * game name, price, player count, addition, or deletion done in Admin Settings
+ * immediately reflects across the entire public website.
+ */
+export function mergeLiveGamesWithCatalog(liveRows: GamePrice[]): GameInfo[] {
+  if (!Array.isArray(liveRows) || liveRows.length === 0) {
+    return GAMES_DATA;
+  }
+
+  const hasSyncedCatalog = liveRows.some((r) => Boolean(r.category)) || liveRows.length >= 35;
+
+  const convertRow = (row: GamePrice): GameInfo => {
+    const exactMatch = findCatalogMatch(row.name);
+    const hasBoys = row.boys !== null && row.boys !== undefined;
+    const hasGirls = row.girls !== null && row.girls !== undefined;
+    const division: GameInfo['division'] =
+      hasBoys && hasGirls ? 'boys_and_girls' : hasBoys ? 'boys_only' : 'girls_only';
+
+    const boysPlayers = hasBoys ? (row.boysPlayers ?? exactMatch?.boysPlayers ?? 1) : undefined;
+    const girlsPlayers = hasGirls ? (row.girlsPlayers ?? exactMatch?.girlsPlayers ?? 1) : undefined;
+    const maxPlayers = Math.max(boysPlayers ?? 1, girlsPlayers ?? 1);
+    const category = normalizeCategory(row.category ?? exactMatch?.category, row.name);
+    const categoryLabel = CATEGORY_LABELS[category];
+
+    return {
+      id: exactMatch?.id ?? slugify(row.name),
+      name: row.name,
+      category,
+      categoryLabel,
+      headline: exactMatch?.headline ?? row.name.toUpperCase(),
+      tagline:
+        exactMatch?.tagline ??
+        `Official Mini Olympics 2026 ${categoryLabel.toLowerCase()} competition for ${row.name}.`,
+      division,
+      playerFormat:
+        exactMatch &&
+        exactMatch.boysPlayers === boysPlayers &&
+        exactMatch.girlsPlayers === girlsPlayers
+          ? exactMatch.playerFormat
+          : buildPlayerFormat(boysPlayers, girlsPlayers),
+      matchFormat: exactMatch?.matchFormat ?? 'TOURNAMENT BRACKET',
+      boysPlayers,
+      girlsPlayers,
+      boysFee: hasBoys ? Number(row.boys) : undefined,
+      girlsFee: hasGirls ? Number(row.girls) : undefined,
+      isTeam: maxPlayers > 1,
+      featured: exactMatch?.featured ?? false,
+      featuredLayout: exactMatch?.featuredLayout,
+      rulesOverview:
+        exactMatch?.rulesOverview ??
+        `Standard FCIT Sports Society tournament regulations apply for ${row.name}.`,
+      venueNote: exactMatch?.venueNote ?? 'PUCIT Old Campus Arena',
+      accentColor: exactMatch?.accentColor ?? '#12E2C4',
+      iconKey: exactMatch?.iconKey ?? 'trophy',
+      image: exactMatch?.image ?? DEFAULT_FALLBACK_IMAGE,
+    };
+  };
+
+  if (hasSyncedCatalog) {
+    return liveRows.map(convertRow);
+  }
+
+  // Legacy partial DB fallback: keep all 49 games visible while overlaying live DB prices/names
+  const matchedCatalogIds = new Set<string>();
+  const convertedByCatalogId = new Map<string, GameInfo>();
+  const extraDbGames: GameInfo[] = [];
+
+  for (const row of liveRows) {
+    const converted = convertRow(row);
+    const catalogMatch = findCatalogMatch(row.name);
+    if (catalogMatch) {
+      matchedCatalogIds.add(catalogMatch.id);
+      convertedByCatalogId.set(catalogMatch.id, converted);
+    } else {
+      extraDbGames.push(converted);
+    }
+  }
+
+  const merged49 = GAMES_DATA.map((g) => convertedByCatalogId.get(g.id) ?? g);
+  return [...merged49, ...extraDbGames];
+}
 
 export function getGameById(id: string): GameInfo | undefined {
   return GAMES_DATA.find((g) => g.id === id || g.name.toLowerCase() === id.toLowerCase());
@@ -1099,6 +1330,17 @@ export function getLowestFee(game: GameInfo): number {
   return fees.length > 0 ? Math.min(...fees) : 0;
 }
 
+/** Return formatted fee summary showing both divisions if their fees differ. */
+export function getFeeSummary(game: GameInfo): string {
+  const b = game.boysFee;
+  const g = game.girlsFee;
+  if (typeof b === 'number' && typeof g === 'number' && b !== g) {
+    return `♂ Rs. ${b.toLocaleString()} · ♀ Rs. ${g.toLocaleString()}`;
+  }
+  const fee = typeof b === 'number' ? b : typeof g === 'number' ? g : 0;
+  return fee > 0 ? `Rs. ${fee.toLocaleString()}` : 'Free';
+}
+
 /** Compact division badge label for cards and modals. */
 export function getDivisionLabel(division: GameInfo['division']): string {
   if (division === 'boys_and_girls') return 'Boys & Girls';
@@ -1116,15 +1358,52 @@ export function getCompactPlayerLabel(game: GameInfo): string {
 }
 
 const PRICING_ALIASES: Record<string, string> = {
+  'cricket': 'Tape Ball Cricket',
   'tape ball cricket': 'Cricket',
+  'football': 'Football Championship',
   'football championship': 'Football',
+  'double wicket': 'Double Wicket Cricket',
   'double wicket cricket': 'Double Wicket',
+  'kabaddi': 'Kabaddi Championship',
+  'kabbadi': 'Kabaddi Championship',
+  'handball': 'Handball Clash',
+  'volley ball': 'Volleyball Spike',
+  'volleyball': 'Volleyball Spike',
+  'frisbee': 'Ultimate Frisbee',
+  'chess': 'Championship Chess',
   'championship chess': 'Chess',
+  'jenga': 'Jenga Tower Challenge',
   'jenga tower challenge': 'Jenga',
+  'uno': 'Uno Championship',
   'uno championship': 'Uno',
+  'pucket': 'Pucket Fast-Track',
+  'dart singles': 'Darts Singles (501)',
+  'darts singles': 'Darts Singles (501)',
   'darts singles (501)': 'Darts Singles',
+  'dart doubles': 'Darts Doubles',
+  '100m race': '100m Sprint Dash',
+  '3 leg race': '3 Legged Race',
+  'relay race': '4x100m Baton Relay',
+  'egg relay race': 'Egg & Spoon Relay',
+  'foosball singles': 'Foosball Singles',
+  'foosball doubles': 'Foosball Doubles',
+  '1 vs 1 penalty': '1v1 Penalty Shootout',
+  'rifle shooting': 'Air Rifle Target Shooting',
+  'gol gappay eating challenge': 'Gol Gappay Challenge',
+  'plank': 'Plank Endurance Test',
+  'rope jump': 'Rope Jump Sprint',
+  "rubik's cube": "Rubik's Speedcubing",
+  'squid game': 'Red Light Green Light',
+  'subway surfer': 'Subway Surfers High Score',
+  'blur (racing)': 'Blur PC Racing',
+  'piano tiles': 'Piano Tiles Reflex Test',
+  'fifa': 'EA Sports FC / FIFA 24',
   'ea sports fc / fifa 24': 'Fifa',
+  'tekken': 'Tekken 8 Tournament',
   'tekken 8 tournament': 'Tekken',
+  'call of duty mobile': 'Call of Duty: Mobile',
+  'pubg': 'PUBG Mobile Championship',
+  'pubg mobile': 'PUBG Mobile Championship',
   'pubg mobile championship': 'PUBG Mobile',
 };
 

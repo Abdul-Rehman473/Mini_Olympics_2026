@@ -121,7 +121,7 @@ export default function GameDossierModal({ game, onClose }: GameDossierModalProp
       onTransitionEnd={handleTransitionEnd}
       onClick={handleDialogClick}
       {...({ closedby: 'any' } as Record<string, string>)}
-      className="game-dossier-dialog m-auto w-[calc(100%-2rem)] max-w-2xl rounded-3xl bg-[#14161E] border border-white/[0.14] text-[#F4F1EA] shadow-2xl p-0 max-h-[90vh] overflow-y-auto"
+      className="game-dossier-dialog m-auto w-[calc(100%-2rem)] max-w-2xl rounded-3xl bg-[#131B38] border border-white/[0.14] text-[#F8FAFC] shadow-2xl p-0 max-h-[90vh] overflow-y-auto"
     >
       {activeGame && (
         <div>
@@ -134,13 +134,13 @@ export default function GameDossierModal({ game, onClose }: GameDossierModalProp
               decoding="async"
               className="w-full h-full object-cover object-center"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#14161E] via-[#14161E]/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#131B38] via-[#131B38]/60 to-transparent" />
 
             <button
               type="button"
               onClick={() => void closeTopLayer()}
               autoFocus
-              className="absolute top-4 right-4 p-2.5 rounded-xl bg-black/70 text-[#A4A5AA] hover:text-white border border-white/[0.12] backdrop-blur-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D5F05B]"
+              className="absolute top-4 right-4 p-2.5 rounded-xl bg-black/70 text-[#94A3B8] hover:text-white border border-white/[0.12] backdrop-blur-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#12E2C4]"
               aria-label={`Close ${activeGame.name} details`}
             >
               <X className="w-5 h-5" />
@@ -149,16 +149,16 @@ export default function GameDossierModal({ game, onClose }: GameDossierModalProp
             <div className="absolute bottom-4 left-6 sm:left-8 right-6 flex items-end justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                  <span className="text-xs font-mono font-bold text-[#D5F05B] tracking-wider uppercase">
+                  <span className="text-xs font-mono font-bold text-[#12E2C4] tracking-wider uppercase">
                     {activeGame.categoryLabel}
                   </span>
-                  <span className="px-2 py-0.5 rounded-md bg-white/[0.1] border border-white/[0.12] text-[10px] font-mono text-[#F4F1EA]">
+                  <span className="px-2 py-0.5 rounded-md bg-white/[0.1] border border-white/[0.12] text-[10px] font-mono text-[#F8FAFC]">
                     {getDivisionLabel(activeGame.division)}
                   </span>
                 </div>
                 <h2
                   id={titleId}
-                  className="text-2xl sm:text-4xl font-black text-[#F4F1EA] font-['Space_Grotesk'] uppercase leading-none"
+                  className="text-2xl sm:text-4xl font-black text-[#F8FAFC] font-['Space_Grotesk'] uppercase leading-none"
                 >
                   {activeGame.name}
                 </h2>
@@ -176,69 +176,76 @@ export default function GameDossierModal({ game, onClose }: GameDossierModalProp
           {/* Modal Body */}
           <div className="p-6 sm:p-8 space-y-6">
             <div>
-              <span className="text-xs font-mono font-bold text-[#F15A29] uppercase tracking-wider block mb-1">
+              <span className="text-xs font-mono font-bold text-[#F59E0B] uppercase tracking-wider block mb-1">
                 Official Discipline Brief
               </span>
-              <p className="text-sm sm:text-base text-[#F4F1EA] font-medium leading-relaxed">
+              <p className="text-sm sm:text-base text-[#F8FAFC] font-medium leading-relaxed">
                 {activeGame.tagline}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
-              <div className="p-4 rounded-2xl bg-[#101114] border border-white/[0.08]">
-                <span className="text-[#A4A5AA] text-[10px] uppercase tracking-wider block mb-1">
+              <div className="p-4 rounded-2xl bg-[#0B1124] border border-white/[0.08]">
+                <span className="text-[#94A3B8] text-[10px] uppercase tracking-wider block mb-1">
                   Roster & Player Format
                 </span>
-                <span className="text-[#F4F1EA] font-bold text-sm block">{activeGame.playerFormat}</span>
+                <span className="text-[#F8FAFC] font-bold text-sm block">{activeGame.playerFormat}</span>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#101114] border border-white/[0.08]">
-                <span className="text-[#A4A5AA] text-[10px] uppercase tracking-wider block mb-1">
+              <div className="p-4 rounded-2xl bg-[#0B1124] border border-white/[0.08]">
+                <span className="text-[#94A3B8] text-[10px] uppercase tracking-wider block mb-1">
                   Match Format
                 </span>
-                <span className="text-[#D5F05B] font-bold text-sm block">
+                <span className="text-[#12E2C4] font-bold text-sm block">
                   {activeGame.matchFormat || 'Knockout Bracket'}
                 </span>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#101114] border border-white/[0.08]">
-                <span className="text-[#A4A5AA] text-[10px] uppercase tracking-wider block mb-1">
+              <div className="p-4 rounded-2xl bg-[#0B1124] border border-white/[0.08]">
+                <span className="text-[#94A3B8] text-[10px] uppercase tracking-wider block mb-1">
                   Registration Entry Fee
                 </span>
-                <span className="text-[#F4F1EA] font-bold text-sm block">
-                  {activeGame.boysFee ? `Rs. ${activeGame.boysFee.toLocaleString()}` : activeGame.girlsFee ? `Rs. ${activeGame.girlsFee.toLocaleString()}` : 'Free Entry'}
-                  {activeGame.boysFee && activeGame.girlsFee && activeGame.girlsFee !== activeGame.boysFee && (
-                    <span className="text-xs font-normal text-[#D5F05B] ml-2">
-                      (Girls: Rs. {activeGame.girlsFee.toLocaleString()})
+                <div className="flex flex-wrap items-center gap-2 text-sm font-bold">
+                  {activeGame.boysFee !== undefined && (
+                    <span className="px-2 py-0.5 rounded bg-[#3B82F6]/15 border border-[#3B82F6]/40 text-[#3B82F6]">
+                      ♂ Boys: Rs. {activeGame.boysFee.toLocaleString()}
                     </span>
                   )}
-                </span>
+                  {activeGame.girlsFee !== undefined && (
+                    <span className="px-2 py-0.5 rounded bg-[#F068B1]/15 border border-[#F068B1]/40 text-[#F068B1]">
+                      ♀ Girls: Rs. {activeGame.girlsFee.toLocaleString()}
+                    </span>
+                  )}
+                  {activeGame.boysFee === undefined && activeGame.girlsFee === undefined && (
+                    <span className="text-[#F8FAFC]">Free Entry</span>
+                  )}
+                </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#101114] border border-white/[0.08]">
-                <span className="text-[#A4A5AA] text-[10px] uppercase tracking-wider block mb-1">
+              <div className="p-4 rounded-2xl bg-[#0B1124] border border-white/[0.08]">
+                <span className="text-[#94A3B8] text-[10px] uppercase tracking-wider block mb-1">
                   Official Venue
                 </span>
-                <div className="flex items-center gap-1.5 text-[#F4F1EA] font-bold text-sm">
-                  <MapPin className="w-4 h-4 text-[#F15A29] shrink-0" />
+                <div className="flex items-center gap-1.5 text-[#F8FAFC] font-bold text-sm">
+                  <MapPin className="w-4 h-4 text-[#F59E0B] shrink-0" />
                   <span className="truncate">{activeGame.venueNote}</span>
                 </div>
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-[#101114]/70 border border-white/[0.08]">
-              <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#D5F05B] uppercase tracking-wider mb-2">
+            <div className="p-5 rounded-2xl bg-[#0B1124]/70 border border-white/[0.08]">
+              <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#12E2C4] uppercase tracking-wider mb-2">
                 <Shield className="w-3.5 h-3.5" />
                 <span>Tournament Regulations</span>
               </div>
-              <p className="text-xs sm:text-sm text-[#A4A5AA] leading-relaxed">{activeGame.rulesOverview}</p>
+              <p className="text-xs sm:text-sm text-[#94A3B8] leading-relaxed">{activeGame.rulesOverview}</p>
             </div>
 
             <div className="flex items-center gap-3 pt-3 border-t border-white/[0.08]">
               <button
                 type="button"
                 onClick={() => void closeTopLayer()}
-                className="w-1/3 py-3.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#A4A5AA] hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition-colors uppercase text-center"
+                className="w-1/3 py-3.5 rounded-xl text-xs font-mono font-bold tracking-wider text-[#94A3B8] hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition-colors uppercase text-center"
               >
                 Close
               </button>
@@ -246,7 +253,7 @@ export default function GameDossierModal({ game, onClose }: GameDossierModalProp
               <Link
                 href={`/register?game=${encodeURIComponent(activeGame.name)}`}
                 onClick={() => void closeTopLayer()}
-                className="w-2/3 flex items-center justify-center gap-2 py-3.5 rounded-xl text-xs font-black tracking-wider text-[#101114] bg-[#D5F05B] hover:bg-[#c2de4a] transition-all uppercase font-['Space_Grotesk'] shadow-lg shadow-[#D5F05B]/20"
+                className="w-2/3 flex items-center justify-center gap-2 py-3.5 rounded-xl text-xs font-black tracking-wider text-[#0B1124] bg-[#12E2C4] hover:bg-[#0FC9AE] transition-all uppercase font-['Space_Grotesk'] shadow-lg shadow-[#12E2C4]/20"
               >
                 <span>Register for This Sport</span>
                 <ArrowUpRight className="w-4 h-4" />

@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import Link from 'next/link';
 import {
   Calendar,
   Users,
@@ -30,6 +31,8 @@ import {
   RefreshCw,
   FileText,
   Swords,
+  Clock,
+  MapPin,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
@@ -77,11 +80,31 @@ type ScheduleData = {
   notes?: string;
 };
 
+type CoordinatorMatch = {
+  id: string;
+  game_name: string;
+  gender: 'boys' | 'girls';
+  round_name: string;
+  match_number: number;
+  player1_name: string;
+  player2_name: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  venue: string | null;
+  status: string;
+  winner_name: string | null;
+  score_summary: string | null;
+  coordinator_username: string | null;
+};
+
 export default function HOCPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
   const [schedules, setSchedules] = useState<MatchSchedule[]>([]);
+  const [coordinatorMatches, setCoordinatorMatches] = useState<CoordinatorMatch[]>([]);
+  const [coordGameFilter, setCoordGameFilter] = useState('all');
+  const [coordStatusFilter, setCoordStatusFilter] = useState('all');
   const [selectedGame, setSelectedGame] = useState('');
   const [selectedGender, setSelectedGender] = useState<'boys' | 'girls'>('boys');
   const [customPrompt, setCustomPrompt] = useState('');
@@ -91,7 +114,20 @@ export default function HOCPage() {
   useEffect(() => {
     loadData();
     loadGames();
+    loadCoordinatorMatches();
   }, []);
+
+  const loadCoordinatorMatches = async () => {
+    try {
+      const res = await fetch(`/api/admin/coordinator?t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success) {
+        setCoordinatorMatches(data.matches || []);
+      }
+    } catch (error) {
+      console.error('Load coordinator matches error:', error);
+    }
+  };
 
   const loadGames = async () => {
     try {
@@ -376,7 +412,7 @@ export default function HOCPage() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Generate Schedule */}
-        <Card className="border-0 shadow-lg">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg">
           <CardHeader className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5" />
@@ -489,7 +525,7 @@ export default function HOCPage() {
         </Card>
 
         {/* Generated Schedule Preview */}
-        <Card className="border-0 shadow-lg">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-indigo-500" />
@@ -610,7 +646,7 @@ export default function HOCPage() {
       </div>
 
       {/* Saved Schedules */}
-      <Card className="border-0 shadow-lg mt-6">
+      <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-purple-500" />
@@ -707,6 +743,153 @@ export default function HOCPage() {
               </div>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Coordinator Match Records (Live Visibility for Admin / HOC) */}
+      <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg mt-6">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Swords className="h-5 w-5 text-indigo-600" />
+                Coordinator Match Records ({coordinatorMatches.length})
+              </CardTitle>
+              <CardDescription>
+                Live matches, timings, venues, scores & winners arranged by game coordinators
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={coordGameFilter} onValueChange={setCoordGameFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All Games" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Games</SelectItem>
+                  {Array.from(new Set(coordinatorMatches.map((m) => m.game_name))).map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={coordStatusFilter} onValueChange={setCoordStatusFilter}>
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="walkover">Walkover</SelectItem>
+                </SelectContent>
+              </Select>
+              <Link href="/admin/coordinator">
+                <Button size="sm" variant="outline">
+                  Manage in Coordinator Portal
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            const filtered = coordinatorMatches.filter((m) => {
+              if (coordGameFilter !== 'all' && m.game_name !== coordGameFilter) return false;
+              if (coordStatusFilter !== 'all' && m.status !== coordStatusFilter) return false;
+              return true;
+            });
+
+            if (filtered.length === 0) {
+              return (
+                <div className="text-center py-8 text-slate-400">
+                  No coordinator match records found yet.
+                </div>
+              );
+            }
+
+            return (
+              <div className="overflow-x-auto">
+                <Table className="w-full text-sm">
+                  <TableHeader>
+                    <TableRow className="bg-slate-50 border-b border-slate-200">
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Game & Round</TableHead>
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Division</TableHead>
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Matchup</TableHead>
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Time & Venue</TableHead>
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Status & Result</TableHead>
+                      <TableHead className="px-3 py-2 text-slate-700 font-semibold">Coordinator</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell>
+                          <p className="font-semibold text-slate-800">{m.game_name}</p>
+                          <p className="text-xs text-slate-500">
+                            {m.round_name} • Match #{m.match_number}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              m.gender === 'boys'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-pink-100 text-pink-700'
+                            }`}
+                          >
+                            {m.gender}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium">{m.player1_name}</span>
+                          <span className="text-slate-400 mx-1.5">vs</span>
+                          <span className="font-medium">{m.player2_name}</span>
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span>
+                              {m.scheduled_date || 'Date TBD'} {m.scheduled_time || ''}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 text-slate-400" />
+                            <span>{m.venue || 'Venue TBD'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-medium uppercase ${
+                              m.status === 'completed' || m.status === 'walkover'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : m.status === 'in_progress'
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            {m.status.replace('_', ' ')}
+                          </span>
+                          {m.winner_name && (
+                            <p className="text-xs font-semibold text-emerald-700 mt-1">
+                              Winner: {m.winner_name}
+                            </p>
+                          )}
+                          {m.score_summary && (
+                            <p className="text-xs text-slate-500">{m.score_summary}</p>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600">
+                          {m.coordinator_username || '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
     </div>

@@ -58,6 +58,7 @@ type SportGroup = {
 export default function SuperAdminPage() {
   const router = useRouter();
   const [userRole, setUserRole] = useState<string>('');
+  const [canManageGroups, setCanManageGroups] = useState(false);
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<SportGroup[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
@@ -94,15 +95,25 @@ export default function SuperAdminPage() {
 
   useEffect(() => {
     loadGames();
-    fetch('/api/admin/verify')
+    fetch('/api/admin/verify', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.authenticated) {
           setUserRole(data.role || 'admin');
-          if (!['super_admin', 'admin', 'hoc_admin'].includes(data.role)) {
-            router.push('/admin/dashboard');
+          const allowedPages: string[] = Array.isArray(data.permissions) ? data.permissions : [];
+          const hasAccess =
+            data.role === 'super_admin' ||
+            data.role === 'admin' ||
+            allowedPages.includes('/admin/super');
+          if (!hasAccess) {
+            router.push(data.defaultPage || '/admin/dashboard');
             return;
           }
+          setCanManageGroups(
+            data.role === 'super_admin' ||
+              data.role === 'admin' ||
+              Boolean(data.permissionDetails?.['/admin/super']?.canEdit)
+          );
           loadGroups();
         }
       })
@@ -265,7 +276,7 @@ export default function SuperAdminPage() {
   const existingGamesForGender = currentGroups.map((g) => g.game_name);
   const availableGames = allGames.map((g) => g.name).filter((name) => !existingGamesForGender.includes(name));
 
-  const isSuperAdmin = userRole === 'super_admin';
+  const isSuperAdmin = userRole === 'super_admin' || canManageGroups;
 
   if (loading) {
     return (

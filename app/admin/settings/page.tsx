@@ -48,6 +48,7 @@ type GamePricing = {
   gender: string;
   price: number;
   players: number | null;
+  category?: string | null;
 };
 
 export default function SettingsPage() {
@@ -133,8 +134,11 @@ export default function SettingsPage() {
   const [gameDialogOpen, setGameDialogOpen] = useState(false);
   const [editingGame, setEditingGame] = useState<GamePricing | null>(null);
   const [savingGame, setSavingGame] = useState(false);
+  const [syncingPdfGames, setSyncingPdfGames] = useState(false);
   const [gameForm, setGameForm] = useState({
+    original_game_name: '',
     game_name: '',
+    category: 'team',
     boys_price: '',
     boys_players: '',
     girls_price: '',
@@ -376,7 +380,9 @@ export default function SettingsPage() {
       
       setEditingGame(game);
       setGameForm({
+        original_game_name: gameName,
         game_name: gameName,
+        category: boysEntry?.category || girlsEntry?.category || 'team',
         boys_price: boysEntry?.price?.toString() || '',
         boys_players: boysEntry?.players?.toString() || '',
         girls_price: girlsEntry?.price?.toString() || '',
@@ -385,7 +391,9 @@ export default function SettingsPage() {
     } else {
       setEditingGame(null);
       setGameForm({
+        original_game_name: '',
         game_name: '',
+        category: 'team',
         boys_price: '',
         boys_players: '',
         girls_price: '',
@@ -403,21 +411,28 @@ export default function SettingsPage() {
 
     setSavingGame(true);
     try {
+      const nextName = gameForm.game_name.trim();
+      const origName = gameForm.original_game_name.trim();
+      let renamedOnce = false;
+
       // Save boys pricing if provided
       if (gameForm.boys_price) {
         await fetch('/api/admin/games', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            game_name: gameForm.game_name.trim(),
+            game_name: nextName,
+            original_game_name: origName && origName !== nextName ? origName : undefined,
+            category: gameForm.category,
             gender: 'boys',
             price: parseFloat(gameForm.boys_price),
             players: gameForm.boys_players ? parseInt(gameForm.boys_players) : null,
           }),
         });
+        renamedOnce = true;
       } else if (editingGame) {
         // Delete boys entry if price is removed
-        await fetch(`/api/admin/games?game_name=${encodeURIComponent(gameForm.game_name)}&gender=boys`, {
+        await fetch(`/api/admin/games?game_name=${encodeURIComponent(origName || nextName)}&gender=boys`, {
           method: 'DELETE',
         });
       }
@@ -428,7 +443,9 @@ export default function SettingsPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            game_name: gameForm.game_name.trim(),
+            game_name: nextName,
+            original_game_name: !renamedOnce && origName && origName !== nextName ? origName : undefined,
+            category: gameForm.category,
             gender: 'girls',
             price: parseFloat(gameForm.girls_price),
             players: gameForm.girls_players ? parseInt(gameForm.girls_players) : null,
@@ -436,7 +453,7 @@ export default function SettingsPage() {
         });
       } else if (editingGame) {
         // Delete girls entry if price is removed
-        await fetch(`/api/admin/games?game_name=${encodeURIComponent(gameForm.game_name)}&gender=girls`, {
+        await fetch(`/api/admin/games?game_name=${encodeURIComponent(nextName)}&gender=girls`, {
           method: 'DELETE',
         });
       }
@@ -447,6 +464,31 @@ export default function SettingsPage() {
       alert('Failed to save game');
     } finally {
       setSavingGame(false);
+    }
+  };
+
+  const handleSyncPdfGames = async () => {
+    if (!confirm('Sync all 49 championship games with the official PDF prices? Existing matching games will update to the PDF prices.')) {
+      return;
+    }
+    setSyncingPdfGames(true);
+    try {
+      const res = await fetch('/api/admin/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_pdf_defaults', replaceAll: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Synced ${data.syncedCount} championship games with PDF prices!`);
+        loadGames();
+      } else {
+        alert(data.error || 'Failed to sync games');
+      }
+    } catch {
+      alert('Failed to sync official games');
+    } finally {
+      setSyncingPdfGames(false);
     }
   };
 
@@ -503,7 +545,7 @@ export default function SettingsPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Registrations open/closed */}
-        <Card className="border-0 shadow-lg lg:col-span-2">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg lg:col-span-2">
           <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               {settings.registrations_open ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
@@ -573,7 +615,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* SMTP Email Settings */}
-        <Card className="border-0 shadow-lg lg:col-span-2">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg lg:col-span-2">
           <CardHeader className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
@@ -710,7 +752,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Automated Email Templates — one at a time with dropdown */}
-        <Card className="border-0 shadow-lg flex flex-col min-h-[420px]">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg flex flex-col min-h-[420px]">
           <CardHeader className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
@@ -789,7 +831,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Coupons — same-size card with scrollable small coupon cards */}
-        <Card className="border-0 shadow-lg flex flex-col min-h-[420px]">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg flex flex-col min-h-[420px]">
           <CardHeader className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Tag className="h-5 w-5" />
@@ -866,7 +908,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* API Key Settings */}
-        <Card className="border-0 shadow-lg">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg">
           <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
             <CardTitle className="flex items-center gap-2">
               <Key className="h-5 w-5" />
@@ -948,7 +990,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Games & Pricing Management */}
-        <Card className="border-0 shadow-lg lg:col-span-1">
+        <Card className="bg-white text-slate-900 border border-slate-200 shadow-lg lg:col-span-1">
           <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
               <div>
@@ -960,14 +1002,25 @@ export default function SettingsPage() {
                   Manage games, prices, and team sizes
                 </CardDescription>
               </div>
-              <Button
-                onClick={() => handleOpenGameDialog()}
-                size="sm"
-                className="bg-white/20 hover:bg-white/30 text-white"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Game
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={handleSyncPdfGames}
+                  disabled={syncingPdfGames}
+                  size="sm"
+                  className="bg-white/15 hover:bg-white/25 text-white"
+                >
+                  {syncingPdfGames ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+                  Sync PDF (49)
+                </Button>
+                <Button
+                  onClick={() => handleOpenGameDialog()}
+                  size="sm"
+                  className="bg-white/20 hover:bg-white/30 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Game
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-4">
@@ -1048,14 +1101,34 @@ export default function SettingsPage() {
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Game Name *</Label>
-              <Input
-                value={gameForm.game_name}
-                onChange={(e) => setGameForm({ ...gameForm, game_name: e.target.value })}
-                placeholder="e.g., Cricket, Football, Chess"
-                disabled={!!editingGame}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Game Name *</Label>
+                <Input
+                  value={gameForm.game_name}
+                  onChange={(e) => setGameForm({ ...gameForm, game_name: e.target.value })}
+                  placeholder="e.g., Cricket, Football, Chess"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={gameForm.category}
+                  onValueChange={(v) => setGameForm({ ...gameForm, category: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="team">Team Sports</SelectItem>
+                    <SelectItem value="race">Races &amp; Relays</SelectItem>
+                    <SelectItem value="racket">Racket Sports</SelectItem>
+                    <SelectItem value="esports">Esports Arena</SelectItem>
+                    <SelectItem value="board">Board &amp; Card</SelectItem>
+                    <SelectItem value="skill">Fun &amp; Skill</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
